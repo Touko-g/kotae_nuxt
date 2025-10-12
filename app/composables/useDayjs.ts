@@ -58,6 +58,16 @@ export const useDayjs = () => {
         return computed(() => dayjs(date).locale(localeRef.value).fromNow())
     }
 
+    const formatNow = (date: string | number | Date | Dayjs) => {
+        const now = new Date().getFullYear()
+        const year = format(date, 'YYYY')
+        if (now.toString() === year) {
+            return format(date, 'MM-DD HH:mm')
+        } else {
+            return format(date, 'YYYY-MM-DD')
+        }
+    }
+
     return {
         dayjs,
         create,
@@ -65,6 +75,7 @@ export const useDayjs = () => {
         add,
         subtract,
         fromNow,
+        formatNow,
         setLocale,
         localeRef, // 可用于模板显示当前语言
     }

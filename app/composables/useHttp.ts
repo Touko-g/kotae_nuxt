@@ -18,6 +18,7 @@ export class HttpError extends Error {
 
 export const useHttp = () => {
     const config = useRuntimeConfig()
+    const { show } = useSnakebar()
     const loadingCount = ref(0) // 并发安全 loading
     const loading = computed(() => loadingCount.value > 0)
 
@@ -41,12 +42,24 @@ export const useHttp = () => {
                 body: options.body,
                 baseURL: config.public.apiBase,
                 timeout: 10000,
+                onRequestError({ error }) {
+                    show(error.message, 'error')
+                },
+                onResponseError({ response }) {
+                    const data = response._data
+
+                    const showText = Object.values(data)[0]?.toString()
+
+                    // 处理请求错误
+                    show(showText || response.statusText, 'error')
+                },
             })
         } catch (err: any) {
             // 统一异常处理
             const message =
                 err?.data?.message || err?.message || 'Unknown Error'
             const status = err?.status
+            // show(message, 'error')
             throw new HttpError(message, status)
         } finally {
             if (options.showLoading) loadingCount.value--

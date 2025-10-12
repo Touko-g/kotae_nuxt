@@ -9,4 +9,17 @@ export default <Partial<Config>>{
             },
         },
     },
+    plugins: [
+        function ({ addUtilities }) {
+            addUtilities({
+                '.scrollbar-hide': {
+                    'scrollbar-width': 'none' /* Firefox */,
+                    '-ms-overflow-style': 'none' /* IE & Edge */,
+                },
+                '.scrollbar-hide::-webkit-scrollbar': {
+                    display: 'none' /* Chrome, Safari */,
+                },
+            })
+        },
+    ],
 }

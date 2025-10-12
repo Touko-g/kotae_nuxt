@@ -14,6 +14,10 @@ export interface Article {
     update_time: string
 }
 
+export type SimpleArticle = Pick<Article, 'id' | 'comments' | 'title'> & {
+    len: number
+}
+
 // 请求参数
 export interface ArticleListParams extends BaseParams {
     title?: string

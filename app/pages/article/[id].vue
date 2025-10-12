@@ -1,8 +1,11 @@
 <script setup lang="ts">
+    import DOMPurify from 'dompurify'
+    import ArticleComment from '~/components/ArticleComment.vue'
     const route = useRoute()
     const { getArticle } = useArticle()
     const { fromNow } = useDayjs()
     const { t } = useLocale()
+    const { mobile } = useDisplay()
     const { name } = useTheme()
     const highlighter = await useShiki()
 
@@ -54,9 +57,8 @@
 
     onMounted(() => {
         if (article.value) {
-            article.value.content = highlightCodeInHtml(
-                article.value.content,
-                name.value
+            article.value.content = DOMPurify.sanitize(
+                highlightCodeInHtml(article.value.content, name.value)
             )
             triggerRef(article)
         }
@@ -81,8 +83,10 @@
                         <span>{{ fromNow(article.create_time) }}</span
                         ><span class="mx-2">|</span>
                         <span>{{ t('view') }}:{{ article.views }}</span
-                        ><span class="mx-2">|</span>
-                        <span>{{ t('comment') }}:{{ article.comments }}</span>
+                        ><span v-if="!mobile" class="mx-2">|</span>
+                        <span v-if="!mobile"
+                            >{{ t('comment') }}:{{ article.comments }}</span
+                        >
                     </div>
                 </div>
             </div>
@@ -93,22 +97,53 @@
             </div>
             <div>
                 <v-divider class="my-2" color="surface" />
+                <!-- eslint-disable vue/no-v-html -->
                 <div class="markdown-body" v-html="article.content"></div>
                 <div class="d-sm-flex align-center mt-6">
-                    <h3 class="text-grey text-capitalize mr-2">
+                    <h3 class="text-grey text-capitalize text-xl mr-2">
                         {{ t('tag') }}:
                     </h3>
                     <v-chip-group active-class="primary--text" column>
                         <v-chip
                             v-for="(tag, index) in article.tag"
                             :key="index"
+                            @click="
+                                navigateTo({
+                                    path: '/search',
+                                    query: {
+                                        query: tag.name,
+                                        type: 'tag',
+                                    },
+                                })
+                            "
                         >
                             {{ tag.name }}
                         </v-chip>
                     </v-chip-group>
                 </div>
                 <v-divider class="my-2" color="surface" />
+                <div class="d-flex justify-space-between">
+                    <div class="d-flex">
+                        <v-btn
+                            variant="text"
+                            icon="mdi-comment-outline"
+                        ></v-btn>
+                        <span>{{ article.comments }}</span>
+                    </div>
+                    <div class="d-flex">
+                        <v-btn
+                            v-permission
+                            icon="mdi-circle-edit-outline"
+                            variant="text"
+                        >
+                        </v-btn>
+                        <v-btn icon="mdi-trash-can-outline" variant="text">
+                        </v-btn>
+                        <v-btn icon="mdi-thumb-up-outline" variant="text" />
+                    </div>
+                </div>
             </div>
+            <ArticleComment :article="article.id" />
         </v-card-text>
     </v-card>
 </template>

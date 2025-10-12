@@ -5,6 +5,7 @@
     const { extractText } = useExtractText()
     const { fromNow } = useDayjs()
     const { t } = useLocale()
+    const { isLogin } = useAuth()
 
     // --- 状态 ---
     const articles = ref<Article[]>([])
@@ -21,13 +22,29 @@
     const observer = ref<IntersectionObserver | null>(null)
 
     // --- 首屏数据 ---
-    const { data, refresh } = useAsyncData('articles', async () => {
-        const [recent, hot] = await Promise.all([
-            getArticleList({ page: 1, order: '-create_time' }),
-            getArticleList({ page: 1, order: '-likes' }),
-        ])
-        return { recent, hot }
-    })
+    const { data } = await useAsyncData(
+        'articles',
+        async () => {
+            const [recent, hot] = await Promise.all([
+                getArticleList({ page: 1, order: '-create_time' }),
+                getArticleList({ page: 1, order: '-likes' }),
+            ])
+            return { recent, hot }
+        },
+        {
+            watch: [isLogin],
+        }
+    )
+
+    watch(
+        () => data.value,
+        val => {
+            if (val?.recent.results) {
+                articles.value = val.recent.results
+                page.count = Math.ceil(val.recent.count / 10)
+            }
+        }
+    )
 
     // --- 初始化文章列表 ---
     if (data.value?.recent.results) {
@@ -57,12 +74,10 @@
 
     // --- 监听滚动触发 ---
     onMounted(() => {
-        refresh().then(() => {
-            if (data.value?.recent?.results) {
-                articles.value = data.value.recent.results
-                page.count = Math.ceil(data.value.recent.count / 10)
-            }
-        })
+        if (data.value?.recent?.results) {
+            articles.value = data.value.recent.results
+            page.count = Math.ceil(data.value.recent.count / 10)
+        }
 
         observer.value = new IntersectionObserver(
             async entries => {
@@ -127,7 +142,15 @@
                                     :key="tag.id"
                                     density="compact"
                                     class="last:!mr-0"
-                                    @click.stop="console.log('123')"
+                                    @click.stop="
+                                        navigateTo({
+                                            path: '/search',
+                                            query: {
+                                                query: tag.name,
+                                                type: 'tag',
+                                            },
+                                        })
+                                    "
                                     >{{ tag.name }}</v-chip
                                 >
                             </v-chip-group>
@@ -159,6 +182,6 @@
                 </div>
             </v-col>
         </v-row>
-        <div v-if="articles?.length" ref="scrollRef"></div>
+        <div v-show="articles?.length" ref="scrollRef"></div>
     </v-container>
 </template>
