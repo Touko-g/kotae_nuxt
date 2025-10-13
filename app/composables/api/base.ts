@@ -1,6 +1,6 @@
 export interface BaseParams {
     page?: number
-    pageSize?: number
+    pagesize?: number
     order?: string
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
     const { t } = useLocale()
     const { login, isLogin } = useAuth()
-    const { getUser, user } = useUser()
+    const { getUser } = useUser()
     const { show } = useSnakebar()
     const { rules } = useRules()
     const loginDialog = useState('login', () => false)
@@ -10,6 +10,7 @@
 
     const token = useCookie('token')
     const refreshToken = useCookie('refresh')
+    const user = useCookie('user')
 
     const formRef = useTemplateRef('formRef')
 
@@ -58,7 +59,8 @@
 
                     const jwtInfo = decodeJwt(token.value)
 
-                    user.value = await getUser(jwtInfo.user_id)
+                    user.value = JSON.stringify(await getUser(jwtInfo.user_id))
+
                     isLogin.value = true
                     loginDialog.value = false
 

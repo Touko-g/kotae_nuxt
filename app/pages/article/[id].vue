@@ -8,13 +8,16 @@
     const { mobile } = useDisplay()
     const { name } = useTheme()
     const highlighter = await useShiki()
+    const refreshCount = useState('refreshCount')
 
     // 安全获取 id
     const id = String(route.params.id ?? '')
 
     // 服务器端渲染加载
-    const { data: article, pending } = await useAsyncData('article', () =>
-        getArticle(id)
+    const { data: article } = await useLazyAsyncData(
+        'article',
+        () => getArticle(id),
+        { watch: [refreshCount] }
     )
 
     /**

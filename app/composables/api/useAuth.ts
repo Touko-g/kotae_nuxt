@@ -30,7 +30,9 @@ type RegisterCode = Pick<RegisterParams, 'email'>
 
 type RegisterCodeResponse = Pick<VerifyResponse, 'detail'>
 
-type LogoutParams = Pick<LoginResponse, 'refresh'>
+type LogoutParams = {
+    refresh_token: string
+}
 
 type ResetParams = Pick<
     RegisterParams,

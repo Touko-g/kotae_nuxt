@@ -1,11 +1,17 @@
 <script setup lang="ts">
-    import { ref, reactive, onMounted } from 'vue'
+    useSeoMeta({
+        title: 'Kotae',
+        ogTitle: 'Kotae',
+        description: 'Kotae 记录 创作 分享，寻找你的答案',
+        ogDescription: 'Kotae 记录 创作 分享，寻找你的答案',
+    })
 
     const { getArticleList } = useArticle()
     const { extractText } = useExtractText()
     const { fromNow } = useDayjs()
     const { t } = useLocale()
     const { isLogin } = useAuth()
+    const refreshCount = useState('refreshCount')
 
     // --- 状态 ---
     const articles = ref<Article[]>([])
@@ -23,7 +29,7 @@
 
     // --- 首屏数据 ---
     const { data } = await useAsyncData(
-        'articles',
+        'initData',
         async () => {
             const [recent, hot] = await Promise.all([
                 getArticleList({ page: 1, order: '-create_time' }),
@@ -32,7 +38,7 @@
             return { recent, hot }
         },
         {
-            watch: [isLogin],
+            watch: [isLogin, refreshCount],
         }
     )
 
@@ -174,6 +180,7 @@
                                 }"
                                 :title="article.title"
                                 :prepend-icon="`mdi-numeric-${key + 1}`"
+                                @click="navigateTo(`article/${article.id}`)"
                             ></v-list-item>
                         </v-list>
                     </v-card>

@@ -1,4 +1,3 @@
-// 类型定义
 export interface HttpOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     headers?: Record<string, string>
@@ -19,17 +18,19 @@ export class HttpError extends Error {
 export const useHttp = () => {
     const config = useRuntimeConfig()
     const { show } = useSnakebar()
+
+    const isRefresh = useState('isRefresh', () => false)
+    const refreshCount = useState('refreshCount', () => 0)
+
     const loadingCount = ref(0) // 并发安全 loading
     const loading = computed(() => loadingCount.value > 0)
 
-    // 核心请求方法
     const request = async <T>(
         url: string,
         options: HttpOptions = {}
     ): Promise<T> => {
         if (options.showLoading) loadingCount.value++
         const token = useCookie('token')?.value
-
         try {
             return await $fetch<T>(url, {
                 method: options.method || 'GET',
@@ -45,28 +46,63 @@ export const useHttp = () => {
                 onRequestError({ error }) {
                     show(error.message, 'error')
                 },
-                onResponseError({ response }) {
+                async onResponseError({ response }) {
                     const data = response._data
+                    const token = useCookie('token')
+                    const refreshToken = useCookie('refresh')
+                    const user = useCookie('user')
+                    const { refresh, isLogin } = useAuth()
 
-                    const showText = Object.values(data)[0]?.toString()
+                    // 避免 refresh 接口再次触发自身
+                    if (response.url.includes('/refresh')) {
+                        token.value = null
+                        refreshToken.value = null
+                        user.value = null
+                        isLogin.value = false
+                        show('登录过期，请重新登录', 'error')
+                        return
+                    }
 
-                    // 处理请求错误
-                    show(showText || response.statusText, 'error')
+                    if (response.status === 401 && refreshToken.value) {
+                        if (isRefresh.value) {
+                            return
+                        }
+
+                        try {
+                            isRefresh.value = true
+                            const data = await refresh({
+                                refresh: refreshToken.value,
+                            })
+                            token.value = data.access
+                            refreshToken.value = data.refresh
+                            isLogin.value = true
+                            refreshCount.value += 1
+                        } catch (e) {
+                            token.value = null
+                            refreshToken.value = null
+                            isLogin.value = false
+                            user.value = null
+                        } finally {
+                            isRefresh.value = false
+                        }
+                    } else {
+                        const showText = Object.values(data)[0]?.toString()
+
+                        // 处理请求错误
+                        show(showText || response.statusText, 'error')
+                    }
                 },
             })
         } catch (err: any) {
-            // 统一异常处理
             const message =
                 err?.data?.message || err?.message || 'Unknown Error'
             const status = err?.status
-            // show(message, 'error')
             throw new HttpError(message, status)
         } finally {
             if (options.showLoading) loadingCount.value--
         }
     }
 
-    // 快捷方法
     const get = <T>(
         url: string,
         params?: Record<string, any>,

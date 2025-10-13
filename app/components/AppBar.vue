@@ -3,12 +3,35 @@
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
     const loginDialog = useState('login')
-    const { isLogin } = useAuth()
+    const { isLogin, logout } = useAuth()
+
+    const user = useCookie<User | null>('user')
+    const { show } = useSnakebar()
+    const loading = useState('loading')
 
     const toggleLocal = () => {
         const newLocale = current.value === 'zh' ? 'en' : 'zh'
         current.value = newLocale
         setLocale(newLocale === 'zh' ? 'zh-cn' : 'en')
+    }
+
+    const handleLogout = async () => {
+        const refresh = useCookie('refresh')
+        const token = useCookie('token')
+        if (refresh.value) {
+            loading.value = true
+            try {
+                await logout({ refresh_token: refresh.value })
+                isLogin.value = false
+                refresh.value = null
+                token.value = null
+                user.value = null
+                show('已退出当前账号', 'success')
+            } catch (e) {
+            } finally {
+                loading.value = false
+            }
+        }
     }
 </script>
 
@@ -31,10 +54,12 @@
             <v-icon>mdi-translate</v-icon>
         </v-btn>
         <v-divider v-if="!isLogin" inset vertical :opacity="0.7" class="mx-6" />
-        <v-menu v-if="isLogin" location="bottom">
+        <v-menu v-if="isLogin && user" location="bottom">
             <template #activator="{ props }">
                 <v-btn icon v-bind="props">
-                    <v-icon>mdi-dots-vertical</v-icon>
+                    <v-avatar>
+                        <v-img :alt="user.username" :src="user.avatar" />
+                    </v-avatar>
                 </v-btn>
             </template>
             <v-list width="225">
@@ -45,19 +70,22 @@
                         {{ t('message') }}
                     </div>
                 </v-list-item>
-                <v-list-item prepend-icon="mdi-emoticon-lol-outline">
-                    {{ t('public_chat') }}
-                </v-list-item>
-                <v-list-item prepend-icon="mdi-palette">
-                    {{ t('ct') }}
+                <v-list-item
+                    prepend-icon="mdi-human"
+                    @click="navigateTo(`/user/${user.id}`)"
+                >
+                    {{ t('about_me') }}
                 </v-list-item>
                 <v-list-item prepend-icon="mdi-key">
                     {{ t('change_psw') }}
                 </v-list-item>
-                <v-list-item prepend-icon="mdi-human">
-                    {{ t('about_me') }}
+                <v-list-item prepend-icon="mdi-emoticon-lol-outline">
+                    {{ t('public_chat') }}
                 </v-list-item>
-                <v-list-item prepend-icon="mdi-logout">
+                <v-list-item prepend-icon="mdi-palette">
+                    {{ t('color_palette') }}
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-logout" @click="handleLogout">
                     {{ t('logout') }}
                 </v-list-item>
             </v-list>
@@ -78,6 +106,7 @@
     <LoginDialog />
     <RegisterDialog />
     <ResetDialog />
+    <FetchLoading />
 </template>
 
 <style scoped></style>
