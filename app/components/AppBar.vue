@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    const route = useRoute()
     const theme = useTheme()
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
@@ -26,6 +27,14 @@
                 refresh.value = null
                 token.value = null
                 user.value = null
+                if (
+                    !(
+                        route.fullPath === '/' ||
+                        route.fullPath.startsWith('/article')
+                    )
+                ) {
+                    navigateTo('/')
+                }
                 show('已退出当前账号', 'success')
             } catch (e) {
             } finally {

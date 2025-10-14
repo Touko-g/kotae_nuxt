@@ -1,14 +1,17 @@
 <script setup lang="ts">
+    import COS from 'cos-js-sdk-v5'
     const route = useRoute()
 
     const id = String(route.params.id ?? '')
 
     const { getUser } = useUser()
     const { getArticleList } = useArticle()
-    const { getPhotoList } = usePhoto()
+    const { addPhoto, getPhotoList } = usePhoto()
+    const { getCosKey } = useAuth()
 
+    const { show } = useSnakebar()
     const { t } = useLocale()
-    const { fromNow } = useDayjs()
+    const { fromNow, format } = useDayjs()
     const { width } = useDisplay()
 
     const refreshCount = useState('refreshCount')
@@ -30,7 +33,14 @@
         user: '',
     })
 
-    const { data: user } = await useLazyAsyncData('user', () => getUser(id), {
+    const photoData = reactive({
+        photoName: '',
+        photoPath: '',
+        cosLoading: false,
+        uploadLoading: false,
+    })
+
+    const { data: user } = await useAsyncData('user', () => getUser(id), {
         watch: [refreshCount],
     })
 
@@ -39,7 +49,7 @@
         photoPage.user = user.value.username
     }
 
-    const { data: articles } = await useLazyAsyncData(
+    const { data: articles } = await useAsyncData(
         'articles',
         () => getArticleList({ ...articleQuery }),
         {
@@ -54,7 +64,7 @@
         )
     }
 
-    const { data: photos } = await useLazyAsyncData(
+    const { data: photos } = await useAsyncData(
         'photos',
         () => getPhotoList({ ...photoPage }),
         { watch: [refreshCount] }
@@ -69,6 +79,54 @@
     const isSelf = computed(() => {
         return loginUser.value?.id === Number(id)
     })
+
+    const handleUpload = async (file: File | File[]) => {
+        if (!file || Array.isArray(file)) return
+        try {
+            photoData.cosLoading = true
+            const { credentials } = await getCosKey()
+
+            const cos = new COS({
+                SecretId: credentials.tmpSecretId,
+                SecretKey: credentials.tmpSecretKey,
+                XCosSecurityToken: credentials.sessionToken,
+            })
+
+            cos.putObject({
+                Bucket: 'chen-1302611521' /* 存储桶 */,
+                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
+                Key: `/blog/photo/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
+                StorageClass: 'STANDARD', // 上传模式, 标准模式
+                Body: file, // 上传文件对象
+                onProgress: () => {},
+            })
+                .then(res => (photoData.photoPath = `https://${res.Location}`))
+                .catch(err => show(err, 'error'))
+        } catch (e) {
+        } finally {
+            photoData.cosLoading = false
+        }
+    }
+
+    const uploadPhoto = async () => {
+        try {
+            photoData.uploadLoading = true
+            await addPhoto({
+                picture: photoData.photoPath,
+                name: photoData.photoName,
+            })
+            show('upload success')
+        } catch (e) {
+        } finally {
+            photoData.uploadLoading = false
+            resetPhoto()
+        }
+    }
+
+    const resetPhoto = () => {
+        photoData.photoName = ''
+        photoData.photoPath = ''
+    }
 
     const changePage = (page: number) => {
         articleQuery.page = page
@@ -107,7 +165,13 @@
                         </v-card-text>
                         <v-card-actions v-show="isSelf">
                             <v-spacer />
-                            <v-btn variant="text">{{ t('edit_user') }}</v-btn>
+                            <v-btn
+                                variant="text"
+                                @click="
+                                    navigateTo(`/user/${user.username}/profile`)
+                                "
+                                >{{ t('edit_user') }}</v-btn
+                            >
                             <v-spacer />
                         </v-card-actions>
                     </v-card>
@@ -155,25 +219,37 @@
                             <v-sheet v-show="isSelf" class="mt-4">
                                 <v-file-input
                                     prepend-icon="mdi-image-plus"
+                                    :loading="photoData.cosLoading"
                                     chips
+                                    show-size
+                                    counter
                                     density="compact"
-                                    accept="image/png, image/jpeg, image/bmp"
+                                    accept="image/png, image/jpeg, image/bmp, image/webp"
                                     variant="outlined"
                                     :label="t('photo')"
+                                    @update:model-value="handleUpload"
                                 >
                                 </v-file-input>
                                 <v-text-field
+                                    v-model="photoData.photoName"
                                     density="compact"
                                     variant="outlined"
                                     :label="t('photo_name')"
                                 ></v-text-field>
                                 <v-sheet class="d-flex">
-                                    <v-btn size="small">{{
-                                        t('upload')
-                                    }}</v-btn>
-                                    <v-btn size="small" class="ml-2">{{
-                                        t('reset')
-                                    }}</v-btn>
+                                    <v-btn
+                                        size="small"
+                                        :disabled="!photoData.photoPath"
+                                        :loading="photoData.uploadLoading"
+                                        @click="uploadPhoto"
+                                        >{{ t('upload') }}</v-btn
+                                    >
+                                    <v-btn
+                                        size="small"
+                                        class="ml-2"
+                                        @click="resetPhoto"
+                                        >{{ t('reset') }}</v-btn
+                                    >
                                 </v-sheet>
                             </v-sheet>
                         </v-card-text>

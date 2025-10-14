@@ -1,22 +1,31 @@
 <script setup lang="ts">
     import DOMPurify from 'dompurify'
-    import ArticleComment from '~/components/ArticleComment.vue'
     const route = useRoute()
+
     const { getArticle } = useArticle()
+    const { getLikeList, addLike } = useLike()
+
     const { fromNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
     const { name } = useTheme()
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
+    const user = useCookie<User>('user')
 
     // 安全获取 id
     const id = String(route.params.id ?? '')
 
     // 服务器端渲染加载
-    const { data: article } = await useLazyAsyncData(
+    const { data: article } = await useAsyncData(
         'article',
         () => getArticle(id),
+        { watch: [refreshCount] }
+    )
+
+    const { data: like } = await useAsyncData(
+        'like',
+        () => getLikeList({ article: id, pagesize: 10000 }),
         { watch: [refreshCount] }
     )
 
@@ -48,6 +57,15 @@
         )
     }
 
+    const handleLike = async () => {
+        try {
+            await addLike({ article: article.value?.id })
+            if (typeof refreshCount.value === 'number') {
+                refreshCount.value += 1
+            }
+        } catch (e) {}
+    }
+
     // 动态标题
     watchEffect(() => {
         if (article.value?.title) {
@@ -56,6 +74,14 @@
                 ogTitle: article.value.title,
             })
         }
+    })
+
+    const isLike = computed(() => {
+        if (like.value?.results && user.value) {
+            const userId = user.value.id
+            return like.value.results.some(item => item.user_info.id === userId)
+        }
+        return false
     })
 
     onMounted(() => {
@@ -72,7 +98,13 @@
     <v-card v-if="article" variant="text" class="pa-2 pa-sm-8">
         <v-card-title>
             <div class="d-flex">
-                <v-btn size="60" icon variant="flat">
+                <v-btn
+                    v-permission
+                    size="60"
+                    icon
+                    variant="flat"
+                    @click="navigateTo(`/user/${article.owner.id}`)"
+                >
                     <v-avatar size="60">
                         <v-img
                             :src="article.owner.avatar"
@@ -140,9 +172,24 @@
                             variant="text"
                         >
                         </v-btn>
-                        <v-btn icon="mdi-trash-can-outline" variant="text">
+                        <v-btn
+                            v-permission
+                            icon="mdi-trash-can-outline"
+                            variant="text"
+                        >
                         </v-btn>
-                        <v-btn icon="mdi-thumb-up-outline" variant="text" />
+                        <v-btn
+                            v-permission
+                            icon="mdi-thumb-up-outline"
+                            variant="text"
+                            :color="isLike ? 'primary' : ''"
+                            @click="handleLike"
+                        />
+                        <span
+                            v-if="article.likes"
+                            :class="isLike && 'text-primary'"
+                            >{{ article.likes }}</span
+                        >
                     </div>
                 </div>
             </div>

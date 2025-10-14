@@ -1,9 +1,11 @@
 <script setup lang="ts">
+    import EmojiPicker from 'vue3-emoji-picker'
+    import 'vue3-emoji-picker/css'
     interface Props {
         article: number
     }
     const { article } = defineProps<Props>()
-    const { getCommentList } = useComment()
+    const { getCommentList, postComment } = useComment()
     const { formatNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
@@ -16,6 +18,8 @@
         count: 0,
         order: 'create_time',
     })
+
+    const emojiDialog = ref(false)
 
     const data = reactive({
         dialog: false,
@@ -34,7 +38,11 @@
         search.count = Math.ceil(comments.value.count / 10)
     }
 
-    const postComment = async () => {}
+    const onSelectEmoji = (emoji: any) => {
+        comment.value += emoji.i
+    }
+
+    const handlePostComment = async () => {}
 
     const byTime = () => {
         search.order === 'create_time'
@@ -69,7 +77,7 @@
             density="comfortable"
             color="primary"
             variant="underlined"
-            @keyup.enter="postComment"
+            @keyup.enter="handlePostComment"
         >
             <template #prepend-inner>
                 <v-btn
@@ -77,6 +85,7 @@
                     size="small"
                     color="primary"
                     variant="plain"
+                    @click="emojiDialog = true"
                 ></v-btn>
             </template>
             <template #append>
@@ -84,7 +93,7 @@
                     variant="flat"
                     color="primary"
                     class="ml-4"
-                    @click="postComment"
+                    @click="handlePostComment"
                     >{{ t('post_comment') }}</v-btn
                 >
             </template>
@@ -289,6 +298,19 @@
         ></v-pagination>
     </div>
     <div v-else class="my-2 text-grey">{{ t('noc') }}</div>
+    <v-dialog
+        v-model="emojiDialog"
+        width="auto"
+        transition="dialog-top-transition"
+        @click:outside="emojiDialog = false"
+    >
+        <EmojiPicker
+            :native="true"
+            hide-search
+            :disabled-groups="['flags']"
+            @select="onSelectEmoji"
+        />
+    </v-dialog>
 </template>
 
 <style scoped></style>

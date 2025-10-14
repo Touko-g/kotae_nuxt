@@ -3,27 +3,25 @@ export default defineNuxtPlugin(nuxtApp => {
 
     nuxtApp.vueApp.directive('permission', {
         mounted(el, binding) {
-            const token = useCookie('token').value
-            const permissions = useState<string[]>('permissions').value
             const value = binding.value
-            // 未登录禁用
-            if (!token) {
-                el.addEventListener('click', (e: Event) => {
+
+            el.addEventListener('click', (e: Event) => {
+                const token = useCookie('token').value
+                const permissions = useState<string[]>('permissions').value
+
+                if (!token) {
                     e.preventDefault()
                     e.stopPropagation()
                     loginDialog.value = true
-                })
-                return
-            }
+                    return
+                }
 
-            // 无权限禁用
-            if (value && !permissions.includes(value)) {
-                el.addEventListener('click', (e: Event) => {
+                if (value && !permissions.includes(value)) {
                     e.preventDefault()
                     e.stopPropagation()
                     alert('无操作权限')
-                })
-            }
+                }
+            })
         },
     })
 })

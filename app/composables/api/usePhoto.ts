@@ -13,11 +13,15 @@ export interface PhotoListParams extends BaseParams {
 
 type PhotoListResponse = BaseResponse<Photo>
 
+type PhotoParams = Pick<Photo, 'picture'> & Partial<Pick<Photo, 'name'>>
+
 export const usePhoto = () => {
-    const { get } = useHttp()
+    const { get, post } = useHttp()
 
     const getPhotoList = (params: PhotoListParams) =>
         get<PhotoListResponse>('/photo/', params)
 
-    return { getPhotoList }
+    const addPhoto = (params: PhotoParams) => post<Photo>('/photo/', params)
+
+    return { getPhotoList, addPhoto }
 }

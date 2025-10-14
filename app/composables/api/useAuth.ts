@@ -39,8 +39,20 @@ type ResetParams = Pick<
     'email' | 'code' | 'password' | 'password2'
 >
 
+export type CosKeyResponse = {
+    credentials: {
+        sessionToken: string
+        tmpSecretId: string
+        tmpSecretKey: string
+    }
+    expiration: string
+    expiredTime: number
+    requestId: string
+    startTime: number
+}
+
 export const useAuth = () => {
-    const { post, put } = useHttp()
+    const { get, post, put } = useHttp()
 
     const isLogin = useState('isLogin', () => false)
 
@@ -69,6 +81,8 @@ export const useAuth = () => {
 
     const logoutAll = () => post('/logout_all/')
 
+    const getCosKey = () => get<CosKeyResponse>('/coskey/')
+
     return {
         isLogin,
         login,
@@ -80,5 +94,6 @@ export const useAuth = () => {
         register,
         logout,
         logoutAll,
+        getCosKey,
     }
 }

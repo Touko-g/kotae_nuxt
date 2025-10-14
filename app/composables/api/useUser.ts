@@ -11,10 +11,15 @@ export interface User {
 
 export type SimpleUser = Pick<User, 'id' | 'username' | 'avatar'>
 
+export type UpdateUser = Pick<User, 'username' | 'avatar' | 'about' | 'email'>
+
 export const useUser = () => {
-    const { get } = useHttp()
+    const { get, put } = useHttp()
 
     const getUser = (id: string | number) => get<User>(`user/${id}`)
 
-    return { getUser }
+    const updateUser = (id: string | number, userData: UpdateUser) =>
+        put<User>(`user/${id}/`, userData)
+
+    return { getUser, updateUser }
 }
