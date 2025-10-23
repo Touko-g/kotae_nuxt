@@ -10,6 +10,11 @@ export default defineNuxtConfig({
                     name: 'viewport',
                     content: 'width=device-width, initial-scale=1',
                 },
+                {
+                    name: 'description',
+                    content: 'Kotae 记录 创作 分享，寻找你的答案',
+                },
+                { name: 'keywords', content: '前端, 生活, 记录, 博客' },
             ],
             link: [
                 {
