@@ -80,11 +80,6 @@
 
     // --- 监听滚动触发 ---
     onMounted(() => {
-        if (data.value?.recent?.results) {
-            articles.value = data.value.recent.results
-            page.count = Math.ceil(data.value.recent.count / 10)
-        }
-
         observer.value = new IntersectionObserver(
             async entries => {
                 if (entries[0]?.isIntersecting) {
@@ -115,7 +110,6 @@
                     class="mr-2"
                     link
                     :rounded="0"
-                    :append-avatar="article.owner.avatar"
                     :title="article.title"
                     transition="fade-transition"
                     :loading="index + 1 === articles.length && loading"
@@ -125,6 +119,18 @@
                         <div class="d-flex justify-between">
                             <span>{{ article.owner.username }}</span>
                         </div>
+                    </template>
+                    <template #append>
+                        <v-avatar
+                            @click.stop="
+                                navigateTo(`/user/${article.owner.id}`)
+                            "
+                        >
+                            <v-img
+                                :src="article.owner.avatar"
+                                alt="avatar"
+                            ></v-img>
+                        </v-avatar>
                     </template>
                     <v-card-text>
                         <p class="line-clamp-2">
@@ -184,8 +190,6 @@
                             ></v-list-item>
                         </v-list>
                     </v-card>
-
-                    <v-card class="mt-4"> 其他内容 </v-card>
                 </div>
             </v-col>
         </v-row>

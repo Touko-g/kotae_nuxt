@@ -10,7 +10,7 @@ export interface ReplyComment extends BaseComment {
     reply_user: string
 }
 
-export interface Comment extends BaseComment {
+export interface Comment extends ReplyComment {
     article: number
     article_info: SimpleArticle
     reply: number | null
@@ -35,7 +35,7 @@ export const useComment = () => {
     const getCommentList = (options: CommentListParams) =>
         get<CommentListResponse>('/comment', options)
     const postComment = (params: CommentParam) =>
-        post<Comment>('/comment', params)
+        post<Comment>('/comment/', params)
 
     return {
         getCommentList,

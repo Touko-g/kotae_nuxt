@@ -1,5 +1,15 @@
 <script setup lang="ts">
     import COS from 'cos-js-sdk-v5'
+
+    definePageMeta({
+        middleware: 'auth',
+    })
+
+    useSeoMeta({
+        title: '个人信息',
+        ogTitle: '个人信息',
+    })
+
     const route = useRoute()
 
     const id = String(route.params.id ?? '')
@@ -65,7 +75,7 @@
     }
 
     const { data: photos } = await useAsyncData(
-        'photos',
+        'photo',
         () => getPhotoList({ ...photoPage }),
         { watch: [refreshCount] }
     )
@@ -115,7 +125,7 @@
                 picture: photoData.photoPath,
                 name: photoData.photoName,
             })
-            show('upload success')
+            show(t('upload_success'), 'success')
         } catch (e) {
         } finally {
             photoData.uploadLoading = false
@@ -187,6 +197,11 @@
                                     v-if="photos?.results.length"
                                     flat
                                     size="small"
+                                    @click="
+                                        navigateTo(
+                                            `/user/${user.username}/photo`
+                                        )
+                                    "
                                     >{{ t('more') }}</v-btn
                                 >
                             </v-sheet>

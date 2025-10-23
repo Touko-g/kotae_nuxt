@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import { onMounted, ref } from 'vue'
-
     const route = useRoute()
     const { t } = useLocale()
     const { getArticleList } = useArticle()
@@ -20,22 +18,37 @@
     })
 
     const scrollRef = useTemplateRef('scrollRef')
-
     const observer = ref<IntersectionObserver | null>(null)
 
-    const { data } = await useAsyncData('search', () =>
-        getArticleList({
-            ...page,
+    const fetchArticles = async () => {
+        loading.value = true
+        const { results, count } = await getArticleList({
+            page: 1,
             [route.query.type as string]: route.query.query,
         })
-    )
-
-    if (data.value?.results) {
-        articles.value = data.value.results
-        page.count = Math.ceil(data.value.count / 10)
+        articles.value = results || []
+        page.page = 1
+        page.count = Math.ceil((count || 0) / 10)
+        loading.value = false
     }
 
-    // --- 加载更多文章 ---
+    // 初始化加载
+    await fetchArticles()
+
+    // --- 监听 query 变化重新请求 ---
+    watch(
+        () => ({ ...route.query }),
+        async (newVal, oldVal) => {
+            if (
+                newVal.query !== oldVal?.query ||
+                newVal.type !== oldVal?.type
+            ) {
+                await fetchArticles()
+            }
+        }
+    )
+
+    // --- 加载更多 ---
     const loadArticles = async () => {
         if (loading.value) return
         if (page.page >= page.count) return
@@ -47,20 +60,13 @@
             page: page.page,
             [route.query.type as string]: route.query.query,
         })
-
         if (results?.length) {
             articles.value.push(...results)
         }
-
         loading.value = false
     }
 
     onMounted(async () => {
-        if (data.value?.results) {
-            articles.value = data.value.results
-            page.count = Math.ceil(data.value.count / 10)
-        }
-
         observer.value = new IntersectionObserver(
             async entries => {
                 if (entries[0]?.isIntersecting) {
@@ -71,18 +77,14 @@
         )
 
         await nextTick()
-        if (scrollRef.value) {
-            observer.value.observe(scrollRef.value)
-        }
+        if (scrollRef.value) observer.value.observe(scrollRef.value)
     })
 
-    onUnmounted(() => {
-        observer.value?.disconnect()
-    })
+    onUnmounted(() => observer.value?.disconnect())
 </script>
 
 <template>
-    <v-container>
+    <v-container class="max-w-5xl mx-auto px-4 py-10">
         <v-alert
             class="mt-5"
             variant="outlined"
@@ -90,13 +92,12 @@
             :text="t(`search_list`, route.query.query)"
         ></v-alert>
         <v-row class="py-6">
-            <v-col v-if="articles">
+            <v-col v-for="(article, index) in articles" :key="article.id">
                 <v-card
-                    v-for="(article, index) in articles"
-                    :key="article.id"
                     v-intersect
                     link
-                    :rounded="0"
+                    variant="outlined"
+                    rounded="lg"
                     :append-avatar="article.owner.avatar"
                     :title="article.title"
                     transition="fade-transition"

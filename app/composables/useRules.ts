@@ -14,6 +14,8 @@ export function useRules() {
             (v: string) => /.+@.+\..+/.test(v) || 'E-mail must be valid',
         ],
         codeRules: [(v: string) => (!!v && !!v.trim()) || 'Code is required'],
+        titleRules: [(v: string) => (!!v && !!v.trim()) || 'Title is required'],
+        tagRules: [(v: []) => !!v.length || 'Tag is required'],
     })
 
     return { rules }

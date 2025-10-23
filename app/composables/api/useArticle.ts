@@ -26,13 +26,30 @@ export interface ArticleListParams extends BaseParams {
     author?: string
 }
 
+export interface ArticleCreateParams {
+    title: string
+    tag: Array<Pick<Tag, 'name'>>
+    content: string
+}
+
 // 响应结构
 type ArticleListResponse = BaseResponse<Article>
 
 export const useArticle = () => {
-    const { get } = useHttp()
+    const { get, post, put, del } = useHttp()
     const getArticle = (id: number | string) => get<Article>(`/article/${id}`)
     const getArticleList = (options: ArticleListParams) =>
         get<ArticleListResponse>('/article', options)
-    return { getArticle, getArticleList }
+    const createArticle = (params: ArticleCreateParams) =>
+        post<Article>(`/article/create`, params)
+    const updateArticle = (id: number | string, params: ArticleCreateParams) =>
+        put<Article>(`/article/${id}/`, params)
+    const delArticle = (id: number | string) => del(`/article/${id}`)
+    return {
+        getArticle,
+        getArticleList,
+        createArticle,
+        updateArticle,
+        delArticle,
+    }
 }

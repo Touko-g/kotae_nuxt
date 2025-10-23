@@ -1,17 +1,23 @@
 <script setup lang="ts">
     import DOMPurify from 'dompurify'
+    import type { ConfirmDialog } from '#components'
     const route = useRoute()
 
-    const { getArticle } = useArticle()
+    const { getArticle, delArticle } = useArticle()
     const { getLikeList, addLike } = useLike()
 
     const { fromNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
     const { name } = useTheme()
+    const { show } = useSnakebar()
+
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
+    const isLogin = useState('isLogin')
     const user = useCookie<User>('user')
+
+    const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 
     // 安全获取 id
     const id = String(route.params.id ?? '')
@@ -57,7 +63,26 @@
         )
     }
 
+    const handleEdit = () => {
+        if (!isLogin.value) return
+        navigateTo(`/article/edit/${id}`)
+    }
+
+    const handleOpenDel = async () => {
+        if (!isLogin.value || !confirmRef.value) return
+        const confirmed = await confirmRef.value.open('del_article')
+        if (!confirmed) return
+        if (article.value) {
+            try {
+                await delArticle(article.value.id)
+                show(t('article_delete_success'), 'success')
+                navigateTo('/')
+            } catch (e) {}
+        }
+    }
+
     const handleLike = async () => {
+        if (!isLogin.value) return
         try {
             await addLike({ article: article.value?.id })
             if (typeof refreshCount.value === 'number') {
@@ -131,7 +156,6 @@
                 {{ article.title }}
             </div>
             <div>
-                <v-divider class="my-2" color="surface" />
                 <!-- eslint-disable vue/no-v-html -->
                 <div class="markdown-body" v-html="article.content"></div>
                 <div class="d-sm-flex align-center mt-6">
@@ -156,7 +180,6 @@
                         </v-chip>
                     </v-chip-group>
                 </div>
-                <v-divider class="my-2" color="surface" />
                 <div class="d-flex justify-space-between">
                     <div class="d-flex">
                         <v-btn
@@ -167,17 +190,24 @@
                     </div>
                     <div class="d-flex">
                         <v-btn
+                            v-if="
+                                article.public && article.owner.id === user?.id
+                            "
                             v-permission
                             icon="mdi-circle-edit-outline"
                             variant="text"
-                        >
-                        </v-btn>
+                            @click="handleEdit"
+                        />
+
                         <v-btn
+                            v-if="
+                                article.public && article.owner.id === user?.id
+                            "
                             v-permission
                             icon="mdi-trash-can-outline"
                             variant="text"
-                        >
-                        </v-btn>
+                            @click="handleOpenDel"
+                        />
                         <v-btn
                             v-permission
                             icon="mdi-thumb-up-outline"
@@ -195,6 +225,7 @@
             </div>
             <ArticleComment :article="article.id" />
         </v-card-text>
+        <ConfirmDialog ref="confirmRef" />
     </v-card>
 </template>
 

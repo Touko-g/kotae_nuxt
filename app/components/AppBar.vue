@@ -4,6 +4,7 @@
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
     const loginDialog = useState('login')
+    const searchDialog = useState('search')
     const { isLogin, logout } = useAuth()
 
     const user = useCookie<User | null>('user')
@@ -35,7 +36,7 @@
                 ) {
                     navigateTo('/')
                 }
-                show('已退出当前账号', 'success')
+                show(t('logout_success'), 'success')
             } catch (e) {
             } finally {
                 loading.value = false
@@ -50,10 +51,10 @@
             Kotae
         </v-app-bar-title>
         <v-spacer></v-spacer>
-        <v-btn icon>
+        <v-btn icon @click="searchDialog = true">
             <v-icon>mdi-magnify</v-icon>
         </v-btn>
-        <v-btn icon>
+        <v-btn icon @click="navigateTo('/article/like')">
             <v-icon>mdi-heart</v-icon>
         </v-btn>
         <v-btn icon @click="theme.toggle()">
@@ -72,7 +73,10 @@
                 </v-btn>
             </template>
             <v-list width="225">
-                <v-list-item prepend-icon="mdi-message-reply-outline">
+                <v-list-item
+                    prepend-icon="mdi-message-reply-outline"
+                    @click="navigateTo('/message')"
+                >
                     <div
                         class="w-100 d-flex justify-space-between align-center"
                     >
@@ -85,15 +89,18 @@
                 >
                     {{ t('about_me') }}
                 </v-list-item>
-                <v-list-item prepend-icon="mdi-key">
+                <v-list-item
+                    prepend-icon="mdi-key"
+                    @click="navigateTo('/user/editPwd')"
+                >
                     {{ t('change_psw') }}
                 </v-list-item>
-                <v-list-item prepend-icon="mdi-emoticon-lol-outline">
-                    {{ t('public_chat') }}
-                </v-list-item>
-                <v-list-item prepend-icon="mdi-palette">
-                    {{ t('color_palette') }}
-                </v-list-item>
+                <!--                <v-list-item prepend-icon="mdi-emoticon-lol-outline">-->
+                <!--                    {{ t('public_chat') }}-->
+                <!--                </v-list-item>-->
+                <!--                <v-list-item prepend-icon="mdi-palette">-->
+                <!--                    {{ t('color_palette') }}-->
+                <!--                </v-list-item>-->
                 <v-list-item prepend-icon="mdi-logout" @click="handleLogout">
                     {{ t('logout') }}
                 </v-list-item>
@@ -116,6 +123,7 @@
     <RegisterDialog />
     <ResetDialog />
     <FetchLoading />
+    <SearchDialog />
 </template>
 
 <style scoped></style>

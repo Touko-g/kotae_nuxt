@@ -21,12 +21,14 @@ export type LikeListResponse = BaseResponse<Like>
 type AddLikeParam = Pick<LikeListParams, 'article'>
 
 export const useLike = () => {
-    const { get, post } = useHttp()
+    const { get, post, del } = useHttp()
 
     const getLikeList = (params: LikeListParams) =>
         get<LikeListResponse>('/like/', params)
 
     const addLike = (params: AddLikeParam) => post<Like>('/like/', params)
 
-    return { getLikeList, addLike }
+    const delLike = (id: number | string) => del(`/like/${id}`)
+
+    return { getLikeList, addLike, delLike }
 }

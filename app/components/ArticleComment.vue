@@ -9,9 +9,16 @@
     const { formatNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
+    const { show } = useSnakebar()
+    const isLogin = useState('isLogin')
+    const refreshCount = useState<number>('refreshCount')
 
     const comment = ref('')
     const comments = ref<CommentListResponse | null>(null)
+    const commentListRef = useTemplateRef('commentListRef')
+    const commentLoading = ref(false)
+    const replyLoading = ref(false)
+
     const search = reactive({
         page: 1,
         pageSize: 10,
@@ -20,16 +27,17 @@
     })
 
     const emojiDialog = ref(false)
+    const replyDialog = ref(false)
 
     const data = reactive({
         dialog: false,
         reply_info: {
-            article: 0,
             reply: 0,
+            reply_user: '',
             content: '',
-            k: 0,
+            replyIndex: 0,
+            isReply: false,
         },
-        reply_user_info: null,
         flag_id: 0,
     })
 
@@ -39,10 +47,42 @@
     }
 
     const onSelectEmoji = (emoji: any) => {
-        comment.value += emoji.i
+        if (replyDialog.value) {
+            data.reply_info.content += emoji.i
+        } else comment.value += emoji.i
     }
 
-    const handlePostComment = async () => {}
+    const handlePostComment = async () => {
+        if (!isLogin.value) return
+
+        if (comment.value.length) {
+            try {
+                commentLoading.value = true
+                const data = await postComment({
+                    article,
+                    content: comment.value,
+                })
+                comment.value = ''
+
+                if (search.order === 'create_time') {
+                    comments.value?.results.push(data)
+                    // 滚动到末尾
+                    commentListRef.value?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'end',
+                        inline: 'nearest',
+                    })
+                } else {
+                    comments.value?.results.unshift(data)
+                }
+
+                show(t('comment_success'), 'success')
+            } catch (e) {
+            } finally {
+                commentLoading.value = false
+            }
+        }
+    }
 
     const byTime = () => {
         search.order === 'create_time'
@@ -61,20 +101,77 @@
     }
 
     /**
+     * 打开回复对话框
+     * @param reply 回复信息
+     * @param index 当前回复信息所处 comments 列表下标，用于插入回复信息
+     * @param isReply 是否二次回复
+     */
+    const handleOpen = (
+        reply: ReplyComment | BaseComment,
+        index: number,
+        isReply: boolean
+    ) => {
+        data.reply_info.reply = reply.id
+        data.reply_info.reply_user = reply.user_info.username
+        data.reply_info.replyIndex = index
+        data.reply_info.isReply = isReply
+        replyDialog.value = true
+    }
+
+    /**
+     * 重置回复弹窗
+     */
+    const handleReset = () => {
+        replyDialog.value = false
+        data.reply_info.content = ''
+        replyLoading.value = false
+    }
+
+    const handleReply = async () => {
+        if (data.reply_info.content.length) {
+            try {
+                replyLoading.value = true
+                const res = await postComment({
+                    article,
+                    content: data.reply_info.content,
+                    reply: data.reply_info.reply,
+                })
+
+                replyDialog.value = false
+
+                // 二次回复设置回复人
+                if (data.reply_info.isReply) {
+                    res.reply_user = data.reply_info.reply_user
+                }
+                // 插入至对应评论位置,减少网络请求
+                comments.value?.results[
+                    data.reply_info.replyIndex
+                ]?.comment_replies.push(res)
+                show(t('reply_success'), 'success')
+            } catch (e) {
+            } finally {
+                handleReset()
+            }
+        }
+    }
+
+    /**
      * 从 ip_address 中提取省份，如果没有匹配到就返回原始字符串
      */
     const extractProvince = (ip: string): string => {
         return ip.match(/(.+)(?=省)/)?.[0] ?? ip
     }
 
-    getComments(search)
+    useAsyncData('comments', () => getComments(search), {
+        watch: [refreshCount],
+    })
 </script>
 
 <template>
     <div class="d-flex">
         <v-text-field
-            v-model="comment"
-            density="comfortable"
+            v-model.trim="comment"
+            density="compact"
             color="primary"
             variant="underlined"
             @keyup.enter="handlePostComment"
@@ -84,15 +181,17 @@
                     icon="mdi-emoticon-sick-outline"
                     size="small"
                     color="primary"
-                    variant="plain"
+                    variant="text"
                     @click="emojiDialog = true"
                 ></v-btn>
             </template>
             <template #append>
                 <v-btn
+                    v-permission
                     variant="flat"
                     color="primary"
                     class="ml-4"
+                    :loading="commentLoading"
                     @click="handlePostComment"
                     >{{ t('post_comment') }}</v-btn
                 >
@@ -117,13 +216,13 @@
         </v-btn>
     </div>
     <v-divider class="mt-6" color="surface" />
-    <div v-if="comments?.results.length" ref="el">
+    <div v-if="comments?.results.length" ref="commentListRef">
         <DelayFade>
             <div
-                v-for="(comment, k) in comments.results"
+                v-for="(comment, index) in comments.results"
                 :key="comment.id"
                 class="d-flex align-start my-6"
-                :data-index="k"
+                :data-index="index"
             >
                 <v-btn size="45" icon variant="flat" class="mr-4">
                     <v-avatar size="45">
@@ -170,6 +269,8 @@
                             density="compact"
                             color="grey"
                             class="mx-2"
+                            :disabled="!isLogin"
+                            @click="handleOpen(comment, index, false)"
                         >
                             {{ t('reply') }}
                         </v-btn>
@@ -262,6 +363,14 @@
                                                 density="compact"
                                                 color="grey"
                                                 class="mx-2"
+                                                :disabled="!isLogin"
+                                                @click="
+                                                    handleOpen(
+                                                        reply_comment,
+                                                        index,
+                                                        true
+                                                    )
+                                                "
                                             >
                                                 {{ t('reply') }}
                                             </v-btn>
@@ -310,6 +419,41 @@
             :disabled-groups="['flags']"
             @select="onSelectEmoji"
         />
+    </v-dialog>
+    <v-dialog
+        v-model="replyDialog"
+        width="auto"
+        transition="dialog-top-transition"
+        @click:outside="handleReset"
+    >
+        <v-card width="300">
+            <v-card-title> To : {{ data.reply_info.reply_user }} </v-card-title>
+            <v-card-text>
+                <v-textarea
+                    v-model.trim="data.reply_info.content"
+                    density="comfortable"
+                    color="primary"
+                    variant="underlined"
+                />
+                <v-btn
+                    icon="mdi-emoticon-sick-outline"
+                    color="primary"
+                    class="mr-2"
+                    variant="plain"
+                    @click="emojiDialog = true"
+                ></v-btn>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn
+                    color="primary"
+                    :loading="replyLoading"
+                    @click="handleReply"
+                    >{{ t('confirm') }}</v-btn
+                >
+                <v-btn @click="handleReset">{{ t('cancel') }}</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 </template>
 

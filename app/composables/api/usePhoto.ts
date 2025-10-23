@@ -16,12 +16,14 @@ type PhotoListResponse = BaseResponse<Photo>
 type PhotoParams = Pick<Photo, 'picture'> & Partial<Pick<Photo, 'name'>>
 
 export const usePhoto = () => {
-    const { get, post } = useHttp()
+    const { get, post, del } = useHttp()
 
     const getPhotoList = (params: PhotoListParams) =>
         get<PhotoListResponse>('/photo/', params)
 
     const addPhoto = (params: PhotoParams) => post<Photo>('/photo/', params)
 
-    return { getPhotoList, addPhoto }
+    const delPhoto = (id: string | number) => del(`/photo/${id}`)
+
+    return { getPhotoList, addPhoto, delPhoto }
 }

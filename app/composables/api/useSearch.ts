@@ -1,8 +1,13 @@
 type SearchResponse = BaseResponse<Tag>
 
+type search = {
+    name: string
+}
+
 export const useSearch = () => {
-    const { get } = useHttp()
+    const { get, post } = useHttp()
     const getSearchList = (options: BaseParams) =>
         get<SearchResponse>('/search', options)
-    return { getSearchList }
+    const addSearch = (params: search) => post('/search/', params)
+    return { getSearchList, addSearch }
 }

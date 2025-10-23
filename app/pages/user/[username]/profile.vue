@@ -1,6 +1,15 @@
 <script setup lang="ts">
     import COS from 'cos-js-sdk-v5'
 
+    definePageMeta({
+        middleware: 'auth',
+    })
+
+    useSeoMeta({
+        title: '修改个人信息',
+        ogTitle: '修改个人信息',
+    })
+
     const { getCosKey } = useAuth()
     const { updateUser } = useUser()
     const { rules } = useRules()
@@ -76,7 +85,7 @@
                     user.value.about = userForm.about
                     user.value.avatar = userForm.avatar
 
-                    show('userinfo update', 'success')
+                    show(t('update_profile_success'), 'success')
                 } catch (e) {
                 } finally {
                     userForm.loading = false

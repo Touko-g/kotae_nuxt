@@ -68,7 +68,7 @@
                 try {
                     registerForm.loading = true
                     await register({ ...registerForm })
-                    show('register success', 'success')
+                    show(t('register_success'), 'success')
                     registerDialog.value = false
                 } finally {
                     registerForm.loading = false

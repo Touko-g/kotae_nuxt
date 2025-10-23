@@ -59,7 +59,11 @@ export const useHttp = () => {
                         refreshToken.value = null
                         user.value = null
                         isLogin.value = false
-                        show('登录过期，请重新登录', 'error')
+                        show(
+                            'Authorization expired, please log in again',
+                            'error'
+                        )
+                        navigateTo('/')
                         return
                     }
 

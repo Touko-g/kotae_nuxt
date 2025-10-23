@@ -13,6 +13,12 @@ export type SimpleUser = Pick<User, 'id' | 'username' | 'avatar'>
 
 export type UpdateUser = Pick<User, 'username' | 'avatar' | 'about' | 'email'>
 
+export interface EditPasswordParams {
+    old_password: string
+    password: string
+    password2: string
+}
+
 export const useUser = () => {
     const { get, put } = useHttp()
 
@@ -21,5 +27,8 @@ export const useUser = () => {
     const updateUser = (id: string | number, userData: UpdateUser) =>
         put<User>(`user/${id}/`, userData)
 
-    return { getUser, updateUser }
+    const editPassword = (id: string | number, params: EditPasswordParams) =>
+        put(`/user/editpsw/${id}/`, params)
+
+    return { getUser, updateUser, editPassword }
 }

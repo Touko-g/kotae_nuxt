@@ -3,6 +3,11 @@
 
     const token = useCookie('token')
 
+    const createArticle = () => {
+        if (!isLogin.value) return
+        navigateTo('/article/create')
+    }
+
     onMounted(async () => {
         if (token.value) {
             try {
@@ -18,7 +23,17 @@
     <NuxtLoadingIndicator />
     <v-app>
         <!--        <v-layout>-->
-        <v-navigation-drawer width="60" elevation="3"> </v-navigation-drawer>
+        <v-navigation-drawer width="60" elevation="3">
+            <div class="h-full flex items-center justify-center">
+                <v-btn
+                    v-permission
+                    icon="mdi-circle-edit-outline"
+                    variant="flat"
+                    @click="createArticle"
+                >
+                </v-btn>
+            </div>
+        </v-navigation-drawer>
         <AppBar />
         <v-navigation-drawer width="60" location="right" elevation="3">
         </v-navigation-drawer>

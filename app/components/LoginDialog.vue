@@ -64,7 +64,7 @@
                     isLogin.value = true
                     loginDialog.value = false
 
-                    show('login success', 'success')
+                    show(t('login_success'), 'success')
                 } catch (e) {
                 } finally {
                     loginForm.loading = false
@@ -121,6 +121,7 @@
                                 color="primary"
                                 variant="outlined"
                                 density="comfortable"
+                                autocomplete="username"
                                 :rules="rules.nameRules"
                                 @keyup.enter="handleLogin"
                             >
@@ -132,6 +133,7 @@
                                 variant="outlined"
                                 density="comfortable"
                                 type="password"
+                                autocomplete="password"
                                 :rules="rules.passwordRules"
                                 @keyup.enter="handleLogin"
                             ></v-text-field>

@@ -68,7 +68,7 @@
                 try {
                     resetForm.loading = true
                     await resetPsw({ ...resetForm })
-                    show('reset success', 'success')
+                    show(t('reset_password_success'), 'success')
                     resetDialog.value = false
                 } finally {
                     resetForm.loading = false
