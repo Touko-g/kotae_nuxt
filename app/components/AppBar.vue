@@ -48,7 +48,7 @@
 <template>
     <v-app-bar elevation="3">
         <v-app-bar-title class="text-primary" @click="navigateTo('/')">
-            Kotae1
+            Kotae
         </v-app-bar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="searchDialog = true">
