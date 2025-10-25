@@ -1,12 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import type {
+    Article,
+    ArticleListResponse,
+} from './app/composables/api/useArticle'
+
 export default defineNuxtConfig({
     app: {
         head: {
             title: 'Kotae',
             meta: [
-                // <meta name="viewport" content="width=device-width, initial-scale=1">
                 {
-                    charset: 'utf-8',
                     name: 'viewport',
                     content: 'width=device-width, initial-scale=1',
                 },
@@ -18,7 +21,20 @@ export default defineNuxtConfig({
                     name: 'description',
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
                 },
-                { name: 'keywords', content: '前端, 生活, 记录, 博客, Kotae' },
+                {
+                    name: 'keywords',
+                    content: 'Kotae, 前端, 博客, 技术社区, 创作',
+                },
+                { name: 'robots', content: 'index, follow' },
+
+                // Open Graph
+                { property: 'og:title', content: 'Kotae - 记录 · 创作 · 分享' },
+                {
+                    property: 'og:description',
+                    content: 'Kotae 记录 创作 分享，寻找你的答案',
+                },
+                { property: 'og:url', content: 'https://kotae.cn' },
+                { property: 'og:type', content: 'website' },
             ],
             link: [
                 {
@@ -59,6 +75,38 @@ export default defineNuxtConfig({
     sitemap: {
         autoLastmod: true,
         exclude: ['/admin/**'],
+        // 新版本动态路由写法
+        urls: async () => {
+            const urls = []
+
+            // 本地测试 API
+            let nextUrl: string | null = 'https://kotae.cn/api/article/?page=1'
+
+            while (nextUrl) {
+                try {
+                    const res = await fetch(nextUrl)
+
+                    if (!res.ok) {
+                        break
+                    }
+
+                    const data: ArticleListResponse = await res.json()
+
+                    urls.push(
+                        ...data.results.map((a: Article) => ({
+                            url: `/article/${a.id}`,
+                            lastmod: a.update_time || new Date().toISOString(),
+                        }))
+                    )
+
+                    nextUrl = data.next
+                } catch (error) {
+                    break
+                }
+            }
+
+            return urls
+        },
     },
     typescript: {
         typeCheck: false,

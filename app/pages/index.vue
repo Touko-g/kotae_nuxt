@@ -1,14 +1,4 @@
 <script setup lang="ts">
-    useSeoMeta({
-        title: 'Kotae',
-        ogTitle: 'Kotae',
-        description: 'Kotae 记录 创作 分享，寻找你的答案',
-        ogDescription: 'Kotae 记录 创作 分享，寻找你的答案',
-        ogUrl: 'https://kotae.cn',
-        ogSiteName: 'Kotae',
-        robots: 'index, follow',
-    })
-
     const { getArticleList } = useArticle()
     const { extractText } = useExtractText()
     const { fromNow } = useDayjs()

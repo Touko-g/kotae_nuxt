@@ -33,7 +33,7 @@ export interface ArticleCreateParams {
 }
 
 // 响应结构
-type ArticleListResponse = BaseResponse<Article>
+export type ArticleListResponse = BaseResponse<Article>
 
 export const useArticle = () => {
     const { get, post, put, del } = useHttp()
