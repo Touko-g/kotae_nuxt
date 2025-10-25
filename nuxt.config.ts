@@ -14,7 +14,7 @@ export default defineNuxtConfig({
                     name: 'description',
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
                 },
-                { name: 'keywords', content: '前端, 生活, 记录, 博客' },
+                { name: 'keywords', content: '前端, 生活, 记录, 博客, Kotae' },
             ],
             link: [
                 {
@@ -29,7 +29,12 @@ export default defineNuxtConfig({
         },
     },
     css: ['~/assets/css/main.css'],
-    modules: ['@nuxtjs/i18n', 'vuetify-nuxt-module', '@nuxtjs/tailwindcss'],
+    modules: [
+        '@nuxtjs/i18n',
+        'vuetify-nuxt-module',
+        '@nuxtjs/tailwindcss',
+        '@nuxtjs/sitemap',
+    ],
     i18n: {
         defaultLocale: 'en',
         locales: [
@@ -42,6 +47,14 @@ export default defineNuxtConfig({
                 name: '简体中文',
             },
         ],
+    },
+    site: {
+        url: 'https://kotae.cn',
+        name: 'Kotae',
+    },
+    sitemap: {
+        autoLastmod: true,
+        exclude: ['/admin/**'],
     },
     typescript: {
         typeCheck: false,

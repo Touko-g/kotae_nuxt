@@ -35,6 +35,13 @@
         { watch: [refreshCount] }
     )
 
+    if (article.value) {
+        useSeoMeta({
+            title: article.value.title,
+            ogTitle: article.value.title,
+        })
+    }
+
     /**
      * 替换 HTML 字符串中的 <pre><code class="language-xxx">...</code></pre> 为高亮代码
      * @param html 原始 HTML 内容
@@ -91,16 +98,6 @@
         } catch (e) {}
     }
 
-    // 动态标题
-    watchEffect(() => {
-        if (article.value?.title) {
-            useSeoMeta({
-                title: article.value.title,
-                ogTitle: article.value.title,
-            })
-        }
-    })
-
     const isLike = computed(() => {
         if (like.value?.results && user.value) {
             const userId = user.value.id
@@ -152,9 +149,9 @@
             </div>
         </v-card-title>
         <v-card-text class="mt-4">
-            <div class="text-4xl">
+            <h2 class="text-4xl my-2">
                 {{ article.title }}
-            </div>
+            </h2>
             <div>
                 <!-- eslint-disable vue/no-v-html -->
                 <div class="markdown-body" v-html="article.content"></div>
@@ -230,15 +227,12 @@
 </template>
 
 <style>
-    .markdown-body {
-    }
-
     .markdown-body h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
         margin: 1em 0;
     }
 

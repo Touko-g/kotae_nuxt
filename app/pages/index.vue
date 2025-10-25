@@ -4,6 +4,9 @@
         ogTitle: 'Kotae',
         description: 'Kotae 记录 创作 分享，寻找你的答案',
         ogDescription: 'Kotae 记录 创作 分享，寻找你的答案',
+        ogUrl: 'https://kotae.cn',
+        ogSiteName: 'Kotae',
+        robots: 'index, follow',
     })
 
     const { getArticleList } = useArticle()
@@ -110,15 +113,13 @@
                     class="mr-2"
                     link
                     :rounded="0"
-                    :title="article.title"
                     transition="fade-transition"
                     :loading="index + 1 === articles.length && loading"
-                    @click="
-                        navigateTo(`/article/${article.id}`, {
-                            open: { target: '_blank' },
-                        })
-                    "
+                    @click="navigateTo(`/article/${article.id}`)"
                 >
+                    <template #title>
+                        <h2>{{ article.title }}</h2>
+                    </template>
                     <template #subtitle>
                         <div class="d-flex justify-between">
                             <span>{{ article.owner.username }}</span>
