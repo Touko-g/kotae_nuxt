@@ -11,6 +11,10 @@ export default defineNuxtConfig({
                     content: 'width=device-width, initial-scale=1',
                 },
                 {
+                    name: 'google-site-verification',
+                    content: 'yR4QyyvDQSCcGrTjxZFErJmIs4Bp_FVOmqm3rzVNTA0',
+                },
+                {
                     name: 'description',
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
                 },
