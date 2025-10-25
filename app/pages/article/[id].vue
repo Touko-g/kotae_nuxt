@@ -11,6 +11,7 @@
     const { mobile } = useDisplay()
     const { name } = useTheme()
     const { show } = useSnakebar()
+    const { extractText } = useExtractText()
 
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
@@ -36,9 +37,41 @@
     )
 
     if (article.value) {
+        const title = article.value.title
+        const description = extractText(article.value.content).slice(0, 160)
+        const url = `https://kotae.cn/article/${article.value.id}`
+
         useSeoMeta({
-            title: article.value.title,
-            ogTitle: article.value.title,
+            title,
+            ogTitle: title,
+            description,
+            ogDescription: description,
+            ogType: 'article',
+            ogUrl: url,
+        })
+
+        useHead({
+            script: [
+                {
+                    type: 'application/ld+json',
+                    innerHTML: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'BlogPosting',
+                        headline: title,
+                        description,
+                        author: {
+                            '@type': 'Person',
+                            name: article.value.owner.username,
+                        },
+                        datePublished: article.value.create_time,
+                        dateModified: article.value.update_time,
+                        mainEntityOfPage: {
+                            '@type': 'WebPage',
+                            '@id': url,
+                        },
+                    }),
+                },
+            ],
         })
     }
 

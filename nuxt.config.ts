@@ -75,16 +75,15 @@ export default defineNuxtConfig({
     sitemap: {
         autoLastmod: true,
         exclude: ['/admin/**'],
-        // 新版本动态路由写法
         urls: async () => {
+            const fetchUrl = 'https://kotae.cn/api/article/'
             const urls = []
+            let page = 1
+            let totalPages = 1
 
-            // 本地测试 API
-            let nextUrl: string | null = 'https://kotae.cn/api/article/?page=1'
-
-            while (nextUrl) {
+            while (page <= totalPages) {
                 try {
-                    const res = await fetch(nextUrl)
+                    const res = await fetch(`${fetchUrl}?page=${page}`)
 
                     if (!res.ok) {
                         break
@@ -92,14 +91,14 @@ export default defineNuxtConfig({
 
                     const data: ArticleListResponse = await res.json()
 
+                    totalPages = Math.ceil(data.count / 10)
+                    page += 1
                     urls.push(
                         ...data.results.map((a: Article) => ({
                             url: `/article/${a.id}`,
                             lastmod: a.update_time || new Date().toISOString(),
                         }))
                     )
-
-                    nextUrl = data.next
                 } catch (error) {
                     break
                 }

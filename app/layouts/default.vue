@@ -2,6 +2,8 @@
     const { isLogin, verify } = useAuth()
 
     const token = useCookie('token')
+    const { current } = useTheme()
+    console.log(current)
 
     const createArticle = () => {
         if (!isLogin.value) return
@@ -20,27 +22,29 @@
     })
 </script>
 <template>
-    <NuxtLoadingIndicator />
-    <v-app>
-        <!--        <v-layout>-->
-        <v-navigation-drawer width="60" elevation="3">
-            <div class="h-full flex items-center justify-center">
-                <v-btn
-                    v-permission
-                    icon="mdi-circle-edit-outline"
-                    variant="flat"
-                    @click="createArticle"
-                >
-                </v-btn>
-            </div>
-        </v-navigation-drawer>
-        <AppBar />
-        <v-navigation-drawer width="60" location="right" elevation="3">
-        </v-navigation-drawer>
-        <v-main class="bg-background">
-            <slot />
-        </v-main>
-        <snake-bar />
-        <!--        </v-layout>-->
-    </v-app>
+    <div>
+        <NuxtLoadingIndicator :color="current.colors.primary" />
+        <v-app>
+            <!--        <v-layout>-->
+            <v-navigation-drawer width="60" elevation="3">
+                <div class="h-full flex items-center justify-center">
+                    <v-btn
+                        v-permission
+                        icon="mdi-circle-edit-outline"
+                        variant="flat"
+                        @click="createArticle"
+                    >
+                    </v-btn>
+                </div>
+            </v-navigation-drawer>
+            <AppBar />
+            <v-navigation-drawer width="60" location="right" elevation="3">
+            </v-navigation-drawer>
+            <v-main class="bg-background">
+                <slot />
+            </v-main>
+            <snake-bar />
+            <!--        </v-layout>-->
+        </v-app>
+    </div>
 </template>
