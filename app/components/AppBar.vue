@@ -54,7 +54,7 @@
         <v-btn icon @click="searchDialog = true">
             <v-icon>mdi-magnify</v-icon>
         </v-btn>
-        <v-btn icon @click="navigateTo('/article/like')">
+        <v-btn v-show="isLogin" icon @click="navigateTo('/article/like')">
             <v-icon>mdi-heart</v-icon>
         </v-btn>
         <v-btn icon @click="theme.toggle()">

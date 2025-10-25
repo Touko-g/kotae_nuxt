@@ -1,6 +1,10 @@
 <script setup lang="ts">
     import { ref } from 'vue'
 
+    definePageMeta({
+        middleware: 'auth',
+    })
+
     useSeoMeta({
         title: '喜欢的文章',
         ogTitle: '喜欢的文章',

@@ -113,7 +113,11 @@
                     :title="article.title"
                     transition="fade-transition"
                     :loading="index + 1 === articles.length && loading"
-                    @click="navigateTo(`article/${article.id}`)"
+                    @click="
+                        navigateTo(`/article/${article.id}`, {
+                            open: { target: '_blank' },
+                        })
+                    "
                 >
                     <template #subtitle>
                         <div class="d-flex justify-between">
@@ -186,7 +190,7 @@
                                 }"
                                 :title="article.title"
                                 :prepend-icon="`mdi-numeric-${key + 1}`"
-                                @click="navigateTo(`article/${article.id}`)"
+                                @click="navigateTo(`/article/${article.id}`)"
                             ></v-list-item>
                         </v-list>
                     </v-card>

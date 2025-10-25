@@ -1,4 +1,7 @@
 <script setup lang="ts">
+    definePageMeta({
+        middleware: 'auth',
+    })
     const route = useRoute()
     const id = Array.isArray(route.params.id)
         ? route.params.id[0]
