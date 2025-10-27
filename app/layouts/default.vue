@@ -3,7 +3,6 @@
 
     const token = useCookie('token')
     const { current } = useTheme()
-    console.log(current)
 
     const createArticle = () => {
         if (!isLogin.value) return

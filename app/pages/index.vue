@@ -6,6 +6,9 @@
     const { isLogin } = useAuth()
     const refreshCount = useState('refreshCount')
 
+    const config = useRuntimeConfig()
+    const versions = config.public.versions
+
     // --- 状态 ---
     const articles = ref<Article[]>([])
     const loading = ref(false)
@@ -26,7 +29,7 @@
         async () => {
             const [recent, hot] = await Promise.all([
                 getArticleList({ page: 1, order: '-create_time' }),
-                getArticleList({ page: 1, order: '-likes' }),
+                getArticleList({ page: 1, pagesize: 10, order: '-likes' }),
             ])
             return { recent, hot }
         },
@@ -34,6 +37,36 @@
             watch: [isLogin, refreshCount],
         }
     )
+
+    useSeoMeta({
+        title: 'Kotae',
+        description:
+            'Kotae 提供最新、最热门的技术文章，帮助你快速学习前端、后端和全栈开发。',
+        ogTitle: 'Kotae',
+        ogDescription: 'Kotae 提供最新、最热门的技术文章',
+        ogUrl: 'https://kotae.cn/',
+        robots: 'index, follow',
+    })
+
+    useHead({
+        script: [
+            {
+                type: 'application/ld+json',
+                innerHTML: JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'ItemList',
+                    itemListElement: data.value?.recent?.results.map(
+                        (a, index) => ({
+                            '@type': 'ListItem',
+                            position: index + 1,
+                            url: `https://kotae.cn/article/${a.id}`,
+                            name: a.title,
+                        })
+                    ),
+                }),
+            },
+        ],
+    })
 
     watch(
         () => data.value,
@@ -105,7 +138,7 @@
                     :rounded="0"
                     transition="fade-transition"
                     :loading="index + 1 === articles.length && loading"
-                    @click="navigateTo(`/article/${article.id}`)"
+                    :to="`/article/${article.id}`"
                 >
                     <template #title>
                         <h2>{{ article.title }}</h2>
@@ -126,6 +159,14 @@
                                 alt="avatar"
                             ></v-img>
                         </v-avatar>
+                    </template>
+                    <template #loader="{ isActive }">
+                        <v-progress-linear
+                            :active="isActive"
+                            color="primary"
+                            height="2"
+                            indeterminate
+                        ></v-progress-linear>
                     </template>
                     <v-card-text>
                         <p class="line-clamp-2">
@@ -149,15 +190,10 @@
                                     :key="tag.id"
                                     density="compact"
                                     class="last:!mr-0"
-                                    @click.stop="
-                                        navigateTo({
-                                            path: '/search',
-                                            query: {
-                                                query: tag.name,
-                                                type: 'tag',
-                                            },
-                                        })
-                                    "
+                                    :to="{
+                                        path: '/search',
+                                        query: { query: tag.name, type: 'tag' },
+                                    }"
                                     >{{ tag.name }}</v-chip
                                 >
                             </v-chip-group>
@@ -181,10 +217,46 @@
                                 }"
                                 :title="article.title"
                                 :prepend-icon="`mdi-numeric-${key + 1}`"
-                                @click="navigateTo(`/article/${article.id}`)"
+                                link
+                                :to="`/article/${article.id}`"
                             ></v-list-item>
                         </v-list>
                     </v-card>
+                    <div class="mt-4">
+                        <v-chip-group density="compact" column>
+                            <v-hover
+                                v-for="(version, key) in versions"
+                                :key="key"
+                                v-slot="{ isHovering, props }"
+                            >
+                                <v-chip
+                                    :href="version.link"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    v-bind="props"
+                                    class="flex items-center gap-2 transition-transform duration-300"
+                                >
+                                    <template #prepend>
+                                        <v-icon
+                                            :icon="version.icon"
+                                            :color="
+                                                isHovering ? version.theme : ''
+                                            "
+                                            :class="[
+                                                'transition-all duration-300',
+                                                isHovering
+                                                    ? `scale-125`
+                                                    : 'scale-100',
+                                            ]"
+                                        />
+                                    </template>
+                                    <p class="ml-2">
+                                        {{ key }} {{ version.version }}
+                                    </p>
+                                </v-chip>
+                            </v-hover>
+                        </v-chip-group>
+                    </div>
                 </div>
             </v-col>
         </v-row>

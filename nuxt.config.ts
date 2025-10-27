@@ -3,16 +3,16 @@ import type {
     Article,
     ArticleListResponse,
 } from './app/composables/api/useArticle'
+import pkg from './package.json'
 
 export default defineNuxtConfig({
     app: {
         head: {
             title: 'Kotae',
+            htmlAttrs: {
+                lang: 'en',
+            },
             meta: [
-                {
-                    name: 'viewport',
-                    content: 'width=device-width, initial-scale=1',
-                },
                 {
                     name: 'google-site-verification',
                     content: 'yR4QyyvDQSCcGrTjxZFErJmIs4Bp_FVOmqm3rzVNTA0',
@@ -20,10 +20,6 @@ export default defineNuxtConfig({
                 {
                     name: 'description',
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
-                },
-                {
-                    name: 'keywords',
-                    content: 'Kotae, 前端, 博客, 技术社区, 创作',
                 },
                 { name: 'robots', content: 'index, follow' },
 
@@ -113,6 +109,32 @@ export default defineNuxtConfig({
     runtimeConfig: {
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/',
+            versions: {
+                nuxt: {
+                    version: pkg.dependencies.nuxt,
+                    icon: 'mdi-nuxt',
+                    theme: 'green darken-2',
+                    link: 'https://nuxt.com/docs',
+                },
+                vue: {
+                    version: pkg.dependencies.vue,
+                    icon: 'mdi-vuejs',
+                    theme: 'green lighten-1',
+                    link: 'https://vuejs.org/',
+                },
+                'vue-router': {
+                    version: pkg.dependencies['vue-router'],
+                    icon: 'mdi-vuejs',
+                    theme: 'teal lighten-1',
+                    link: 'https://router.vuejs.org/',
+                },
+                vuetify: {
+                    version: '^3.7.0',
+                    icon: 'mdi-vuetify',
+                    theme: 'blue darken-2',
+                    link: 'https://vuetifyjs.com/',
+                },
+            },
         },
     },
     imports: {
