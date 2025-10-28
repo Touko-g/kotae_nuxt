@@ -127,139 +127,139 @@
 
 <template>
     <v-container>
-        <!--        <v-row class="py-6">-->
-        <!--            <v-col sm="12" md="8">-->
-        <!--                <v-card-->
-        <!--                    v-for="(article, index) in articles"-->
-        <!--                    :key="article.id"-->
-        <!--                    v-intersect-->
-        <!--                    class="mr-2"-->
-        <!--                    link-->
-        <!--                    :rounded="0"-->
-        <!--                    transition="fade-transition"-->
-        <!--                    :loading="index + 1 === articles.length && loading"-->
-        <!--                    :to="`/article/${article.id}`"-->
-        <!--                >-->
-        <!--                    <template #title>-->
-        <!--                        <h2>{{ article.title }}</h2>-->
-        <!--                    </template>-->
-        <!--                    <template #subtitle>-->
-        <!--                        <div class="d-flex justify-between">-->
-        <!--                            <span>{{ article.owner.username }}</span>-->
-        <!--                        </div>-->
-        <!--                    </template>-->
-        <!--                    <template #append>-->
-        <!--                        <v-avatar-->
-        <!--                            @click.stop="-->
-        <!--                                navigateTo(`/user/${article.owner.id}`)-->
-        <!--                            "-->
-        <!--                        >-->
-        <!--                            <v-img-->
-        <!--                                :src="article.owner.avatar"-->
-        <!--                                alt="avatar"-->
-        <!--                            ></v-img>-->
-        <!--                        </v-avatar>-->
-        <!--                    </template>-->
-        <!--                    <template #loader="{ isActive }">-->
-        <!--                        <v-progress-linear-->
-        <!--                            :active="isActive"-->
-        <!--                            color="primary"-->
-        <!--                            height="2"-->
-        <!--                            indeterminate-->
-        <!--                        ></v-progress-linear>-->
-        <!--                    </template>-->
-        <!--                    <v-card-text>-->
-        <!--                        <p class="line-clamp-2">-->
-        <!--                            {{ extractText(article.content) }}-->
-        <!--                        </p>-->
-        <!--                        <div-->
-        <!--                            class="d-flex justify-between text-grey text-[0.75rem] mt-3 mb-1"-->
-        <!--                        >-->
-        <!--                            <div>-->
-        <!--                                <span class="mr-4"-->
-        <!--                                    >{{ t('view') }}:{{ article.views }}</span-->
-        <!--                                >-->
-        <!--                                <span>{{ t('like') }}:{{ article.likes }}</span>-->
-        <!--                            </div>-->
-        <!--                            <span>{{ fromNow(article.create_time) }}</span>-->
-        <!--                        </div>-->
-        <!--                        <div class="d-flex justify-end">-->
-        <!--                            <v-chip-group>-->
-        <!--                                <v-chip-->
-        <!--                                    v-for="tag in article.tag"-->
-        <!--                                    :key="tag.id"-->
-        <!--                                    density="compact"-->
-        <!--                                    class="last:!mr-0"-->
-        <!--                                    :to="{-->
-        <!--                                        path: '/search',-->
-        <!--                                        query: { query: tag.name, type: 'tag' },-->
-        <!--                                    }"-->
-        <!--                                    >{{ tag.name }}</v-chip-->
-        <!--                                >-->
-        <!--                            </v-chip-group>-->
-        <!--                        </div>-->
-        <!--                    </v-card-text>-->
-        <!--                    <v-divider :opacity="0.7"></v-divider>-->
-        <!--                </v-card>-->
-        <!--            </v-col>-->
+        <v-row class="py-6">
+            <v-col sm="12" md="8">
+                <v-card
+                    v-for="(article, index) in articles"
+                    :key="article.id"
+                    v-intersect
+                    class="mr-2"
+                    link
+                    :rounded="0"
+                    transition="fade-transition"
+                    :loading="index + 1 === articles.length && loading"
+                    :to="`/article/${article.id}`"
+                >
+                    <template #title>
+                        <h2>{{ article.title }}</h2>
+                    </template>
+                    <template #subtitle>
+                        <div class="d-flex justify-between">
+                            <span>{{ article.owner.username }}</span>
+                        </div>
+                    </template>
+                    <template #append>
+                        <v-avatar
+                            @click.stop="
+                                navigateTo(`/user/${article.owner.id}`)
+                            "
+                        >
+                            <v-img
+                                :src="article.owner.avatar"
+                                alt="avatar"
+                            ></v-img>
+                        </v-avatar>
+                    </template>
+                    <template #loader="{ isActive }">
+                        <v-progress-linear
+                            :active="isActive"
+                            color="primary"
+                            height="2"
+                            indeterminate
+                        ></v-progress-linear>
+                    </template>
+                    <v-card-text>
+                        <p class="line-clamp-2">
+                            {{ extractText(article.content) }}
+                        </p>
+                        <div
+                            class="d-flex justify-between text-grey text-[0.75rem] mt-3 mb-1"
+                        >
+                            <div>
+                                <span class="mr-4"
+                                    >{{ t('view') }}:{{ article.views }}</span
+                                >
+                                <span>{{ t('like') }}:{{ article.likes }}</span>
+                            </div>
+                            <span>{{ fromNow(article.create_time) }}</span>
+                        </div>
+                        <div class="d-flex justify-end">
+                            <v-chip-group>
+                                <v-chip
+                                    v-for="tag in article.tag"
+                                    :key="tag.id"
+                                    density="compact"
+                                    class="last:!mr-0"
+                                    :to="{
+                                        path: '/search',
+                                        query: { query: tag.name, type: 'tag' },
+                                    }"
+                                    >{{ tag.name }}</v-chip
+                                >
+                            </v-chip-group>
+                        </div>
+                    </v-card-text>
+                    <v-divider :opacity="0.7"></v-divider>
+                </v-card>
+            </v-col>
 
-        <!--            <v-col sm="12" md="4">-->
-        <!--                <div class="sticky top-[6.5rem]">-->
-        <!--                    <v-card title="Popular Articles">-->
-        <!--                        <v-divider :opacity="0.7"></v-divider>-->
-        <!--                        <v-list activatable>-->
-        <!--                            <v-list-item-->
-        <!--                                v-for="(article, key) in data?.hot?.results"-->
-        <!--                                :key="article.id"-->
-        <!--                                v-tooltip="{-->
-        <!--                                    text: article.title,-->
-        <!--                                    openDelay: 500,-->
-        <!--                                }"-->
-        <!--                                :title="article.title"-->
-        <!--                                :prepend-icon="`mdi-numeric-${key + 1}`"-->
-        <!--                                link-->
-        <!--                                :to="`/article/${article.id}`"-->
-        <!--                            ></v-list-item>-->
-        <!--                        </v-list>-->
-        <!--                    </v-card>-->
-        <!--                    <div class="mt-4">-->
-        <!--                        <v-chip-group density="compact" column>-->
-        <!--                            <v-hover-->
-        <!--                                v-for="(version, key) in versions"-->
-        <!--                                :key="key"-->
-        <!--                                v-slot="{ isHovering, props }"-->
-        <!--                            >-->
-        <!--                                <v-chip-->
-        <!--                                    :href="version.link"-->
-        <!--                                    target="_blank"-->
-        <!--                                    rel="noopener noreferrer"-->
-        <!--                                    v-bind="props"-->
-        <!--                                    class="flex items-center gap-2 transition-transform duration-300"-->
-        <!--                                >-->
-        <!--                                    <template #prepend>-->
-        <!--                                        <v-icon-->
-        <!--                                            :icon="version.icon"-->
-        <!--                                            :color="-->
-        <!--                                                isHovering ? version.theme : ''-->
-        <!--                                            "-->
-        <!--                                            :class="[-->
-        <!--                                                'transition-all duration-300',-->
-        <!--                                                isHovering-->
-        <!--                                                    ? `scale-125`-->
-        <!--                                                    : 'scale-100',-->
-        <!--                                            ]"-->
-        <!--                                        />-->
-        <!--                                    </template>-->
-        <!--                                    <p class="ml-2">-->
-        <!--                                        {{ key }} {{ version.version }}-->
-        <!--                                    </p>-->
-        <!--                                </v-chip>-->
-        <!--                            </v-hover>-->
-        <!--                        </v-chip-group>-->
-        <!--                    </div>-->
-        <!--                </div>-->
-        <!--            </v-col>-->
-        <!--        </v-row>-->
-        <!--        <div v-show="articles?.length" ref="scrollRef"></div>-->
+            <v-col sm="12" md="4">
+                <div class="sticky top-[6.5rem]">
+                    <v-card title="Popular Articles">
+                        <v-divider :opacity="0.7"></v-divider>
+                        <v-list activatable>
+                            <v-list-item
+                                v-for="(article, key) in data?.hot?.results"
+                                :key="article.id"
+                                v-tooltip="{
+                                    text: article.title,
+                                    openDelay: 500,
+                                }"
+                                :title="article.title"
+                                :prepend-icon="`mdi-numeric-${key + 1}`"
+                                link
+                                :to="`/article/${article.id}`"
+                            ></v-list-item>
+                        </v-list>
+                    </v-card>
+                    <div class="mt-4">
+                        <v-chip-group density="compact" column>
+                            <v-hover
+                                v-for="(version, key) in versions"
+                                :key="key"
+                                v-slot="{ isHovering, props }"
+                            >
+                                <v-chip
+                                    :href="version.link"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    v-bind="props"
+                                    class="flex items-center gap-2 transition-transform duration-300"
+                                >
+                                    <template #prepend>
+                                        <v-icon
+                                            :icon="version.icon"
+                                            :color="
+                                                isHovering ? version.theme : ''
+                                            "
+                                            :class="[
+                                                'transition-all duration-300',
+                                                isHovering
+                                                    ? `scale-125`
+                                                    : 'scale-100',
+                                            ]"
+                                        />
+                                    </template>
+                                    <p class="ml-2">
+                                        {{ key }} {{ version.version }}
+                                    </p>
+                                </v-chip>
+                            </v-hover>
+                        </v-chip-group>
+                    </div>
+                </div>
+            </v-col>
+        </v-row>
+        <div v-show="articles?.length" ref="scrollRef"></div>
     </v-container>
 </template>
