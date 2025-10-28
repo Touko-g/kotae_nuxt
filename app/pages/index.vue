@@ -41,9 +41,10 @@
     useSeoMeta({
         title: 'Kotae',
         description:
-            'Kotae 提供最新、最热门的技术文章，帮助你快速学习前端、后端和全栈开发。',
+            'Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。',
         ogTitle: 'Kotae',
-        ogDescription: 'Kotae 提供最新、最热门的技术文章',
+        ogDescription:
+            'Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。',
         ogUrl: 'https://kotae.cn/',
         robots: 'index, follow',
     })
