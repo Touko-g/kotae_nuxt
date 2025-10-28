@@ -50,6 +50,7 @@ export default defineNuxtConfig({
         'vuetify-nuxt-module',
         '@nuxtjs/tailwindcss',
         '@nuxtjs/sitemap',
+        '@nuxtjs/robots',
     ],
     i18n: {
         defaultLocale: 'en',
@@ -102,6 +103,16 @@ export default defineNuxtConfig({
 
             return urls
         },
+    },
+    robots: {
+        sitemap: 'https://example.com/sitemap.xml',
+        groups: [
+            {
+                userAgent: '*',
+                allow: '/',
+                disallow: '/admin',
+            },
+        ],
     },
     typescript: {
         typeCheck: false,
