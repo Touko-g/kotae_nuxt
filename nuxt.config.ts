@@ -105,7 +105,6 @@ export default defineNuxtConfig({
         },
     },
     robots: {
-        sitemap: 'https://example.com/sitemap.xml',
         groups: [
             {
                 userAgent: '*',
