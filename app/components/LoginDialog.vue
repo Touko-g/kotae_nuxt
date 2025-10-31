@@ -137,7 +137,9 @@
                                 :rules="rules.passwordRules"
                                 @keyup.enter="handleLogin"
                             ></v-text-field>
-                            <div class="d-flex justify-space-between align-end">
+                            <div
+                                class="d-flex justify-space-between flex-col sm:flex-row"
+                            >
                                 <div class="d-flex">
                                     <v-btn
                                         color="primary"
@@ -155,7 +157,7 @@
                                     >
                                 </div>
                                 <p
-                                    class="text-primary text-decoration-none cursor-pointer"
+                                    class="text-primary text-decoration-none cursor-pointer mt-2 sm:mt-0"
                                     @click="resetDialog = true"
                                 >
                                     {{ t('forget_psw') }}

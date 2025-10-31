@@ -22,7 +22,7 @@ export interface EditPasswordParams {
 export const useUser = () => {
     const { get, put } = useHttp()
 
-    const getUser = (id: string | number) => get<User>(`user/${id}`)
+    const getUser = (id: string | number) => get<User>(`user/${id}/`)
 
     const updateUser = (id: string | number, userData: UpdateUser) =>
         put<User>(`user/${id}/`, userData)

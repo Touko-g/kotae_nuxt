@@ -152,6 +152,12 @@ export default defineNuxtConfig({
     },
     vuetify: {
         vuetifyOptions: {
+            defaults: {
+                VProgressLinear: {
+                    color: 'primary',
+                    height: 2,
+                },
+            },
             theme: {
                 defaultTheme: 'light',
                 themes: {

@@ -28,7 +28,7 @@ export const useLike = () => {
 
     const addLike = (params: AddLikeParam) => post<Like>('/like/', params)
 
-    const delLike = (id: number | string) => del(`/like/${id}`)
+    const delLike = (id: number | string) => del(`/like/${id}/`)
 
     return { getLikeList, addLike, delLike }
 }

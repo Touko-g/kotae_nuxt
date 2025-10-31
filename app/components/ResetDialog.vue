@@ -127,7 +127,7 @@
                 </v-tabs>
             </v-card-item>
             <v-card-text>
-                <v-window v-model="tab">
+                <v-window v-model="tab" :touch="false">
                     <v-window-item :value="0">
                         <p class="text-sm text-uppercase">
                             {{ t('email_for_code') }}

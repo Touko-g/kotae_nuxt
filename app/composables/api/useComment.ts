@@ -33,7 +33,7 @@ export type CommentListResponse = BaseResponse<Comment>
 export const useComment = () => {
     const { get, post } = useHttp()
     const getCommentList = (options: CommentListParams) =>
-        get<CommentListResponse>('/comment', options)
+        get<CommentListResponse>('/comment/', options)
     const postComment = (params: CommentParam) =>
         post<Comment>('/comment/', params)
 

@@ -23,7 +23,7 @@ export const usePhoto = () => {
 
     const addPhoto = (params: PhotoParams) => post<Photo>('/photo/', params)
 
-    const delPhoto = (id: string | number) => del(`/photo/${id}`)
+    const delPhoto = (id: string | number) => del(`/photo/${id}/`)
 
     return { getPhotoList, addPhoto, delPhoto }
 }

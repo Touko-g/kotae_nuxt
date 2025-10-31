@@ -37,7 +37,12 @@
                 </div>
             </v-navigation-drawer>
             <AppBar />
-            <v-navigation-drawer width="60" location="right" elevation="3">
+            <v-navigation-drawer
+                width="60"
+                location="right"
+                elevation="3"
+                disable-resize-watcher
+            >
             </v-navigation-drawer>
             <v-main class="bg-background">
                 <slot />

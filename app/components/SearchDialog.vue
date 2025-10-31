@@ -21,12 +21,16 @@
     watch(searchDialog, async value => {
         if (value) {
             try {
+                search.loading = true
                 const { results } = await getSearchList({
                     order: '-hot',
                     pagesize: 5,
                 })
                 search.tops = results
-            } catch (e) {}
+            } catch (e) {
+            } finally {
+                search.loading = false
+            }
         }
     })
 

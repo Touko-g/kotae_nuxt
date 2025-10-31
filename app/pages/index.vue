@@ -161,14 +161,6 @@
                             ></v-img>
                         </v-avatar>
                     </template>
-                    <template #loader="{ isActive }">
-                        <v-progress-linear
-                            :active="isActive"
-                            color="primary"
-                            height="2"
-                            indeterminate
-                        ></v-progress-linear>
-                    </template>
                     <v-card-text>
                         <p class="line-clamp-2">
                             {{ extractText(article.content) }}
@@ -191,12 +183,18 @@
                                     :key="tag.id"
                                     density="compact"
                                     class="last:!mr-0"
-                                    :to="{
-                                        path: '/search',
-                                        query: { query: tag.name, type: 'tag' },
-                                    }"
-                                    >{{ tag.name }}</v-chip
+                                    @click.stop.prevent="
+                                        navigateTo({
+                                            path: '/search',
+                                            query: {
+                                                query: tag.name,
+                                                type: 'tag',
+                                            },
+                                        })
+                                    "
                                 >
+                                    {{ tag.name }}
+                                </v-chip>
                             </v-chip-group>
                         </div>
                     </v-card-text>
