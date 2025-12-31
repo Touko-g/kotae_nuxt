@@ -12,6 +12,7 @@
     // --- 状态 ---
     const articles = ref<Article[]>([])
     const loading = ref(false)
+    const skeletonLoading = ref(true)
     const page = reactive({
         page: 1,
         count: 0,
@@ -85,6 +86,8 @@
         page.count = Math.ceil(data.value.recent.count / 10)
     }
 
+    skeletonLoading.value = false
+
     // --- 加载更多文章 ---
     const loadArticles = async () => {
         if (loading.value) return
@@ -130,76 +133,88 @@
     <v-container>
         <v-row class="py-6">
             <v-col sm="12" md="8">
-                <v-card
+                <v-skeleton-loader
                     v-for="(article, index) in articles"
                     :key="article.id"
-                    v-intersect
-                    class="mr-2"
-                    link
-                    :rounded="0"
-                    transition="fade-transition"
-                    :loading="index + 1 === articles.length && loading"
-                    :to="`/article/${article.id}`"
+                    :loading="skeletonLoading"
+                    type="heading, list-item-three-line, chip, chip"
+                    class="mb-6"
                 >
-                    <template #title>
-                        <h2>{{ article.title }}</h2>
-                    </template>
-                    <template #subtitle>
-                        <div class="d-flex justify-between">
-                            <span>{{ article.owner.username }}</span>
-                        </div>
-                    </template>
-                    <template #append>
-                        <v-avatar
-                            @click.stop="
-                                navigateTo(`/user/${article.owner.id}`)
-                            "
-                        >
-                            <v-img
-                                :src="article.owner.avatar"
-                                alt="avatar"
-                            ></v-img>
-                        </v-avatar>
-                    </template>
-                    <v-card-text>
-                        <p class="line-clamp-2">
-                            {{ extractText(article.content) }}
-                        </p>
-                        <div
-                            class="d-flex justify-between text-grey text-[0.75rem] mt-3 mb-1"
-                        >
-                            <div>
-                                <span class="mr-4"
-                                    >{{ t('view') }}:{{ article.views }}</span
-                                >
-                                <span>{{ t('like') }}:{{ article.likes }}</span>
+                    <v-card
+                        v-intersect
+                        class="mr-2"
+                        link
+                        :rounded="0"
+                        transition="fade-transition"
+                        :loading="index + 1 === articles.length && loading"
+                        :to="`/article/${article.id}`"
+                    >
+                        <template #title>
+                            <h2>{{ article.title }}</h2>
+                        </template>
+                        <template #subtitle>
+                            <div class="d-flex justify-between">
+                                <span>{{ article.owner.username }}</span>
                             </div>
-                            <span>{{ fromNow(article.create_time) }}</span>
-                        </div>
-                        <div class="d-flex justify-end">
-                            <v-chip-group>
-                                <v-chip
-                                    v-for="tag in article.tag"
-                                    :key="tag.id"
-                                    density="compact"
-                                    class="last:!mr-0"
-                                    @click.stop.prevent="
-                                        navigateTo({
-                                            path: '/search',
-                                            query: {
-                                                query: tag.name,
-                                                type: 'tag',
-                                            },
-                                        })
-                                    "
-                                >
-                                    {{ tag.name }}
-                                </v-chip>
-                            </v-chip-group>
-                        </div>
-                    </v-card-text>
-                    <v-divider :opacity="0.7"></v-divider>
-                </v-card>
+                        </template>
+                        <template #append>
+                            <v-avatar
+                                @click.stop="
+                                    navigateTo(`/user/${article.owner.id}`)
+                                "
+                            >
+                                <v-img
+                                    :src="article.owner.avatar"
+                                    alt="avatar"
+                                ></v-img>
+                            </v-avatar>
+                        </template>
+                        <v-card-text>
+                            <p class="line-clamp-2" data-allow-mismatch>
+                                {{ extractText(article.content) }}
+                            </p>
+                            <div
+                                class="d-flex justify-between text-grey text-[0.75rem] mt-3 mb-1"
+                            >
+                                <div>
+                                    <span class="mr-4"
+                                        >{{ t('view') }}:{{
+                                            article.views
+                                        }}</span
+                                    >
+                                    <span
+                                        >{{ t('like') }}:{{
+                                            article.likes
+                                        }}</span
+                                    >
+                                </div>
+                                <span>{{ fromNow(article.create_time) }}</span>
+                            </div>
+                            <div class="d-flex justify-end">
+                                <v-chip-group>
+                                    <v-chip
+                                        v-for="tag in article.tag"
+                                        :key="tag.id"
+                                        density="compact"
+                                        class="last:!mr-0"
+                                        @click.stop.prevent="
+                                            navigateTo({
+                                                path: '/search',
+                                                query: {
+                                                    query: tag.name,
+                                                    type: 'tag',
+                                                },
+                                            })
+                                        "
+                                    >
+                                        {{ tag.name }}
+                                    </v-chip>
+                                </v-chip-group>
+                            </div>
+                        </v-card-text>
+                        <v-divider :opacity="0.7"></v-divider>
+                    </v-card>
+                </v-skeleton-loader>
             </v-col>
 
             <v-col sm="12" md="4">

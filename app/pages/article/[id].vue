@@ -257,6 +257,7 @@
         </v-card-text>
         <ConfirmDialog ref="confirmRef" />
     </v-card>
+    <div v-else>该文章不存在或已被删除</div>
 </template>
 
 <style>

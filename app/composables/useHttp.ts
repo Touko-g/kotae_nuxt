@@ -32,7 +32,7 @@ export const useHttp = () => {
         if (options.showLoading) loadingCount.value++
         const token = useCookie('token')?.value
         try {
-            return await $fetch<T>(url, {
+            return (await $fetch<T>(url, {
                 method: options.method || 'GET',
                 headers: {
                     Authorization: token ? `Bearer ${token}` : '',
@@ -89,6 +89,8 @@ export const useHttp = () => {
                         } finally {
                             isRefresh.value = false
                         }
+                    } else if (response.status === 500) {
+                        show(response.statusText, 'error')
                     } else {
                         const showText = Object.values(data)[0]?.toString()
 
@@ -96,7 +98,7 @@ export const useHttp = () => {
                         show(showText || response.statusText, 'error')
                     }
                 },
-            })
+            })) as T
         } catch (err: any) {
             const message =
                 err?.data?.message || err?.message || 'Unknown Error'

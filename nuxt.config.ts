@@ -32,19 +32,16 @@ export default defineNuxtConfig({
                 { property: 'og:url', content: 'https://kotae.cn' },
                 { property: 'og:type', content: 'website' },
             ],
-            link: [
-                {
-                    rel: 'stylesheet',
-                    href: 'https://chinese-fonts-cdn.deno.dev/packages/maple-mono-cn/dist/MapleMono-CN-SemiBoldItalic/result.css',
-                },
-            ],
             noscript: [
                 // <noscript>JavaScript is required</noscript>
                 { textContent: 'JavaScript is required' },
             ],
         },
     },
-    css: ['~/assets/css/main.css'],
+    css: [
+        '~/assets/css/main.css',
+        '@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-SemiBoldItalic/result.css',
+    ],
     modules: [
         '@nuxtjs/i18n',
         'vuetify-nuxt-module',
@@ -118,7 +115,8 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/',
+            apiBase:
+                process.env.NUXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/',
             versions: {
                 nuxt: {
                     version: pkg.dependencies.nuxt,
