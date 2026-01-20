@@ -65,13 +65,17 @@
                 comment.value = ''
 
                 if (search.order === 'create_time') {
-                    comments.value?.results.push(data)
-                    // 滚动到末尾
-                    commentListRef.value?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'end',
-                        inline: 'nearest',
-                    })
+                    if (comments.value) {
+                        if (comments.value.results.length < 10) {
+                            comments.value.results.push(data)
+                            // 滚动到末尾
+                            commentListRef.value?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'end',
+                                inline: 'nearest',
+                            })
+                        }
+                    }
                 } else {
                     comments.value?.results.unshift(data)
                 }

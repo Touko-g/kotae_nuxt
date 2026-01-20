@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    import { Toaster } from 'vue-sonner'
+    import 'vue-sonner/style.css'
     const { isLogin, verify } = useAuth()
 
     const token = useCookie('token')
@@ -48,6 +50,7 @@
                 <slot />
             </v-main>
             <snake-bar />
+            <Toaster />
             <!--        </v-layout>-->
         </v-app>
     </div>

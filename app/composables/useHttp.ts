@@ -25,14 +25,11 @@ export const useHttp = () => {
     const loadingCount = ref(0) // 并发安全 loading
     const loading = computed(() => loadingCount.value > 0)
 
-    const request = async <T>(
-        url: string,
-        options: HttpOptions = {}
-    ): Promise<T> => {
+    const request = async <T>(url: string, options: HttpOptions = {}) => {
         if (options.showLoading) loadingCount.value++
         const token = useCookie('token')?.value
         try {
-            return (await $fetch<T>(url, {
+            return await $fetch<T>(url, {
                 method: options.method || 'GET',
                 headers: {
                     Authorization: token ? `Bearer ${token}` : '',
@@ -98,7 +95,7 @@ export const useHttp = () => {
                         show(showText || response.statusText, 'error')
                     }
                 },
-            })) as T
+            })
         } catch (err: any) {
             const message =
                 err?.data?.message || err?.message || 'Unknown Error'
