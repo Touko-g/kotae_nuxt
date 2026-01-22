@@ -1,6 +1,6 @@
 <script setup lang="ts">
     const { t } = useLocale()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { rules } = useRules()
     const { getCode, register } = useAuth()
     const registerDialog = useState('register', () => false)

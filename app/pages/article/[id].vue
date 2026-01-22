@@ -10,7 +10,7 @@
     const { t } = useLocale()
     const { mobile } = useDisplay()
     const { name } = useTheme()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { extractText } = useExtractText()
 
     const highlighter = await useShiki()

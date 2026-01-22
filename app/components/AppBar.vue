@@ -8,7 +8,7 @@
     const { isLogin, logout } = useAuth()
 
     const user = useCookie<User | null>('user')
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const loading = useState('loading')
 
     const toggleLocal = () => {

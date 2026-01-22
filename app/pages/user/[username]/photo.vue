@@ -10,7 +10,7 @@
     })
 
     const { getPhotoList, delPhoto } = usePhoto()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { format } = useDayjs()
     const { t } = useLocale()
 

@@ -8,7 +8,7 @@
     })
 
     const { t } = useLocale()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
 
     const { logout } = useAuth()
     const { editPassword } = useUser()

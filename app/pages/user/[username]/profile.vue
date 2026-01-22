@@ -16,7 +16,7 @@
 
     const { t } = useLocale()
     const { format } = useDayjs()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const user = useCookie<User>('user')
 
     const userFormRef = useTemplateRef('userFormRef')

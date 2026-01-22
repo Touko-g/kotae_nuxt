@@ -1,6 +1,6 @@
 import type { Anchor } from 'vuetify'
 
-export interface SnakeOptions {
+export interface SnackOptions {
     text: string
     color?: string
     duration?: number
@@ -8,23 +8,23 @@ export interface SnakeOptions {
     close?: boolean
 }
 
-export interface SnakeMessage extends Required<SnakeOptions> {
+export interface SnackMessage extends Required<SnackOptions> {
     id: number
     visible: boolean
 }
 
-const messages = reactive<SnakeMessage[]>([])
+const messages = reactive<SnackMessage[]>([])
 let idCounter = 0
 const timers = new Map<number, ReturnType<typeof setTimeout>>()
 
-export const useSnakebar = () => {
+export const useSnackbar = () => {
     const show = (
         text: string,
         color = 'primary',
-        options: Partial<Omit<SnakeOptions, 'text' | 'color'>> = {}
+        options: Partial<Omit<SnackOptions, 'text' | 'color'>> = {}
     ) => {
         const id = ++idCounter
-        const msg: SnakeMessage = {
+        const msg: SnackMessage = {
             id,
             text,
             color,

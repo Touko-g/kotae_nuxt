@@ -19,7 +19,7 @@
     const { addPhoto, getPhotoList } = usePhoto()
     const { getCosKey } = useAuth()
 
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { t } = useLocale()
     const { fromNow, format } = useDayjs()
     const { width } = useDisplay()
@@ -273,70 +273,92 @@
             </v-row>
         </v-col>
         <v-col cols="12" sm="12" md="8" lg="9">
-            <v-card>
-                <v-card-title>
-                    <div class="d-flex">
-                        {{ t('my_article') }}
-                        <v-spacer />
-                        <v-btn-toggle
-                            v-model="toggle"
-                            color="primary"
-                            density="compact"
-                        >
-                            <v-btn variant="text">{{ t('newest') }}</v-btn>
-                            <v-btn variant="text"> {{ t('like') }}</v-btn>
-                        </v-btn-toggle>
-                    </div>
-                </v-card-title>
-                <v-divider color="surface" />
-                <v-card-text>
-                    <v-list lines="two">
-                        <v-list-item
-                            v-for="article in articles?.results"
-                            :key="article.id"
-                            @click="navigateTo(`/article/${article.id}`)"
-                        >
-                            <template #title>
-                                <span>{{ article.title }}</span>
-                            </template>
+            <v-row>
+                <v-col cols="12">
+                    <v-card>
+                        <v-card-title>
+                            <div class="d-flex">
+                                {{ t('my_article') }}
+                                <v-spacer />
+                                <v-btn-toggle
+                                    v-model="toggle"
+                                    color="primary"
+                                    density="compact"
+                                >
+                                    <v-btn variant="text">{{
+                                        t('newest')
+                                    }}</v-btn>
+                                    <v-btn variant="text">
+                                        {{ t('like') }}</v-btn
+                                    >
+                                </v-btn-toggle>
+                            </div>
+                        </v-card-title>
+                        <v-divider color="surface" />
+                        <v-card-text>
+                            <v-list lines="two">
+                                <v-list-item
+                                    v-for="article in articles?.results"
+                                    :key="article.id"
+                                    @click="
+                                        navigateTo(`/article/${article.id}`)
+                                    "
+                                >
+                                    <template #title>
+                                        <span>{{ article.title }}</span>
+                                    </template>
 
-                            <template #subtitle>
-                                <div class="d-flex justify-space-between">
-                                    <div>
-                                        <span class="text-xs"
-                                            >{{ t('view') }}:{{ article.views }}
-                                        </span>
-                                        <span class="text-xs mx-2"
-                                            >{{ t('like') }}:{{
-                                                article.likes
-                                            }}</span
+                                    <template #subtitle>
+                                        <div
+                                            class="d-flex justify-space-between"
                                         >
-                                        <span class="text-xs">
-                                            {{ t('comment') }}:{{
-                                                article.comments
-                                            }}</span
+                                            <div>
+                                                <span class="text-xs"
+                                                    >{{ t('view') }}:{{
+                                                        article.views
+                                                    }}
+                                                </span>
+                                                <span class="text-xs mx-2"
+                                                    >{{ t('like') }}:{{
+                                                        article.likes
+                                                    }}</span
+                                                >
+                                                <span class="text-xs">
+                                                    {{ t('comment') }}:{{
+                                                        article.comments
+                                                    }}</span
+                                                >
+                                            </div>
+                                            <div
+                                                v-show="width > 400"
+                                                class="text-xs"
+                                            >
+                                                {{
+                                                    fromNow(article.create_time)
+                                                }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            v-show="width < 400"
+                                            class="text-xs"
                                         >
-                                    </div>
-                                    <div v-show="width > 400" class="text-xs">
-                                        {{ fromNow(article.create_time) }}
-                                    </div>
-                                </div>
-                                <div v-show="width < 400" class="text-xs">
-                                    {{ fromNow(article.create_time) }}
-                                </div>
-                            </template>
-                        </v-list-item>
-                    </v-list>
-                    <v-pagination
-                        v-if="articleQuery.count"
-                        v-model="articleQuery.page"
-                        :length="articleQuery.count"
-                        rounded="circle"
-                        density="compact"
-                        @update:model-value="changePage"
-                    ></v-pagination>
-                </v-card-text>
-            </v-card>
+                                            {{ fromNow(article.create_time) }}
+                                        </div>
+                                    </template>
+                                </v-list-item>
+                            </v-list>
+                            <v-pagination
+                                v-if="articleQuery.count"
+                                v-model="articleQuery.page"
+                                :length="articleQuery.count"
+                                rounded="circle"
+                                density="compact"
+                                @update:model-value="changePage"
+                            ></v-pagination>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+            </v-row>
         </v-col>
     </v-row>
 </template>

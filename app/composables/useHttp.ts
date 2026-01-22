@@ -17,7 +17,7 @@ export class HttpError extends Error {
 
 export const useHttp = () => {
     const config = useRuntimeConfig()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
 
     const isRefresh = useState('isRefresh', () => false)
     const refreshCount = useState('refreshCount', () => 0)

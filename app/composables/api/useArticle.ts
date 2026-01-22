@@ -41,7 +41,7 @@ export const useArticle = () => {
     const getArticleList = (options: ArticleListParams) =>
         get<ArticleListResponse>('/article/', options)
     const createArticle = (params: ArticleCreateParams) =>
-        post<Article>(`/article/create/`, params)
+        post<Article>(`/article/create`, params)
     const updateArticle = (id: number | string, params: ArticleCreateParams) =>
         put<Article>(`/article/${id}/`, params)
     const delArticle = (id: number | string) => del(`/article/${id}/`)

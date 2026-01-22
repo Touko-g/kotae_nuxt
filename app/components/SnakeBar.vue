@@ -7,7 +7,6 @@
         :color="msg.color"
         :location="msg.position"
         transition="scroll-y-transition"
-        class="transition-all"
         :style="getOffsetStyle(index, msg.position)"
     >
         {{ msg.text }}
@@ -24,15 +23,26 @@
 </template>
 
 <script setup lang="ts">
-    const { messages, close } = useSnakebar()
+    const { messages, close } = useSnackbar()
 
     const getOffsetStyle = (index: number, position = 'top') => {
         const gap = 12
         const base = 50
-        const offset = base * index + gap * index
-        if (position.includes('top')) return { marginTop: `${offset}px` }
-        else return { marginBottom: `${offset}px` }
+        const offset = (base + gap) * index
+
+        if (position.includes('top'))
+            return { transform: `translateY(${offset}px)` }
+        else return { transform: `translateY(-${offset}px)` }
     }
 </script>
 
-<style scoped></style>
+<style scoped>
+    /* Snackbar 平滑过渡 */
+    .v-snackbar {
+        transition:
+            transform 0.3s ease,
+            opacity 0.3s ease;
+
+        will-change: transform, opacity;
+    }
+</style>

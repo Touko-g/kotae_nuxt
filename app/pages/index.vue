@@ -142,7 +142,7 @@
                 >
                     <v-card
                         v-intersect
-                        class="mr-2"
+                        class="mr-2 border-b last:!border-0 border-dashed"
                         link
                         :rounded="0"
                         transition="fade-transition"
@@ -212,15 +212,16 @@
                                 </v-chip-group>
                             </div>
                         </v-card-text>
-                        <v-divider :opacity="0.7"></v-divider>
                     </v-card>
                 </v-skeleton-loader>
             </v-col>
 
             <v-col sm="12" md="4">
                 <div class="sticky top-[6.5rem]">
-                    <v-card title="Popular Articles">
-                        <v-divider :opacity="0.7"></v-divider>
+                    <v-card>
+                        <v-card-title class="border-b border-dashed"
+                            >Popular Articles</v-card-title
+                        >
                         <v-list activatable>
                             <v-list-item
                                 v-for="(article, key) in data?.hot?.results"

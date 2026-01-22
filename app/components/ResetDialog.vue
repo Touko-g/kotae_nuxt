@@ -1,6 +1,6 @@
 <script setup lang="ts">
     const { t } = useLocale()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { rules } = useRules()
     const { resetCode, resetPsw } = useAuth()
     const resetDialog = useState('reset', () => false)

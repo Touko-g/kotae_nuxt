@@ -2,7 +2,7 @@
     const { t } = useLocale()
     const { login, isLogin } = useAuth()
     const { getUser } = useUser()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { rules } = useRules()
     const loginDialog = useState('login', () => false)
     const registerDialog = useState('register')

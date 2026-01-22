@@ -12,7 +12,7 @@
 
     const { getLikeList, delLike } = useLike()
     const { t } = useLocale()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
 
     const likes = ref<Like[]>([])
     const loading = ref(false)

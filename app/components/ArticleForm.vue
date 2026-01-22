@@ -4,7 +4,7 @@
 
     const theme = useTheme()
     const { format } = useDayjs()
-    const { show } = useSnakebar()
+    const { show } = useSnackbar()
     const { t } = useLocale()
     const { rules } = useRules()
 
