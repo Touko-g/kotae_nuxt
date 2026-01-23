@@ -296,7 +296,7 @@
                         </v-card-title>
                         <v-divider color="surface" />
                         <v-card-text>
-                            <v-list lines="two">
+                            <v-list v-if="articles?.results.length" lines="two">
                                 <v-list-item
                                     v-for="article in articles?.results"
                                     :key="article.id"
@@ -347,6 +347,9 @@
                                     </template>
                                 </v-list-item>
                             </v-list>
+                            <div v-else class="font-weight-bold text-grey">
+                                {{ t('no_photo') }}
+                            </div>
                             <v-pagination
                                 v-if="articleQuery.count"
                                 v-model="articleQuery.page"

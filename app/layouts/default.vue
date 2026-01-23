@@ -1,6 +1,24 @@
 <script setup lang="ts">
     import { Toaster } from 'vue-sonner'
     import 'vue-sonner/style.css'
+
+    useHead({
+        script: [
+            {
+                src: 'https://o.alicdn.com/appflow/chatbot/v1/AppflowChatSDK.js',
+                onload: () => {
+                    // @ts-ignore
+                    window.APPFLOW_CHAT_SDK?.init({
+                        integrateConfig: {
+                            integrateId: 'cit-552d544bf79546a3878c',
+                            domain: { requestDomain: 'https://kotae.cn' },
+                        },
+                    })
+                },
+            },
+        ],
+    })
+
     const { isLogin, verify } = useAuth()
 
     const token = useCookie('token')
