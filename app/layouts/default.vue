@@ -11,7 +11,10 @@
                     window.APPFLOW_CHAT_SDK?.init({
                         integrateConfig: {
                             integrateId: 'cit-552d544bf79546a3878c',
-                            domain: { requestDomain: 'https://kotae.cn' },
+                            domain: {
+                                requestDomain:
+                                    'https://1094281040266220.appflow.aliyunnest.com',
+                            },
                         },
                     })
                 },
