@@ -16,6 +16,7 @@ module.exports = {
                 bracketSpacing: true, // 控制对象字面量大括号内的空格
                 arrowParens: 'avoid', // 如果只有一个参数，就去掉括号
                 vueIndentScriptAndStyle: true, // 保证 <script setup> 和 <style> 有缩进
+                endOfLine: 'auto', // 结尾使用 LF（换行符）还是 CRLF（回车换行符）
             },
         ],
     },

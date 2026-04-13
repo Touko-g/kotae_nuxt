@@ -155,6 +155,10 @@ export default defineNuxtConfig({
                     height: 2,
                 },
             },
+            icons: {
+                defaultSet: 'mdi',
+                sets: 'mdi',
+            },
             theme: {
                 defaultTheme: 'light',
                 themes: {

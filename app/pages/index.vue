@@ -30,7 +30,11 @@
         async () => {
             const [recent, hot] = await Promise.all([
                 getArticleList({ page: 1, order: '-create_time' }),
-                getArticleList({ page: 1, pagesize: 10, order: '-likes' }),
+                getArticleList({
+                    page: 1,
+                    pagesize: 10,
+                    order: '-likes',
+                }),
             ])
             return { recent, hot }
         },
@@ -266,7 +270,8 @@
                                         />
                                     </template>
                                     <p class="ml-2">
-                                        {{ key }} {{ version.version }}
+                                        {{ key }}
+                                        {{ version.version }}
                                     </p>
                                 </v-chip>
                             </v-hover>
