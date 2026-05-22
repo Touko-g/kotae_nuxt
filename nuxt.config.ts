@@ -41,6 +41,7 @@ export default defineNuxtConfig({
     css: [
         '~/assets/css/main.css',
         '@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-SemiBoldItalic/result.css',
+        '@mdi/font/css/materialdesignicons.min.css',
     ],
     modules: [
         '@nuxtjs/i18n',
