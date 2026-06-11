@@ -9,11 +9,12 @@
 
     const { t } = useLocale()
     const { show } = useSnackbar()
+    const { rules, password2Rules } = useRules()
 
     const { logout } = useAuth()
     const { editPassword } = useUser()
+    const { clearAuth } = useClearAuth()
 
-    const isLogin = useState('isLogin')
     const refreshToken = useCookie('refresh')
     const user = useCookie<User | null>('user')
 
@@ -24,38 +25,23 @@
         password: '',
         password2: '',
         loading: false,
-        oldPswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'Password is required',
-        ],
-        pswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'New Password is required',
-            (v: string) =>
-                (v && v.length >= 8) ||
-                'This password is too short. It must contain at least 8 characters.',
-            (v: string) =>
-                checkPsw1(v) ||
-                'The New Password cannot be the same as the Old Password',
-        ],
-        psw2Rules: [
-            (v: string) =>
-                (!!v && !!v.trim()) || 'Confirm Password is required',
-            (v: string) => checkPsw(v) || 'Confirm Password does not match',
-        ],
     })
 
-    onMounted(async () => {})
+    const oldPswRules = [
+        (v: string) => (!!v && !!v.trim()) || 'Password is required',
+    ]
 
-    const checkPsw1 = (v: string): boolean => {
-        return data.old_password !== data.password
-    }
+    const pswRules = [
+        ...rules.passwordRules,
+        (_v: string) =>
+            data.old_password !== data.password ||
+            'The New Password cannot be the same as the Old Password',
+    ]
 
-    const checkPsw = (v: string): boolean => {
-        return data.password === data.password2
-    }
+    const psw2Rules = password2Rules(() => data.password)
 
     const handleEdit = async () => {
         if (form.value && user.value && refreshToken.value) {
-            form.value.validate()
             const { valid } = await form.value.validate()
             if (valid) {
                 try {
@@ -67,9 +53,7 @@
                     })
 
                     await logout({ refresh_token: refreshToken.value })
-                    const cookies = ['user', 'refresh', 'token']
-                    cookies.forEach(name => (useCookie(name).value = null))
-                    isLogin.value = false
+                    clearAuth()
                     navigateTo('/')
                     show(t('change_password_success'), 'success')
                 } catch (error) {
@@ -94,7 +78,7 @@
                     :label="t('old_psw')"
                     type="password"
                     autocomplete="current-password"
-                    :rules="data.oldPswRules"
+                    :rules="oldPswRules"
                     color="primary"
                     variant="outlined"
                     density="comfortable"
@@ -106,7 +90,7 @@
                     :label="t('new_psw')"
                     type="password"
                     autocomplete="new-password"
-                    :rules="data.pswRules"
+                    :rules="pswRules"
                     color="primary"
                     variant="outlined"
                     density="comfortable"
@@ -118,7 +102,7 @@
                     :label="t('confirm_psw')"
                     type="password"
                     autocomplete="new-password"
-                    :rules="data.psw2Rules"
+                    :rules="psw2Rules"
                     color="primary"
                     variant="outlined"
                     density="comfortable"

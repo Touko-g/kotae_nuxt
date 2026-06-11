@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
-
     definePageMeta({
         middleware: 'auth',
     })
@@ -17,11 +15,10 @@
     const { getUser } = useUser()
     const { getArticleList } = useArticle()
     const { addPhoto, getPhotoList } = usePhoto()
-    const { getCosKey } = useAuth()
 
     const { show } = useSnackbar()
     const { t } = useLocale()
-    const { fromNow, format } = useDayjs()
+    const { fromNow } = useDayjs()
     const { width } = useDisplay()
 
     const refreshCount = useState('refreshCount')
@@ -46,7 +43,6 @@
     const photoData = reactive({
         photoName: '',
         photoPath: '',
-        cosLoading: false,
         uploadLoading: false,
     })
 
@@ -90,32 +86,14 @@
         return loginUser.value?.id === Number(id)
     })
 
+    const { cosLoading, upload: cosUpload } = useCosUpload({
+        keyPrefix: `/blog/photo/${user.value?.username}/`,
+    })
+
     const handleUpload = async (file: File | File[]) => {
         if (!file || Array.isArray(file)) return
-        try {
-            photoData.cosLoading = true
-            const { credentials } = await getCosKey()
-
-            const cos = new COS({
-                SecretId: credentials.tmpSecretId,
-                SecretKey: credentials.tmpSecretKey,
-                XCosSecurityToken: credentials.sessionToken,
-            })
-
-            cos.putObject({
-                Bucket: 'chen-1302611521' /* 存储桶 */,
-                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                Key: `/blog/photo/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                Body: file, // 上传文件对象
-                onProgress: () => {},
-            })
-                .then(res => (photoData.photoPath = `https://${res.Location}`))
-                .catch(err => show(err, 'error'))
-        } catch (e) {
-        } finally {
-            photoData.cosLoading = false
-        }
+        const url = await cosUpload(file)
+        if (url) photoData.photoPath = url
     }
 
     const uploadPhoto = async () => {
@@ -234,7 +212,7 @@
                             <v-sheet v-show="isSelf" class="mt-4">
                                 <v-file-input
                                     prepend-icon="mdi-image-plus"
-                                    :loading="photoData.cosLoading"
+                                    :loading="cosLoading"
                                     chips
                                     show-size
                                     counter

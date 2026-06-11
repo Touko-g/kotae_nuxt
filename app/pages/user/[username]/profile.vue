@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
-
     definePageMeta({
         middleware: 'auth',
     })
@@ -10,12 +8,10 @@
         ogTitle: '修改个人信息',
     })
 
-    const { getCosKey } = useAuth()
     const { updateUser } = useUser()
     const { rules } = useRules()
 
     const { t } = useLocale()
-    const { format } = useDayjs()
     const { show } = useSnackbar()
     const user = useCookie<User>('user')
 
@@ -27,7 +23,10 @@
         about: '',
         avatar: '',
         loading: false,
-        cosLoading: false,
+    })
+
+    const { cosLoading, upload: cosUpload } = useCosUpload({
+        keyPrefix: `/blog/avatar/${user.value?.username}/`,
     })
 
     onMounted(() => {
@@ -41,30 +40,8 @@
 
     const handleUpload = async (file: File | File[]) => {
         if (!file || Array.isArray(file)) return
-        try {
-            userForm.cosLoading = true
-            const { credentials } = await getCosKey()
-
-            const cos = new COS({
-                SecretId: credentials.tmpSecretId,
-                SecretKey: credentials.tmpSecretKey,
-                XCosSecurityToken: credentials.sessionToken,
-            })
-
-            cos.putObject({
-                Bucket: 'chen-1302611521' /* 存储桶 */,
-                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                Key: `/blog/avatar/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                Body: file, // 上传文件对象
-                onProgress: () => {},
-            })
-                .then(res => (userForm.avatar = `https://${res.Location}`))
-                .catch(err => show(err, 'error'))
-        } catch (e) {
-        } finally {
-            userForm.cosLoading = false
-        }
+        const url = await cosUpload(file)
+        if (url) userForm.avatar = url
     }
 
     const handleEdit = async () => {
@@ -122,7 +99,7 @@
                             prepend-icon="mdi-camera"
                             variant="outlined"
                             :label="t('avatar')"
-                            :loading="userForm.cosLoading"
+                            :loading="cosLoading"
                             @update:model-value="handleUpload"
                         ></v-file-input>
                     </v-col>
