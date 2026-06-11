@@ -14,8 +14,8 @@
     const { editPassword } = useUser()
 
     const isLogin = useState('isLogin')
-    const refreshToken = useCookie('refresh')
-    const user = useCookie<User | null>('user')
+    const refreshToken = useCookie('refresh', AUTH_COOKIE_OPTIONS)
+    const user = useCookie<User | null>('user', AUTH_COOKIE_OPTIONS)
 
     const form = useTemplateRef('form')
     const data = reactive({
@@ -68,7 +68,10 @@
 
                     await logout({ refresh_token: refreshToken.value })
                     const cookies = ['user', 'refresh', 'token']
-                    cookies.forEach(name => (useCookie(name).value = null))
+                    cookies.forEach(
+                        name =>
+                            (useCookie(name, AUTH_COOKIE_OPTIONS).value = null)
+                    )
                     isLogin.value = false
                     navigateTo('/')
                     show(t('change_password_success'), 'success')

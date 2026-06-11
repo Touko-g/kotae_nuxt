@@ -23,9 +23,10 @@
     const { t } = useLocale()
     const { fromNow, format } = useDayjs()
     const { width } = useDisplay()
+    const config = useRuntimeConfig()
 
     const refreshCount = useState('refreshCount')
-    const loginUser = useCookie<User | null>('user')
+    const loginUser = useCookie<User | null>('user', AUTH_COOKIE_OPTIONS)
 
     const articleQuery = reactive({
         page: 1,
@@ -103,8 +104,8 @@
             })
 
             cos.putObject({
-                Bucket: 'chen-1302611521' /* 存储桶 */,
-                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
+                Bucket: config.public.cosBucket,
+                Region: config.public.cosRegion,
                 Key: `/blog/photo/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
                 StorageClass: 'STANDARD', // 上传模式, 标准模式
                 Body: file, // 上传文件对象

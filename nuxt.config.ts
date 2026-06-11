@@ -117,6 +117,12 @@ export default defineNuxtConfig({
     runtimeConfig: {
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/',
+            tinymceApiKey:
+                process.env.NUXT_PUBLIC_TINYMCE_API_KEY || 'no-api-key',
+            cosBucket: process.env.NUXT_PUBLIC_COS_BUCKET || 'chen-1302611521',
+            cosRegion: process.env.NUXT_PUBLIC_COS_REGION || 'ap-nanjing',
+            chatbotIntegrateId:
+                process.env.NUXT_PUBLIC_CHATBOT_INTEGRATE_ID || '',
             versions: {
                 nuxt: {
                     version: pkg.dependencies.nuxt,
@@ -192,5 +198,5 @@ export default defineNuxtConfig({
         },
     },
     compatibilityDate: '2025-07-15',
-    devtools: { enabled: true },
+    devtools: { enabled: process.env.NODE_ENV !== 'production' },
 })

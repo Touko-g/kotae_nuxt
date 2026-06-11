@@ -2,29 +2,34 @@
     import { Toaster } from 'vue-sonner'
     import 'vue-sonner/style.css'
 
+    const chatbotConfig = useRuntimeConfig()
+
     useHead({
-        script: [
-            {
-                src: 'https://o.alicdn.com/appflow/chatbot/v1/AppflowChatSDK.js',
-                onload: () => {
-                    // @ts-ignore
-                    window.APPFLOW_CHAT_SDK?.init({
-                        integrateConfig: {
-                            integrateId: 'cit-552d544bf79546a3878c',
-                            domain: {
-                                requestDomain:
-                                    'https://1094281040266220.appflow.aliyunnest.com',
-                            },
-                        },
-                    })
-                },
-            },
-        ],
+        script: chatbotConfig.public.chatbotIntegrateId
+            ? [
+                  {
+                      src: 'https://o.alicdn.com/appflow/chatbot/v1/AppflowChatSDK.js',
+                      onload: () => {
+                          // @ts-ignore
+                          window.APPFLOW_CHAT_SDK?.init({
+                              integrateConfig: {
+                                  integrateId:
+                                      chatbotConfig.public.chatbotIntegrateId,
+                                  domain: {
+                                      requestDomain:
+                                          'https://1094281040266220.appflow.aliyunnest.com',
+                                  },
+                              },
+                          })
+                      },
+                  },
+              ]
+            : [],
     })
 
     const { isLogin, verify } = useAuth()
 
-    const token = useCookie('token')
+    const token = useCookie('token', AUTH_COOKIE_OPTIONS)
     const { current } = useTheme()
 
     const createArticle = () => {

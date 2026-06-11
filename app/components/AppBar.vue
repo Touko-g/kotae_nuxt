@@ -7,7 +7,7 @@
     const searchDialog = useState('search')
     const { isLogin, logout } = useAuth()
 
-    const user = useCookie<User | null>('user')
+    const user = useCookie<User | null>('user', AUTH_COOKIE_OPTIONS)
     const { show } = useSnackbar()
     const loading = useState('loading')
 
@@ -18,8 +18,8 @@
     }
 
     const handleLogout = async () => {
-        const refresh = useCookie('refresh')
-        const token = useCookie('token')
+        const refresh = useCookie('refresh', AUTH_COOKIE_OPTIONS)
+        const token = useCookie('token', AUTH_COOKIE_OPTIONS)
         if (refresh.value) {
             loading.value = true
             try {
