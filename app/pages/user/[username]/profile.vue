@@ -61,7 +61,8 @@
             })
                 .then(res => (userForm.avatar = `https://${res.Location}`))
                 .catch(err => show(err, 'error'))
-        } catch (e) {
+        } catch (e: any) {
+            show(e?.message || 'Failed to upload avatar', 'error')
         } finally {
             userForm.cosLoading = false
         }
@@ -86,7 +87,8 @@
                     user.value.avatar = userForm.avatar
 
                     show(t('update_profile_success'), 'success')
-                } catch (e) {
+                } catch (e: any) {
+                    show(e?.message || 'Failed to update profile', 'error')
                 } finally {
                     userForm.loading = false
                 }

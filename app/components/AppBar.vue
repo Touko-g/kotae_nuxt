@@ -37,7 +37,8 @@
                     navigateTo('/')
                 }
                 show(t('logout_success'), 'success')
-            } catch (e) {
+            } catch (e: any) {
+                show(e?.message || 'Logout failed', 'error')
             } finally {
                 loading.value = false
             }

@@ -37,7 +37,9 @@
             try {
                 await verify({ token: token.value })
                 isLogin.value = true
-            } catch (e) {}
+            } catch (_e) {
+                isLogin.value = false
+            }
         } else {
             isLogin.value = false
         }

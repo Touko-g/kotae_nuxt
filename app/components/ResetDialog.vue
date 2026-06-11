@@ -48,6 +48,8 @@
                     })
                     show(detail as string, 'success')
                     resetOptions.isLock = false
+                } catch (e: any) {
+                    show(e?.message || 'Failed to send code', 'error')
                 } finally {
                     codeForm.loading = false
                 }
@@ -70,6 +72,8 @@
                     await resetPsw({ ...resetForm })
                     show(t('reset_password_success'), 'success')
                     resetDialog.value = false
+                } catch (e: any) {
+                    show(e?.message || 'Failed to reset password', 'error')
                 } finally {
                     resetForm.loading = false
                 }

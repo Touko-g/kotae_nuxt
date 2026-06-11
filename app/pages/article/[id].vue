@@ -117,7 +117,9 @@
                 await delArticle(article.value.id)
                 show(t('article_delete_success'), 'success')
                 navigateTo('/')
-            } catch (e) {}
+            } catch (e: any) {
+                show(e?.message || 'Failed to delete article', 'error')
+            }
         }
     }
 
@@ -128,7 +130,9 @@
             if (typeof refreshCount.value === 'number') {
                 refreshCount.value += 1
             }
-        } catch (e) {}
+        } catch (e: any) {
+            show(e?.message || 'Failed to like article', 'error')
+        }
     }
 
     const isLike = computed(() => {
