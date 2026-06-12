@@ -20,7 +20,6 @@
 
     // --- 滚动触发元素 ---
     const scrollRef = useTemplateRef('scrollRef')
-
     // --- IntersectionObserver ---
     const observer = ref<IntersectionObserver | null>(null)
 
