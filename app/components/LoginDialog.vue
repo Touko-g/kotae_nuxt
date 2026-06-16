@@ -8,9 +8,9 @@
     const registerDialog = useState('register')
     const resetDialog = useState('reset')
 
-    const token = useCookie('token')
-    const refreshToken = useCookie('refresh')
-    const user = useCookie('user')
+    const token = useCookie('token', AUTH_COOKIE_OPTIONS)
+    const refreshToken = useCookie('refresh', AUTH_COOKIE_OPTIONS)
+    const user = useCookie('user', AUTH_COOKIE_OPTIONS)
 
     const formRef = useTemplateRef('formRef')
 

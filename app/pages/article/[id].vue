@@ -16,7 +16,7 @@
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
     const isLogin = useState('isLogin')
-    const user = useCookie<User>('user')
+    const user = useCookie<User>('user', AUTH_COOKIE_OPTIONS)
 
     const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 

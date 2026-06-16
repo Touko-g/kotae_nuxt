@@ -27,7 +27,7 @@ export const useHttp = () => {
 
     const request = async <T>(url: string, options: HttpOptions = {}) => {
         if (options.showLoading) loadingCount.value++
-        const token = useCookie('token')?.value
+        const token = useCookie('token', AUTH_COOKIE_OPTIONS)?.value
         try {
             return await $fetch<T>(url, {
                 method: options.method || 'GET',
@@ -45,9 +45,12 @@ export const useHttp = () => {
                 },
                 async onResponseError({ response }) {
                     const data = response._data
-                    const token = useCookie('token')
-                    const refreshToken = useCookie('refresh')
-                    const user = useCookie('user')
+                    const token = useCookie('token', AUTH_COOKIE_OPTIONS)
+                    const refreshToken = useCookie(
+                        'refresh',
+                        AUTH_COOKIE_OPTIONS
+                    )
+                    const user = useCookie('user', AUTH_COOKIE_OPTIONS)
                     const { refresh, isLogin } = useAuth()
 
                     // 避免 refresh 接口再次触发自身

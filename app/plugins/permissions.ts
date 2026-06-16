@@ -6,7 +6,7 @@ export default defineNuxtPlugin(nuxtApp => {
             const value = binding.value
 
             el.addEventListener('click', (e: Event) => {
-                const token = useCookie('token').value
+                const token = useCookie('token', AUTH_COOKIE_OPTIONS).value
                 const permissions = useState<string[]>('permissions').value
 
                 if (!token) {

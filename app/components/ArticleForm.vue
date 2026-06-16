@@ -8,6 +8,8 @@
     const { t } = useLocale()
     const { rules } = useRules()
 
+    const config = useRuntimeConfig()
+
     const { getCosKey } = useAuth()
     const { getArticle, createArticle, updateArticle } = useArticle()
     const { getTagList } = useTag()
@@ -41,7 +43,7 @@
             const val = ['light', 'dark'].includes(theme.global.name.value)
                 ? theme.global.name.value
                 : 'light'
-            return `https://chen-1302611521.cos.ap-nanjing.myqcloud.com/tinymce/${val}/skins/ui/${val}`
+            return `https://${config.public.cosBucket}.cos.${config.public.cosRegion}.myqcloud.com/tinymce/${val}/skins/ui/${val}`
         }),
         plugins:
             'link lists image codesample code table wordcount  table fullscreen preview pagebreak insertdatetime', // 插件
@@ -74,8 +76,8 @@
                         })
                         cos.putObject(
                             {
-                                Bucket: 'chen-1302611521' /* 存储桶 */,
-                                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
+                                Bucket: config.public.cosBucket,
+                                Region: config.public.cosRegion,
                                 Key: `/blog/article/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
                                 StorageClass: 'STANDARD', // 上传模式, 标准模式
                                 Body: file, // 上传文件对象
@@ -195,7 +197,7 @@
             id="tinymce-editor"
             v-model="articleForm.content"
             :init="editorConfig"
-            api-key="4aoi5vbw5t6v7q43jt2w6s6q9cpzikf3384bpre1tq2pftid"
+            :api-key="config.public.tinymceApiKey"
         />
         <v-overlay
             v-model="editorLoad"
