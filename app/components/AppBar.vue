@@ -6,6 +6,7 @@
     const loginDialog = useState('login')
     const searchDialog = useState('search')
     const { isLogin, logout } = useAuth()
+    const { clearAuth } = useClearAuth()
 
     const user = useCookie<User | null>('user')
     const { show } = useSnackbar()
@@ -19,15 +20,11 @@
 
     const handleLogout = async () => {
         const refresh = useCookie('refresh')
-        const token = useCookie('token')
         if (refresh.value) {
             loading.value = true
             try {
                 await logout({ refresh_token: refresh.value })
-                isLogin.value = false
-                refresh.value = null
-                token.value = null
-                user.value = null
+                clearAuth()
                 if (
                     !(
                         route.fullPath === '/' ||

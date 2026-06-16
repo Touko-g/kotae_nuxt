@@ -18,5 +18,10 @@ export function useRules() {
         tagRules: [(v: []) => !!v.length || 'Tag is required'],
     })
 
-    return { rules }
+    const password2Rules = (getPassword: () => string) => [
+        (v: string) => (!!v && !!v.trim()) || 'Password is required',
+        (v: string) => getPassword() === v || 'Password does not match',
+    ]
+
+    return { rules, password2Rules }
 }

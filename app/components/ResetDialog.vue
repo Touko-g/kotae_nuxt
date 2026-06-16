@@ -1,7 +1,7 @@
 <script setup lang="ts">
     const { t } = useLocale()
     const { show } = useSnackbar()
-    const { rules } = useRules()
+    const { rules, password2Rules } = useRules()
     const { resetCode, resetPsw } = useAuth()
     const resetDialog = useState('reset', () => false)
 
@@ -28,14 +28,7 @@
         loading: false,
     })
 
-    const checkPsw = (v: string) => {
-        return resetForm.password === v
-    }
-
-    const password2Rules = [
-        (v: string) => (!!v && !!v.trim()) || 'Password is required',
-        (v: string) => checkPsw(v) || 'Password does not match',
-    ]
+    const confirmPasswordRules = password2Rules(() => resetForm.password)
 
     const handleCode = async () => {
         if (codeFormRef.value) {
@@ -219,7 +212,7 @@
                             <v-text-field
                                 v-model="resetForm.password2"
                                 :label="t('password2')"
-                                :rules="password2Rules"
+                                :rules="confirmPasswordRules"
                                 color="primary"
                                 variant="outlined"
                                 density="comfortable"

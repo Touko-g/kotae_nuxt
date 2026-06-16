@@ -14,17 +14,19 @@
     const { format } = useDayjs()
     const { t } = useLocale()
 
-    const photos = ref<Photo[]>([])
     const cols = ref<number[]>([])
-    const loading = ref(false)
-    const observer = ref<IntersectionObserver | null>(null)
-    const scrollRef = useTemplateRef('scrollRef')
     const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 
-    const page = reactive({
-        page: 1,
-        pagesize: 3,
-        count: 0,
+    const {
+        items: photos,
+        loading,
+        currentPage,
+        pageCount,
+        scrollRef,
+        initItems,
+        observeScroll,
+    } = useInfiniteScroll<Photo>(page => getPhotoList({ page, pagesize: 3 }), {
+        pageSize: 3,
     })
 
     // ✅ 图片预览
@@ -121,12 +123,11 @@
 
     // 初始化加载
     const { data } = await useAsyncData('photos', () =>
-        getPhotoList({ ...page })
+        getPhotoList({ page: 1, pagesize: 3 })
     )
 
     if (data.value?.results) {
-        photos.value = data.value.results
-        page.count = Math.ceil(data.value.count / page.pagesize)
+        initItems(data.value)
         cols.value = generateCols(photos.value.length)
     }
 
@@ -137,44 +138,17 @@
         if (!confirmed) return
         try {
             await delPhoto(id)
-            photos.value.splice(index, 1) // 从数组中删除
+            photos.value.splice(index, 1)
             cols.value = generateCols(photos.value.length)
             show(t('photo_delete_success'), 'success')
         } catch (err) {}
     }
 
-    // 加载更多
-    const loadPhotos = async () => {
-        if (loading.value || page.page >= page.count) return
-        loading.value = true
-        page.page++
-        const { results } = await getPhotoList({ ...page })
-        if (results?.length) {
-            photos.value.push(...results)
-            cols.value.push(...generateCols(results.length))
-        }
-        loading.value = false
-    }
-
-    // 监听加载更多
-    onMounted(async () => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) await loadPhotos()
-            },
-            { rootMargin: '100px' }
-        )
-        await nextTick()
-        if (scrollRef.value) observer.value.observe(scrollRef.value)
-    })
-
     watch(photos, async () => {
+        cols.value = generateCols(photos.value.length)
         await nextTick()
-        if (scrollRef.value && observer.value)
-            observer.value.observe(scrollRef.value)
+        observeScroll()
     })
-
-    onUnmounted(() => observer.value?.disconnect())
 </script>
 
 <template>
@@ -240,7 +214,7 @@
         <div v-if="photos?.length" ref="scrollRef"></div>
 
         <div
-            v-if="!loading && page.page >= page.count"
+            v-if="!loading && currentPage >= pageCount"
             class="text-center text-gray-500 py-4"
         >
             已经到底啦～

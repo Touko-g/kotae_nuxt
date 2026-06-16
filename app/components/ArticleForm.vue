@@ -1,16 +1,16 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
     import Editor from '@tinymce/tinymce-vue'
 
     const theme = useTheme()
-    const { format } = useDayjs()
     const { show } = useSnackbar()
     const { t } = useLocale()
     const { rules } = useRules()
 
-    const { getCosKey } = useAuth()
     const { getArticle, createArticle, updateArticle } = useArticle()
     const { getTagList } = useTag()
+    const { upload: cosUpload } = useCosUpload({
+        keyPrefix: '/blog/article/',
+    })
 
     interface Props {
         mode: 'create' | 'edit'
@@ -61,42 +61,12 @@
             { text: 'Python', value: 'python' },
         ],
         branding: false,
-        // 图片上传回调
-        images_upload_handler: (blobInfo: any) =>
-            new Promise((resolve, reject) => {
-                const file = blobInfo.blob()
-                getCosKey()
-                    .then(res => {
-                        const cos = new COS({
-                            SecretId: res.credentials.tmpSecretId, // 身份识别ID
-                            SecretKey: res.credentials.tmpSecretKey, // 身份秘钥
-                            XCosSecurityToken: res.credentials.sessionToken,
-                        })
-                        cos.putObject(
-                            {
-                                Bucket: 'chen-1302611521' /* 存储桶 */,
-                                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                                Key: `/blog/article/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                                Body: file, // 上传文件对象
-                            },
-                            (err, data) => {
-                                // 上传成功之后
-                                if (data.statusCode === 200) {
-                                    const path = `https://${data.Location}`
-                                    resolve(path)
-                                }
-                                if (err) {
-                                    show(err.message, 'error')
-                                    reject(err)
-                                }
-                            }
-                        )
-                    })
-                    .catch(e => {
-                        reject(e)
-                    })
-            }),
+        images_upload_handler: async (blobInfo: any) => {
+            const file = blobInfo.blob()
+            const url = await cosUpload(file)
+            if (!url) throw new Error('Upload failed')
+            return url
+        },
     })
 
     onMounted(async () => {
