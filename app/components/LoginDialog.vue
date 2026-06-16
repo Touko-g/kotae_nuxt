@@ -65,7 +65,8 @@
                     loginDialog.value = false
 
                     show(t('login_success'), 'success')
-                } catch (e) {
+                } catch (e: any) {
+                    show(e?.message || 'Login failed', 'error')
                 } finally {
                     loginForm.loading = false
                 }

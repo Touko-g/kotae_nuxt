@@ -42,21 +42,29 @@
         loading.value = true
         page.page += 1
 
-        const { results } = await getLikeList({
-            page: page.page,
-        })
+        try {
+            const { results } = await getLikeList({
+                page: page.page,
+            })
 
-        if (results?.length) {
-            likes.value.push(...results)
+            if (results?.length) {
+                likes.value.push(...results)
+            }
+        } catch (_e) {
+            page.page -= 1
+        } finally {
+            loading.value = false
         }
-
-        loading.value = false
     }
 
     const handleDel = async (id: string | number) => {
-        await delLike(id)
-        likes.value = likes.value.filter(like => like.id !== id)
-        show(t('unlike'), 'success')
+        try {
+            await delLike(id)
+            likes.value = likes.value.filter(like => like.id !== id)
+            show(t('unlike'), 'success')
+        } catch (e: any) {
+            show(e?.message || 'Failed to unlike', 'error')
+        }
     }
 
     onMounted(async () => {
