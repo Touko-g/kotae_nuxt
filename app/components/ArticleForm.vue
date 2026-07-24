@@ -231,6 +231,8 @@
                 color="primary"
                 variant="tonal"
                 :loading="articleForm.loading"
+                data-cuelume-press
+                data-cuelume-release
                 @click="publish"
                 >{{ t(id ? 'edit' : 'publish') }}</v-btn
             >

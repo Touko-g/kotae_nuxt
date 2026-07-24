@@ -193,6 +193,8 @@
                         height="100%"
                         class="transition-all duration-300 cursor-pointer"
                         lazy-src="https://chen-1302611521.cos.ap-nanjing.myqcloud.com/blog/photo/Touko/thumbbig-287318.webp"
+                        data-cuelume-press
+                        data-cuelume-release
                         @click="openPreview(index)"
                     >
                         <template #placeholder>

@@ -5,6 +5,7 @@
     const { getSearchList, addSearch } = useSearch()
     const { getArticleList } = useArticle()
     const { fromNow } = useDayjs()
+    const { soundWhisper } = useSound()
     const searchDialog = useState('search', () => false)
 
     const search = reactive({
@@ -20,6 +21,7 @@
 
     watch(searchDialog, async value => {
         if (value) {
+            soundWhisper()
             try {
                 search.loading = true
                 const { results } = await getSearchList({

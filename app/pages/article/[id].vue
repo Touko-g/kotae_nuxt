@@ -12,6 +12,7 @@
     const { name } = useTheme()
     const { show } = useSnackbar()
     const { extractText } = useExtractText()
+    const { soundSparkle } = useSound()
 
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
@@ -125,6 +126,7 @@
         if (!isLogin.value) return
         try {
             await addLike({ article: article.value?.id })
+            soundSparkle()
             if (typeof refreshCount.value === 'number') {
                 refreshCount.value += 1
             }
@@ -243,6 +245,7 @@
                             icon="mdi-thumb-up-outline"
                             variant="text"
                             :color="isLike ? 'primary' : ''"
+                            data-cuelume-manual
                             @click="handleLike"
                         />
                         <span

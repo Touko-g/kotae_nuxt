@@ -196,6 +196,8 @@
                     color="primary"
                     class="ml-4"
                     :loading="commentLoading"
+                    data-cuelume-press
+                    data-cuelume-release
                     @click="handlePostComment"
                     >{{ t('post_comment') }}</v-btn
                 >
@@ -390,7 +392,9 @@
                                 {{ comment.comment_replies.length }}
                                 {{ t('replies') }}
                                 <span
-                                    class="text-primary"
+                                    class="text-primary cursor-pointer"
+                                    data-cuelume-press
+                                    data-cuelume-release
                                     @click="viewMore(comment.id)"
                                 >
                                     {{ t('view_more') }}

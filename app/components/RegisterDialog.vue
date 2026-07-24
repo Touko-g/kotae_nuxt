@@ -3,6 +3,7 @@
     const { show } = useSnackbar()
     const { rules } = useRules()
     const { getCode, register } = useAuth()
+    const { soundWhisper } = useSound()
     const registerDialog = useState('register', () => false)
 
     const registerOptions = reactive({
@@ -91,6 +92,10 @@
     }
 
     const { tab, isLock, tabItems } = toRefs(registerOptions)
+
+    watch(registerDialog, val => {
+        if (val) soundWhisper()
+    })
 </script>
 
 <template>
@@ -249,6 +254,8 @@
                                     variant="tonal"
                                     class="mr-1"
                                     :loading="registerForm.loading"
+                                    data-cuelume-press
+                                    data-cuelume-release
                                     @click="handleRegister"
                                     >{{ t('sign_up') }}
                                 </v-btn>

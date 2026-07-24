@@ -3,6 +3,7 @@
     const { show } = useSnackbar()
     const { rules } = useRules()
     const { resetCode, resetPsw } = useAuth()
+    const { soundWhisper } = useSound()
     const resetDialog = useState('reset', () => false)
 
     const resetOptions = reactive({
@@ -91,6 +92,10 @@
     }
 
     const { tab, isLock, tabItems } = toRefs(resetOptions)
+
+    watch(resetDialog, val => {
+        if (val) soundWhisper()
+    })
 </script>
 
 <template>

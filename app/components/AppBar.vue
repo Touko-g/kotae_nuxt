@@ -9,12 +9,14 @@
 
     const user = useCookie<User | null>('user')
     const { show } = useSnackbar()
+    const { soundToggle, soundTick, soundEnabled, toggleSound } = useSound()
     const loading = useState('loading')
 
     const toggleLocal = () => {
         const newLocale = current.value === 'zh' ? 'en' : 'zh'
         current.value = newLocale
         setLocale(newLocale === 'zh' ? 'zh-cn' : 'en')
+        soundTick()
     }
 
     const handleLogout = async () => {
@@ -47,7 +49,12 @@
 
 <template>
     <v-app-bar elevation="3">
-        <v-app-bar-title class="text-primary" @click="navigateTo('/')">
+        <v-app-bar-title
+            class="text-primary cursor-pointer"
+            data-cuelume-press
+            data-cuelume-release
+            @click="navigateTo('/')"
+        >
             Kotae
         </v-app-bar-title>
         <v-spacer></v-spacer>
@@ -57,11 +64,25 @@
         <v-btn v-show="isLogin" icon @click="navigateTo('/article/like')">
             <v-icon>mdi-heart</v-icon>
         </v-btn>
-        <v-btn icon @click="theme.toggle()">
+        <v-btn
+            icon
+            data-cuelume-manual
+            @click="
+                () => {
+                    theme.toggle()
+                    soundToggle()
+                }
+            "
+        >
             <v-icon>mdi-theme-light-dark</v-icon>
         </v-btn>
-        <v-btn icon @click="toggleLocal">
+        <v-btn icon data-cuelume-manual @click="toggleLocal">
             <v-icon>mdi-translate</v-icon>
+        </v-btn>
+        <v-btn icon data-cuelume-manual @click="toggleSound">
+            <v-icon>{{
+                soundEnabled ? 'mdi-volume-high' : 'mdi-volume-off'
+            }}</v-icon>
         </v-btn>
         <v-divider v-if="!isLogin" inset vertical :opacity="0.7" class="mx-6" />
         <v-menu v-if="isLogin && user" location="bottom">

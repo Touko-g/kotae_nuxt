@@ -4,6 +4,7 @@
     const { getUser } = useUser()
     const { show } = useSnackbar()
     const { rules } = useRules()
+    const { soundWhisper } = useSound()
     const loginDialog = useState('login', () => false)
     const registerDialog = useState('register')
     const resetDialog = useState('reset')
@@ -78,6 +79,10 @@
             formRef.value.reset()
         }
     }
+
+    watch(loginDialog, val => {
+        if (val) soundWhisper()
+    })
 </script>
 
 <template>
@@ -146,6 +151,8 @@
                                         variant="tonal"
                                         class="mr-1"
                                         :loading="loginForm.loading"
+                                        data-cuelume-press
+                                        data-cuelume-release
                                         @click="handleLogin"
                                         >{{ t('sign_in') }}
                                     </v-btn>
@@ -158,6 +165,8 @@
                                 </div>
                                 <p
                                     class="text-primary text-decoration-none cursor-pointer mt-2 sm:mt-0"
+                                    data-cuelume-press
+                                    data-cuelume-release
                                     @click="resetDialog = true"
                                 >
                                     {{ t('forget_psw') }}
