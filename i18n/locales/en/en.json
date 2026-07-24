@@ -35,6 +35,7 @@
   "view": "views",
   "like": "likes",
   "tag": "tags",
+  "toc": "Contents",
   "comment": "comments",
   "post_comment": "Post Comment",
   "by_time": "Sort by time",

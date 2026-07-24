@@ -154,7 +154,9 @@
                         :to="`/article/${article.id}`"
                     >
                         <template #title>
-                            <h2>{{ article.title }}</h2>
+                            <h2 class="font-weight-bold leading-snug">
+                                {{ article.title }}
+                            </h2>
                         </template>
                         <template #subtitle>
                             <div class="d-flex justify-between">
@@ -174,7 +176,10 @@
                             </v-avatar>
                         </template>
                         <v-card-text>
-                            <p class="line-clamp-2" data-allow-mismatch>
+                            <p
+                                class="line-clamp-2 leading-relaxed"
+                                data-allow-mismatch
+                            >
                                 {{ extractText(article.content) }}
                             </p>
                             <div
