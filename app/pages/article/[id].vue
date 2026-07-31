@@ -244,7 +244,8 @@
 <template>
     <v-row v-if="article" class="pa-2 pa-sm-6">
         <!-- 主内容 -->
-        <v-col :cols="toc.length && !mobile ? 9 : 12">
+        <v-col :cols="!mobile ? 2 : 0" />
+        <v-col :cols="toc.length && !mobile ? 7 : 12">
             <v-card variant="text">
                 <v-card-title>
                     <div class="d-flex">
@@ -625,6 +626,8 @@
         font-family: 'Maple Mono CN SemiBold', sans-serif;
         font-size: 1.02rem;
         line-height: 1.7;
+        background: rgba(var(--v-theme-primary), 0.08);
+        color: rgb(var(--v-theme-primary));
     }
 
     .markdown-body a {
