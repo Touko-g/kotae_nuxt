@@ -240,10 +240,16 @@
                                     openDelay: 500,
                                 }"
                                 :title="article.title"
-                                :prepend-icon="`mdi-numeric-${key + 1}`"
                                 link
                                 :to="`/article/${article.id}`"
-                            ></v-list-item>
+                            >
+                                <template #prepend>
+                                    <v-icon
+                                        :icon="`mdi-numeric-${key + 1}`"
+                                        :color="key < 3 ? 'primary' : ''"
+                                    />
+                                </template>
+                            </v-list-item>
                         </v-list>
                     </v-card>
                     <div class="mt-4">

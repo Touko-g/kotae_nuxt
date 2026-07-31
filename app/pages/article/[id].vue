@@ -169,7 +169,7 @@
                 level: Number(el.tagName[1]),
             })
         })
-        toc.value = items
+        toc.value = items.filter(item => item.text)
         headingEls = Array.from(headings) as HTMLElement[]
     }
 
