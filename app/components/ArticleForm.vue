@@ -81,14 +81,18 @@
                                 Body: file, // 上传文件对象
                             },
                             (err, data) => {
-                                // 上传成功之后
-                                if (data.statusCode === 200) {
-                                    const path = `https://${data.Location}`
-                                    resolve(path)
-                                }
                                 if (err) {
                                     show(err.message, 'error')
                                     reject(err)
+                                    return
+                                }
+                                if (data.statusCode === 200) {
+                                    const path = `https://${data.Location}`
+                                    resolve(path)
+                                } else {
+                                    const msg = `Upload failed with status ${data.statusCode}`
+                                    show(msg, 'error')
+                                    reject(new Error(msg))
                                 }
                             }
                         )
@@ -109,10 +113,14 @@
         observer.observe(form, { childList: true })
 
         if (id) {
-            const { title, content, tag } = await getArticle(id)
-            articleForm.title = title
-            articleForm.content = content
-            articleForm.select = tag.map(i => i.name)
+            try {
+                const { title, content, tag } = await getArticle(id)
+                articleForm.title = title
+                articleForm.content = content
+                articleForm.select = tag.map(i => i.name)
+            } catch (e: any) {
+                show(e?.message || 'Failed to load article', 'error')
+            }
         }
     })
 
@@ -123,7 +131,8 @@
             if (results && results.length > 0) {
                 articleForm.items = results.map(tag => tag.name)
             }
-        } catch (e) {
+        } catch (_e) {
+            // Tag search error already shown by useHttp
         } finally {
             articleForm.searchLoading = false
         }
@@ -152,7 +161,8 @@
                         show(t('article_create_success'), 'success')
                     }
                     reset()
-                } catch (err) {
+                } catch (err: any) {
+                    show(err?.message || 'Failed to save article', 'error')
                 } finally {
                     articleForm.loading = false
                 }

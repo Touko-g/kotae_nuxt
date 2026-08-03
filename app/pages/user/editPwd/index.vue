@@ -72,7 +72,8 @@
                     isLogin.value = false
                     navigateTo('/')
                     show(t('change_password_success'), 'success')
-                } catch (error) {
+                } catch (error: any) {
+                    show(error?.message || 'Failed to change password', 'error')
                 } finally {
                     data.loading = false
                 }

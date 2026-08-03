@@ -22,14 +22,19 @@
 
     const fetchArticles = async () => {
         loading.value = true
-        const { results, count } = await getArticleList({
-            page: 1,
-            [route.query.type as string]: route.query.query,
-        })
-        articles.value = results || []
-        page.page = 1
-        page.count = Math.ceil((count || 0) / 10)
-        loading.value = false
+        try {
+            const { results, count } = await getArticleList({
+                page: 1,
+                [route.query.type as string]: route.query.query,
+            })
+            articles.value = results || []
+            page.page = 1
+            page.count = Math.ceil((count || 0) / 10)
+        } catch (_e) {
+            articles.value = []
+        } finally {
+            loading.value = false
+        }
     }
 
     // 初始化加载
@@ -56,14 +61,19 @@
         loading.value = true
         page.page += 1
 
-        const { results } = await getArticleList({
-            page: page.page,
-            [route.query.type as string]: route.query.query,
-        })
-        if (results?.length) {
-            articles.value.push(...results)
+        try {
+            const { results } = await getArticleList({
+                page: page.page,
+                [route.query.type as string]: route.query.query,
+            })
+            if (results?.length) {
+                articles.value.push(...results)
+            }
+        } catch (_e) {
+            page.page -= 1
+        } finally {
+            loading.value = false
         }
-        loading.value = false
     }
 
     onMounted(async () => {

@@ -42,8 +42,12 @@
     })
 
     const getComments = async (params: CommentListParams) => {
-        comments.value = await getCommentList({ article, ...params })
-        search.count = Math.ceil(comments.value.count / 10)
+        try {
+            comments.value = await getCommentList({ article, ...params })
+            search.count = Math.ceil(comments.value.count / 10)
+        } catch (e: any) {
+            show(e?.message || 'Failed to load comments', 'error')
+        }
     }
 
     const onSelectEmoji = (emoji: any) => {
@@ -81,7 +85,8 @@
                 }
 
                 show(t('comment_success'), 'success')
-            } catch (e) {
+            } catch (e: any) {
+                show(e?.message || 'Failed to post comment', 'error')
             } finally {
                 commentLoading.value = false
             }
@@ -152,7 +157,8 @@
                     data.reply_info.replyIndex
                 ]?.comment_replies.push(res)
                 show(t('reply_success'), 'success')
-            } catch (e) {
+            } catch (e: any) {
+                show(e?.message || 'Failed to post reply', 'error')
             } finally {
                 handleReset()
             }

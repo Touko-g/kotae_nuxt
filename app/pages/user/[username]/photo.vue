@@ -140,7 +140,9 @@
             photos.value.splice(index, 1) // 从数组中删除
             cols.value = generateCols(photos.value.length)
             show(t('photo_delete_success'), 'success')
-        } catch (err) {}
+        } catch (err: any) {
+            show(err?.message || 'Failed to delete photo', 'error')
+        }
     }
 
     // 加载更多
@@ -148,12 +150,17 @@
         if (loading.value || page.page >= page.count) return
         loading.value = true
         page.page++
-        const { results } = await getPhotoList({ ...page })
-        if (results?.length) {
-            photos.value.push(...results)
-            cols.value.push(...generateCols(results.length))
+        try {
+            const { results } = await getPhotoList({ ...page })
+            if (results?.length) {
+                photos.value.push(...results)
+                cols.value.push(...generateCols(results.length))
+            }
+        } catch (_e) {
+            page.page--
+        } finally {
+            loading.value = false
         }
-        loading.value = false
     }
 
     // 监听加载更多
