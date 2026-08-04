@@ -18,6 +18,7 @@ export class HttpError extends Error {
 export const useHttp = () => {
     const config = useRuntimeConfig()
     const { show } = useSnackbar()
+    const { clearAuth } = useClearAuth()
 
     const isRefresh = useState('isRefresh', () => false)
     const refreshCount = useState('refreshCount', () => 0)
@@ -47,15 +48,11 @@ export const useHttp = () => {
                     const data = response._data
                     const token = useCookie('token')
                     const refreshToken = useCookie('refresh')
-                    const user = useCookie('user')
                     const { refresh, isLogin } = useAuth()
 
                     // 避免 refresh 接口再次触发自身
                     if (response.url.includes('/refresh')) {
-                        token.value = null
-                        refreshToken.value = null
-                        user.value = null
-                        isLogin.value = false
+                        clearAuth()
                         show(
                             'Authorization expired, please log in again',
                             'error'
@@ -79,10 +76,7 @@ export const useHttp = () => {
                             isLogin.value = true
                             refreshCount.value += 1
                         } catch (e) {
-                            token.value = null
-                            refreshToken.value = null
-                            isLogin.value = false
-                            user.value = null
+                            clearAuth()
                         } finally {
                             isRefresh.value = false
                         }

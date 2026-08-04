@@ -10,25 +10,27 @@
         ogTitle: `${t('search')} : ${route.query.type}-${route.query.query}`,
     })
 
-    const articles = ref<Article[]>([])
-    const loading = ref(false)
-    const page = reactive({
-        page: 1,
-        count: 0,
-    })
-
-    const scrollRef = useTemplateRef('scrollRef')
-    const observer = ref<IntersectionObserver | null>(null)
+    const {
+        items: articles,
+        loading,
+        scrollRef,
+        initItems,
+        resetPage,
+    } = useInfiniteScroll<Article>(page =>
+        getArticleList({
+            page,
+            [route.query.type as string]: route.query.query,
+        })
+    )
 
     const fetchArticles = async () => {
         loading.value = true
-        const { results, count } = await getArticleList({
+        resetPage()
+        const data = await getArticleList({
             page: 1,
             [route.query.type as string]: route.query.query,
         })
-        articles.value = results || []
-        page.page = 1
-        page.count = Math.ceil((count || 0) / 10)
+        initItems({ results: data.results || [], count: data.count || 0 })
         loading.value = false
     }
 
@@ -47,40 +49,6 @@
             }
         }
     )
-
-    // --- 加载更多 ---
-    const loadArticles = async () => {
-        if (loading.value) return
-        if (page.page >= page.count) return
-
-        loading.value = true
-        page.page += 1
-
-        const { results } = await getArticleList({
-            page: page.page,
-            [route.query.type as string]: route.query.query,
-        })
-        if (results?.length) {
-            articles.value.push(...results)
-        }
-        loading.value = false
-    }
-
-    onMounted(async () => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) {
-                    await loadArticles()
-                }
-            },
-            { rootMargin: '100px' }
-        )
-
-        await nextTick()
-        if (scrollRef.value) observer.value.observe(scrollRef.value)
-    })
-
-    onUnmounted(() => observer.value?.disconnect())
 </script>
 
 <template>
