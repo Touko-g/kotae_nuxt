@@ -49,6 +49,8 @@
                     const { detail } = await getCode({ email: codeForm.email })
                     show(detail as string, 'success')
                     registerOptions.isLock = false
+                } catch (e: any) {
+                    show(e?.message || 'Failed to send code', 'error')
                 } finally {
                     codeForm.loading = false
                 }
@@ -71,6 +73,8 @@
                     await register({ ...registerForm })
                     show(t('register_success'), 'success')
                     registerDialog.value = false
+                } catch (e: any) {
+                    show(e?.message || 'Registration failed', 'error')
                 } finally {
                     registerForm.loading = false
                 }

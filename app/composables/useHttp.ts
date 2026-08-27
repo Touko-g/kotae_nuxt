@@ -89,7 +89,12 @@ export const useHttp = () => {
                     } else if (response.status === 500) {
                         show(response.statusText, 'error')
                     } else {
-                        const showText = Object.values(data)[0]?.toString()
+                        const showText =
+                            data &&
+                            typeof data === 'object' &&
+                            Object.keys(data).length > 0
+                                ? Object.values(data)[0]?.toString()
+                                : undefined
 
                         // 处理请求错误
                         show(showText || response.statusText, 'error')

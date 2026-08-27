@@ -29,7 +29,8 @@
                     pagesize: 5,
                 })
                 search.tops = results
-            } catch (e) {
+            } catch (_e) {
+                // Hot search list is non-critical; error already shown by useHttp
             } finally {
                 search.loading = false
             }
@@ -54,7 +55,8 @@
                         pagesize: 5,
                     })
                     search.results = results
-                } catch (e) {
+                } catch (_e) {
+                    // Search error already shown by useHttp
                 } finally {
                     search.loading = false
                 }
@@ -91,7 +93,8 @@
                     })
                     await addSearch({ name: searchInfo })
                     search.results = results
-                } catch (e) {
+                } catch (_e) {
+                    // Search error already shown by useHttp
                 } finally {
                     search.loading = false
                 }

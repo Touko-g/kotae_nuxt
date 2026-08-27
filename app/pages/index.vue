@@ -100,16 +100,20 @@
         loading.value = true
         page.page += 1
 
-        const { results } = await getArticleList({
-            page: page.page,
-            order: '-create_time',
-        })
+        try {
+            const { results } = await getArticleList({
+                page: page.page,
+                order: '-create_time',
+            })
 
-        if (results?.length) {
-            articles.value.push(...results)
+            if (results?.length) {
+                articles.value.push(...results)
+            }
+        } catch (_e) {
+            page.page -= 1
+        } finally {
+            loading.value = false
         }
-
-        loading.value = false
     }
 
     // --- 监听滚动触发 ---

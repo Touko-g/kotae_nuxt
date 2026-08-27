@@ -42,7 +42,9 @@
     onUnmounted(async () => {
         try {
             await readNotice({})
-        } catch (error) {}
+        } catch (_e) {
+            // Mark-as-read is best-effort; error already shown by useHttp
+        }
     })
 </script>
 

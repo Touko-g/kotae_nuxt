@@ -112,7 +112,8 @@
             })
                 .then(res => (photoData.photoPath = `https://${res.Location}`))
                 .catch(err => show(err, 'error'))
-        } catch (e) {
+        } catch (e: any) {
+            show(e?.message || 'Failed to upload image', 'error')
         } finally {
             photoData.cosLoading = false
         }
@@ -126,7 +127,8 @@
                 name: photoData.photoName,
             })
             show(t('upload_success'), 'success')
-        } catch (e) {
+        } catch (e: any) {
+            show(e?.message || 'Failed to upload photo', 'error')
         } finally {
             photoData.uploadLoading = false
             resetPhoto()
