@@ -52,6 +52,18 @@
   "search_list_about": "一些列表关于",
   "search_article": "搜索文章",
 
+  "cmd_placeholder": "输入命令…",
+  "cmd_nav": "前往",
+  "cmd_actions": "操作",
+  "cmd_home": "首页",
+  "cmd_open_search": "打开搜索",
+  "cmd_search_query": "搜索「{0}」",
+  "cmd_toggle_theme": "切换主题",
+  "cmd_toggle_lang": "切换语言",
+  "cmd_toggle_sound": "切换音效",
+  "cmd_hint": "↑↓ 导航 · ⏎ 选择 · Esc 关闭",
+  "copy_code": "复制",
+
   "publish": "发布",
   "edit": "编辑文章",
   "add": "创建文章",

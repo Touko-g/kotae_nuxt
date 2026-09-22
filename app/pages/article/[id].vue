@@ -12,7 +12,7 @@
     const { name } = useTheme()
     const { show } = useSnackbar()
     const { extractText } = useExtractText()
-    const { soundSparkle } = useSound()
+    const { soundSparkle, soundTick } = useSound()
 
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
@@ -224,196 +224,259 @@
         window.scrollTo({ top, behavior: 'smooth' })
     }
 
+    // --- 代码块一键复制 ---
+    const COPY_ICON = '<i class="mdi mdi-content-copy"></i>'
+    const COPIED_ICON = '<i class="mdi mdi-check"></i>'
+
+    // 为正文中每个 <pre> 注入复制按钮（幂等，可重复调用）
+    const enhanceCodeBlocks = () => {
+        const container = markdownRef.value
+        if (!container) return
+        container.querySelectorAll('pre').forEach(pre => {
+            if (pre.querySelector(':scope > .code-copy-btn')) return
+            const btn = document.createElement('button')
+            btn.type = 'button'
+            btn.className = 'code-copy-btn'
+            btn.setAttribute('title', t('copy_code'))
+            btn.innerHTML = COPY_ICON
+            pre.appendChild(btn)
+        })
+    }
+
+    // 事件委托处理复制，避免逐个按钮绑监听
+    const onCodeCopy = async (e: Event) => {
+        const node = e.target as Element
+        const btn = node?.closest?.('.code-copy-btn')
+        if (!btn) return
+        const code =
+            btn.closest('pre')?.querySelector('code')?.textContent ?? ''
+        try {
+            await navigator.clipboard.writeText(code)
+        } catch (err) {
+            // 兼容非安全上下文的降级方案
+            const ta = document.createElement('textarea')
+            ta.value = code
+            document.body.appendChild(ta)
+            ta.select()
+            document.execCommand('copy')
+            ta.remove()
+        }
+        btn.classList.add('code-copied')
+        btn.innerHTML = COPIED_ICON
+        soundTick()
+        window.setTimeout(() => {
+            btn.classList.remove('code-copied')
+            btn.innerHTML = COPY_ICON
+        }, 1500)
+    }
+
     onMounted(() => {
         if (article.value) {
             article.value.content = DOMPurify.sanitize(
                 highlightCodeInHtml(article.value.content, name.value)
             )
             triggerRef(article)
-            nextTick(buildToc)
+            nextTick(() => {
+                buildToc()
+                enhanceCodeBlocks()
+            })
         }
+        markdownRef.value?.addEventListener('click', onCodeCopy)
         window.addEventListener('scroll', onScroll, { passive: true })
         onScroll()
     })
 
     onUnmounted(() => {
+        markdownRef.value?.removeEventListener('click', onCodeCopy)
         window.removeEventListener('scroll', onScroll)
     })
 </script>
 
 <template>
-    <v-row v-if="article" class="pa-2 pa-sm-6">
-        <!-- 主内容 -->
-        <v-col :cols="toc.length && !mobile ? 9 : 12">
-            <v-card variant="text">
-                <v-card-title>
-                    <div class="d-flex">
-                        <v-btn
-                            v-permission
-                            size="60"
-                            icon
-                            variant="flat"
-                            @click="navigateTo(`/user/${article.owner.id}`)"
-                        >
-                            <v-avatar size="60">
-                                <v-img
-                                    :src="article.owner.avatar"
-                                    :alt="article.owner.username"
-                                ></v-img>
-                            </v-avatar>
-                        </v-btn>
-                        <div class="d-flex flex-column justify-center ml-4">
-                            <span>{{ article.owner.username }}</span>
-                            <div class="text-sm text-grey">
-                                <span>{{ fromNow(article.create_time) }}</span
-                                ><span class="mx-2">|</span>
-                                <span>{{ t('view') }}:{{ article.views }}</span
-                                ><span v-if="!mobile" class="mx-2">|</span>
-                                <span v-if="!mobile"
-                                    >{{ t('comment') }}:{{
-                                        article.comments
+    <v-container class="px-4 px-sm-6 py-6 py-sm-10">
+        <v-row v-if="article">
+            <!-- 主内容 -->
+            <v-col :cols="toc.length && !mobile ? 9 : 12">
+                <v-card variant="text">
+                    <v-card-title>
+                        <div class="d-flex">
+                            <v-btn
+                                v-permission
+                                size="60"
+                                icon
+                                variant="flat"
+                                @click="navigateTo(`/user/${article.owner.id}`)"
+                            >
+                                <v-avatar size="60">
+                                    <v-img
+                                        :src="article.owner.avatar"
+                                        :alt="article.owner.username"
+                                    ></v-img>
+                                </v-avatar>
+                            </v-btn>
+                            <div class="d-flex flex-column justify-center ml-4">
+                                <span>{{ article.owner.username }}</span>
+                                <div class="text-sm text-grey">
+                                    <span>{{
+                                        fromNow(article.create_time)
                                     }}</span
-                                >
+                                    ><span class="mx-2">|</span>
+                                    <span
+                                        >{{ t('view') }}:{{
+                                            article.views
+                                        }}</span
+                                    ><span v-if="!mobile" class="mx-2">|</span>
+                                    <span v-if="!mobile"
+                                        >{{ t('comment') }}:{{
+                                            article.comments
+                                        }}</span
+                                    >
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </v-card-title>
-                <v-card-text class="mt-4">
-                    <h2 class="text-4xl my-4 leading-tight tracking-tight">
-                        {{ article.title }}
-                    </h2>
-                    <div>
-                        <!-- eslint-disable vue/no-v-html -->
-                        <div
-                            ref="markdownRef"
-                            class="markdown-body"
-                            v-html="article.content"
-                        ></div>
-                        <div class="d-sm-flex align-center mt-6">
-                            <h3 class="text-grey text-capitalize text-xl mr-2">
-                                {{ t('tag') }}:
-                            </h3>
-                            <v-chip-group active-class="primary--text" column>
-                                <v-chip
-                                    v-for="(tag, index) in article.tag"
-                                    :key="index"
-                                    @click="
-                                        navigateTo({
-                                            path: '/search',
-                                            query: {
-                                                query: tag.name,
-                                                type: 'tag',
-                                            },
-                                        })
-                                    "
+                    </v-card-title>
+                    <v-card-text class="mt-4">
+                        <h2 class="text-4xl my-4 leading-tight tracking-tight">
+                            {{ article.title }}
+                        </h2>
+                        <div>
+                            <!-- eslint-disable vue/no-v-html -->
+                            <div
+                                ref="markdownRef"
+                                class="markdown-body"
+                                v-html="article.content"
+                            ></div>
+                            <div class="d-sm-flex align-center mt-6">
+                                <h3
+                                    class="text-grey text-capitalize text-xl mr-2"
                                 >
-                                    {{ tag.name }}
-                                </v-chip>
-                            </v-chip-group>
+                                    {{ t('tag') }}:
+                                </h3>
+                                <v-chip-group
+                                    active-class="primary--text"
+                                    column
+                                >
+                                    <v-chip
+                                        v-for="(tag, index) in article.tag"
+                                        :key="index"
+                                        @click="
+                                            navigateTo({
+                                                path: '/search',
+                                                query: {
+                                                    query: tag.name,
+                                                    type: 'tag',
+                                                },
+                                            })
+                                        "
+                                    >
+                                        {{ tag.name }}
+                                    </v-chip>
+                                </v-chip-group>
+                            </div>
+                            <div
+                                class="d-flex justify-space-between align-center mt-2"
+                            >
+                                <div class="d-flex align-center">
+                                    <v-btn
+                                        variant="text"
+                                        icon="mdi-comment-outline"
+                                    ></v-btn>
+                                    <span>{{ article.comments }}</span>
+                                </div>
+                                <div class="d-flex align-center">
+                                    <v-btn
+                                        v-if="
+                                            article.public &&
+                                            article.owner.id === user?.id
+                                        "
+                                        v-permission
+                                        icon="mdi-circle-edit-outline"
+                                        variant="text"
+                                        @click="handleEdit"
+                                    />
+
+                                    <v-btn
+                                        v-if="
+                                            article.public &&
+                                            article.owner.id === user?.id
+                                        "
+                                        v-permission
+                                        icon="mdi-trash-can-outline"
+                                        variant="text"
+                                        @click="handleOpenDel"
+                                    />
+                                    <v-btn
+                                        v-permission
+                                        icon="mdi-thumb-up-outline"
+                                        variant="text"
+                                        :color="isLike ? 'primary' : ''"
+                                        data-cuelume-manual
+                                        @click="handleLike"
+                                    />
+                                    <span
+                                        v-if="article.likes"
+                                        :class="isLike && 'text-primary'"
+                                        >{{ article.likes }}</span
+                                    >
+                                </div>
+                            </div>
                         </div>
-                        <div
-                            class="d-flex justify-space-between align-center mt-2"
+                        <ArticleComment :article="article.id" />
+                    </v-card-text>
+                    <ConfirmDialog ref="confirmRef" />
+                </v-card>
+            </v-col>
+
+            <!-- TOC 目录 -->
+            <v-col v-if="toc.length && !mobile" cols="3">
+                <div class="toc-wrapper sticky top-[5.5rem]">
+                    <div class="d-flex align-center mb-2">
+                        <p
+                            class="font-semibold text-uppercase mb-0 font-weight-medium"
+                            style="letter-spacing: 0.08em"
                         >
-                            <div class="d-flex align-center">
-                                <v-btn
-                                    variant="text"
-                                    icon="mdi-comment-outline"
-                                ></v-btn>
-                                <span>{{ article.comments }}</span>
-                            </div>
-                            <div class="d-flex align-center">
-                                <v-btn
-                                    v-if="
-                                        article.public &&
-                                        article.owner.id === user?.id
-                                    "
-                                    v-permission
-                                    icon="mdi-circle-edit-outline"
-                                    variant="text"
-                                    @click="handleEdit"
-                                />
-
-                                <v-btn
-                                    v-if="
-                                        article.public &&
-                                        article.owner.id === user?.id
-                                    "
-                                    v-permission
-                                    icon="mdi-trash-can-outline"
-                                    variant="text"
-                                    @click="handleOpenDel"
-                                />
-                                <v-btn
-                                    v-permission
-                                    icon="mdi-thumb-up-outline"
-                                    variant="text"
-                                    :color="isLike ? 'primary' : ''"
-                                    data-cuelume-manual
-                                    @click="handleLike"
-                                />
-                                <span
-                                    v-if="article.likes"
-                                    :class="isLike && 'text-primary'"
-                                    >{{ article.likes }}</span
-                                >
-                            </div>
+                            {{ t('toc') }}
+                        </p>
+                        <span
+                            class="font-semibold ml-auto font-weight-medium text-primary"
+                        >
+                            {{ Math.round(progress) }}%
+                        </span>
+                    </div>
+                    <div class="toc-progress">
+                        <div
+                            class="toc-progress-bar"
+                            :style="{ width: `${progress}%` }"
+                        ></div>
+                    </div>
+                    <div ref="tocNavRef" class="toc-nav">
+                        <div
+                            class="toc-indicator"
+                            :style="{
+                                top: `${indicator.top}px`,
+                                height: `${indicator.height}px`,
+                                opacity: indicator.height ? 1 : 0,
+                            }"
+                        ></div>
+                        <div
+                            v-for="item in toc"
+                            :key="item.id"
+                            :data-toc-id="item.id"
+                            class="toc-item text-truncate"
+                            :class="[
+                                `toc-level-${item.level}`,
+                                { 'toc-active': activeId === item.id },
+                            ]"
+                            @click="scrollToHeading(item.id)"
+                        >
+                            {{ item.text }}
                         </div>
                     </div>
-                    <ArticleComment :article="article.id" />
-                </v-card-text>
-                <ConfirmDialog ref="confirmRef" />
-            </v-card>
-        </v-col>
-
-        <!-- TOC 目录 -->
-        <v-col v-if="toc.length && !mobile" cols="3">
-            <div class="toc-wrapper sticky top-[5.5rem]">
-                <div class="d-flex align-center mb-2">
-                    <p
-                        class="font-semibold text-uppercase mb-0 font-weight-medium"
-                        style="letter-spacing: 0.08em"
-                    >
-                        {{ t('toc') }}
-                    </p>
-                    <span
-                        class="font-semibold ml-auto font-weight-medium text-primary"
-                    >
-                        {{ Math.round(progress) }}%
-                    </span>
                 </div>
-                <div class="toc-progress">
-                    <div
-                        class="toc-progress-bar"
-                        :style="{ width: `${progress}%` }"
-                    ></div>
-                </div>
-                <div ref="tocNavRef" class="toc-nav">
-                    <div
-                        class="toc-indicator"
-                        :style="{
-                            top: `${indicator.top}px`,
-                            height: `${indicator.height}px`,
-                            opacity: indicator.height ? 1 : 0,
-                        }"
-                    ></div>
-                    <div
-                        v-for="item in toc"
-                        :key="item.id"
-                        :data-toc-id="item.id"
-                        class="toc-item text-truncate"
-                        :class="[
-                            `toc-level-${item.level}`,
-                            { 'toc-active': activeId === item.id },
-                        ]"
-                        @click="scrollToHeading(item.id)"
-                    >
-                        {{ item.text }}
-                    </div>
-                </div>
-            </div>
-        </v-col>
-    </v-row>
-    <div v-else>该文章不存在或已被删除</div>
+            </v-col>
+        </v-row>
+        <div v-else>该文章不存在或已被删除</div>
+    </v-container>
 </template>
 
 <style scoped>
@@ -608,9 +671,42 @@
     }
 
     .markdown-body pre {
+        position: relative;
         padding: 1em;
         border-radius: 5px;
         overflow: auto;
+    }
+
+    .code-copy-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(128, 128, 128, 0.18);
+        color: #8b8b8b;
+        font-size: 1rem;
+        cursor: pointer;
+        opacity: 0.7;
+        transition:
+            opacity 0.2s ease,
+            background-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    .code-copy-btn:hover {
+        opacity: 1;
+        background: rgba(128, 128, 128, 0.32);
+    }
+
+    .code-copy-btn.code-copied {
+        opacity: 1;
+        color: #4caf50;
     }
 
     .markdown-body pre code {

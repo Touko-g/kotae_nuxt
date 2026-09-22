@@ -134,8 +134,8 @@
 </script>
 
 <template>
-    <v-container>
-        <v-row class="py-6">
+    <v-container class="px-4 px-sm-6 py-6 py-sm-10">
+        <v-row>
             <v-col sm="12" md="8">
                 <v-skeleton-loader
                     v-for="(article, index) in articles"

@@ -1,49 +1,19 @@
 <script setup lang="ts">
-    const route = useRoute()
     const theme = useTheme()
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
     const loginDialog = useState('login')
     const searchDialog = useState('search')
-    const { isLogin, logout } = useAuth()
+    const { isLogin, performLogout } = useAuth()
 
     const user = useCookie<User | null>('user')
-    const { show } = useSnackbar()
     const { soundToggle, soundTick, soundEnabled, toggleSound } = useSound()
-    const loading = useState('loading')
 
     const toggleLocal = () => {
         const newLocale = current.value === 'zh' ? 'en' : 'zh'
         current.value = newLocale
         setLocale(newLocale === 'zh' ? 'zh-cn' : 'en')
         soundTick()
-    }
-
-    const handleLogout = async () => {
-        const refresh = useCookie('refresh')
-        const token = useCookie('token')
-        if (refresh.value) {
-            loading.value = true
-            try {
-                await logout({ refresh_token: refresh.value })
-                isLogin.value = false
-                refresh.value = null
-                token.value = null
-                user.value = null
-                if (
-                    !(
-                        route.fullPath === '/' ||
-                        route.fullPath.startsWith('/article')
-                    )
-                ) {
-                    navigateTo('/')
-                }
-                show(t('logout_success'), 'success')
-            } catch (e) {
-            } finally {
-                loading.value = false
-            }
-        }
     }
 </script>
 
@@ -122,7 +92,7 @@
                 <!--                <v-list-item prepend-icon="mdi-palette">-->
                 <!--                    {{ t('color_palette') }}-->
                 <!--                </v-list-item>-->
-                <v-list-item prepend-icon="mdi-logout" @click="handleLogout">
+                <v-list-item prepend-icon="mdi-logout" @click="performLogout">
                     {{ t('logout') }}
                 </v-list-item>
             </v-list>
@@ -145,6 +115,7 @@
     <ResetDialog />
     <FetchLoading />
     <SearchDialog />
+    <CommandPalette />
 </template>
 
 <style scoped></style>

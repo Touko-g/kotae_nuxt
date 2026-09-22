@@ -81,7 +81,7 @@
 </script>
 
 <template>
-    <v-container class="max-w-5xl mx-auto px-4 py-10">
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
         <!-- 标题栏 -->
         <v-alert
             class="mb-8 text-lg font-semibold tracking-wide border border-gray-700 dark:border-gray-600 bg-transparent text-gray-200"

@@ -131,6 +131,20 @@ export const useArticle = () => {
 - Global state via `useState()` for cross-component communication
 - Dialogs controlled by global state (e.g., `useState('login')`)
 
+### Page Shell (Container Convention)
+
+Every page root MUST be a `v-container` with unified padding, no per-page `pa-*`/`ma-*` hacks on `v-row`:
+
+```html
+<v-container class="px-4 px-sm-6 py-6 py-sm-10">
+    <v-row>… page grid …</v-row>
+</v-container>
+```
+
+- **Wide pages** (with a side column: home, article detail, user profile): default `v-container` width (no `max-w-*`).
+- **Reading pages** (single column / grid flows: search, likes, photos, messages, profile edit, password edit, article form, message board): add `max-w-5xl` to the shell.
+- Spacing comes only from the shell (`px-4 px-sm-6 py-6 py-sm-10`); do not add `mx-auto` (v-container self-centers) or root-level margin/padding hacks.
+
 ### i18n Usage
 
 - Translations in `i18n/locales/{lang}/`

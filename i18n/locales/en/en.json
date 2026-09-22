@@ -52,6 +52,18 @@
   "search_list_about": "Some List About",
   "search_article": "Search Article",
 
+  "cmd_placeholder": "Type a command…",
+  "cmd_nav": "Go to",
+  "cmd_actions": "Actions",
+  "cmd_home": "Home",
+  "cmd_open_search": "Open Search",
+  "cmd_search_query": "Search for “{0}”",
+  "cmd_toggle_theme": "Toggle Theme",
+  "cmd_toggle_lang": "Toggle Language",
+  "cmd_toggle_sound": "Toggle Sound",
+  "cmd_hint": "↑↓ navigate · ⏎ select · Esc close",
+  "copy_code": "Copy",
+
   "publish": "Publish",
   "edit": "Edit Article",
   "add": "Create Article",

@@ -86,62 +86,68 @@
 </script>
 
 <template>
-    <v-row class="d-flex justify-center">
-        <v-card width="500" variant="text" class="mt-12 pa-6" rounded="lg">
-            <v-form ref="form" v-model="data.valid" lazy-validation>
-                <v-text-field
-                    v-model="data.old_password"
-                    :label="t('old_psw')"
-                    type="password"
-                    autocomplete="current-password"
-                    :rules="data.oldPswRules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-4"
-                    clearable
-                />
-                <v-text-field
-                    v-model="data.password"
-                    :label="t('new_psw')"
-                    type="password"
-                    autocomplete="new-password"
-                    :rules="data.pswRules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-4"
-                    clearable
-                />
-                <v-text-field
-                    v-model="data.password2"
-                    :label="t('confirm_psw')"
-                    type="password"
-                    autocomplete="new-password"
-                    :rules="data.psw2Rules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-6"
-                    clearable
-                />
-
-                <div class="d-flex justify-end gap-2">
-                    <v-btn
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <v-row class="d-flex justify-center">
+            <v-card width="500" variant="text" class="mt-12 pa-6" rounded="lg">
+                <v-form ref="form" v-model="data.valid" lazy-validation>
+                    <v-text-field
+                        v-model="data.old_password"
+                        :label="t('old_psw')"
+                        type="password"
+                        autocomplete="current-password"
+                        :rules="data.oldPswRules"
                         color="primary"
-                        variant="tonal"
-                        :loading="data.loading"
-                        @click="handleEdit"
-                    >
-                        {{ t('confirm') }}
-                    </v-btn>
-                    <v-btn color="primary" variant="tonal" @click="handleReset">
-                        {{ t('clear') }}
-                    </v-btn>
-                </div>
-            </v-form>
-        </v-card>
-    </v-row>
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-4"
+                        clearable
+                    />
+                    <v-text-field
+                        v-model="data.password"
+                        :label="t('new_psw')"
+                        type="password"
+                        autocomplete="new-password"
+                        :rules="data.pswRules"
+                        color="primary"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-4"
+                        clearable
+                    />
+                    <v-text-field
+                        v-model="data.password2"
+                        :label="t('confirm_psw')"
+                        type="password"
+                        autocomplete="new-password"
+                        :rules="data.psw2Rules"
+                        color="primary"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-6"
+                        clearable
+                    />
+
+                    <div class="d-flex justify-end gap-2">
+                        <v-btn
+                            color="primary"
+                            variant="tonal"
+                            :loading="data.loading"
+                            @click="handleEdit"
+                        >
+                            {{ t('confirm') }}
+                        </v-btn>
+                        <v-btn
+                            color="primary"
+                            variant="tonal"
+                            @click="handleReset"
+                        >
+                            {{ t('clear') }}
+                        </v-btn>
+                    </div>
+                </v-form>
+            </v-card>
+        </v-row>
+    </v-container>
 </template>
 
 <style scoped></style>

@@ -54,6 +54,8 @@ export type CosKeyResponse = {
 export const useAuth = () => {
     const { get, post, put } = useHttp()
 
+    const { t } = useLocale()
+
     const isLogin = useState('isLogin', () => false)
 
     const login = (params: LoginParams) =>
@@ -81,6 +83,39 @@ export const useAuth = () => {
 
     const logoutAll = () => post('/logout_all/')
 
+    /** 登出并清理本地凭据（登录态/导航/提示统一处理） */
+    const performLogout = async () => {
+        const route = useRoute()
+        const loading = useState('loading')
+        const { show } = useSnackbar()
+
+        const refreshCookie = useCookie('refresh')
+        const tokenCookie = useCookie('token')
+        const userCookie = useCookie('user')
+
+        if (!refreshCookie.value) return
+        loading.value = true
+        try {
+            await logout({ refresh_token: refreshCookie.value })
+            isLogin.value = false
+            refreshCookie.value = null
+            tokenCookie.value = null
+            userCookie.value = null
+            if (
+                !(
+                    route.fullPath === '/' ||
+                    route.fullPath.startsWith('/article')
+                )
+            ) {
+                navigateTo('/')
+            }
+            show(t('logout_success'), 'success')
+        } catch (e) {
+        } finally {
+            loading.value = false
+        }
+    }
+
     const getCosKey = () => get<CosKeyResponse>('/coskey/')
 
     return {
@@ -94,6 +129,7 @@ export const useAuth = () => {
         register,
         logout,
         logoutAll,
+        performLogout,
         getCosKey,
     }
 }

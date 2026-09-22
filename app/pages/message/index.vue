@@ -47,60 +47,62 @@
 </script>
 
 <template>
-    <v-row class="ma-2 ma-sm-6">
-        <v-col>
-            <v-card>
-                <!-- 主分类 -->
-                <v-tabs v-model="activeTab" color="primary" centered>
-                    <v-tab value="reply">
-                        <v-badge
-                            v-if="replyNotices?.unread?.length"
-                            dot
-                            color="error"
-                            floating
-                        >
-                            {{ t('reply') }}
-                        </v-badge>
-                        <span v-else>{{ t('reply') }}</span>
-                    </v-tab>
-                    <v-tab value="comment">
-                        <v-badge
-                            v-if="commentNotices?.unread?.length"
-                            dot
-                            color="error"
-                            floating
-                        >
-                            {{ t('comment') }}
-                        </v-badge>
-                        <span v-else>{{ t('comment') }}</span>
-                    </v-tab>
-                </v-tabs>
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <v-row>
+            <v-col>
+                <v-card>
+                    <!-- 主分类 -->
+                    <v-tabs v-model="activeTab" color="primary" centered>
+                        <v-tab value="reply">
+                            <v-badge
+                                v-if="replyNotices?.unread?.length"
+                                dot
+                                color="error"
+                                floating
+                            >
+                                {{ t('reply') }}
+                            </v-badge>
+                            <span v-else>{{ t('reply') }}</span>
+                        </v-tab>
+                        <v-tab value="comment">
+                            <v-badge
+                                v-if="commentNotices?.unread?.length"
+                                dot
+                                color="error"
+                                floating
+                            >
+                                {{ t('comment') }}
+                            </v-badge>
+                            <span v-else>{{ t('comment') }}</span>
+                        </v-tab>
+                    </v-tabs>
 
-                <v-card-text>
-                    <v-window v-model="activeTab">
-                        <!-- 回复通知 -->
-                        <v-window-item value="reply">
-                            <NoticePanel
-                                :notices="replyNotices"
-                                :active-tab="activeReplyTab"
-                                :t="t"
-                                :format="format"
-                                label="reply_to_you"
-                            />
-                        </v-window-item>
+                    <v-card-text>
+                        <v-window v-model="activeTab">
+                            <!-- 回复通知 -->
+                            <v-window-item value="reply">
+                                <NoticePanel
+                                    :notices="replyNotices"
+                                    :active-tab="activeReplyTab"
+                                    :t="t"
+                                    :format="format"
+                                    label="reply_to_you"
+                                />
+                            </v-window-item>
 
-                        <!-- 评论通知 -->
-                        <v-window-item value="comment">
-                            <NoticePanel
-                                :notices="commentNotices"
-                                :active-tab="activeCommentTab"
-                                :t="t"
-                                :format="format"
-                                label="comment_to_you"
-                            />
-                        </v-window-item>
-                    </v-window>
-                </v-card-text> </v-card
-        ></v-col>
-    </v-row>
+                            <!-- 评论通知 -->
+                            <v-window-item value="comment">
+                                <NoticePanel
+                                    :notices="commentNotices"
+                                    :active-tab="activeCommentTab"
+                                    :t="t"
+                                    :format="format"
+                                    label="comment_to_you"
+                                />
+                            </v-window-item>
+                        </v-window>
+                    </v-card-text> </v-card
+            ></v-col>
+        </v-row>
+    </v-container>
 </template>

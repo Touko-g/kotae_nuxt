@@ -168,83 +168,89 @@
 </script>
 
 <template>
-    <p class="my-6 text-2xl text-uppercase d-flex align-center justify-center">
-        <v-icon
-            :icon="id ? 'mdi-circle-edit-outline' : 'mdi-circle-edit-outline'"
-            class="mr-3"
-        ></v-icon>
-        {{ id ? t('edit') : t('add') }}
-    </p>
-    <v-divider color="surface" />
-    <v-form
-        id="articleForm"
-        ref="articleFormRef"
-        v-model="articleForm.valid"
-        class="mb-6 mx-6"
-        lazy-validation
-    >
-        <v-text-field
-            v-model="articleForm.title"
-            :label="t('title')"
-            color="primary"
-            variant="outlined"
-            density="comfortable"
-            :rules="rules.titleRules"
-        ></v-text-field>
-        <Editor
-            id="tinymce-editor"
-            v-model="articleForm.content"
-            :init="editorConfig"
-            api-key="4aoi5vbw5t6v7q43jt2w6s6q9cpzikf3384bpre1tq2pftid"
-        />
-        <v-overlay
-            v-model="editorLoad"
-            color="primary"
-            class="d-flex justify-center align-center"
-            persistent
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <p
+            class="my-6 text-2xl text-uppercase d-flex align-center justify-center"
         >
-            <div class="w-[120px]">
-                <v-progress-linear
-                    color="info"
-                    indeterminate
-                    rounded
-                    height="10"
-                ></v-progress-linear>
-            </div>
-        </v-overlay>
-        <v-combobox
-            v-model="articleForm.select"
-            class="my-10"
-            variant="outlined"
-            color="primary"
-            density="comfortable"
-            :items="articleForm.items"
-            :label="t('tag')"
-            multiple
-            chips
-            :rules="rules.tagRules"
-            :loading="articleForm.searchLoading"
-            @update:search="getTag"
-        ></v-combobox>
-        <p class="d-flex">
-            <v-btn
-                color="primary"
-                variant="tonal"
-                :loading="articleForm.loading"
-                data-cuelume-press
-                data-cuelume-release
-                @click="publish"
-                >{{ t(id ? 'edit' : 'publish') }}</v-btn
-            >
-            <v-btn
-                color="primary"
-                variant="tonal"
-                class="ml-1"
-                @click="reset"
-                >{{ t('reset') }}</v-btn
-            >
+            <v-icon
+                :icon="
+                    id ? 'mdi-circle-edit-outline' : 'mdi-circle-edit-outline'
+                "
+                class="mr-3"
+            ></v-icon>
+            {{ id ? t('edit') : t('add') }}
         </p>
-    </v-form>
+        <v-divider color="surface" />
+        <v-form
+            id="articleForm"
+            ref="articleFormRef"
+            v-model="articleForm.valid"
+            class="mb-6"
+            lazy-validation
+        >
+            <v-text-field
+                v-model="articleForm.title"
+                :label="t('title')"
+                color="primary"
+                variant="outlined"
+                density="comfortable"
+                :rules="rules.titleRules"
+            ></v-text-field>
+            <Editor
+                id="tinymce-editor"
+                v-model="articleForm.content"
+                :init="editorConfig"
+                api-key="4aoi5vbw5t6v7q43jt2w6s6q9cpzikf3384bpre1tq2pftid"
+            />
+            <v-overlay
+                v-model="editorLoad"
+                color="primary"
+                class="d-flex justify-center align-center"
+                persistent
+            >
+                <div class="w-[120px]">
+                    <v-progress-linear
+                        color="info"
+                        indeterminate
+                        rounded
+                        height="10"
+                    ></v-progress-linear>
+                </div>
+            </v-overlay>
+            <v-combobox
+                v-model="articleForm.select"
+                class="my-10"
+                variant="outlined"
+                color="primary"
+                density="comfortable"
+                :items="articleForm.items"
+                :label="t('tag')"
+                multiple
+                chips
+                :rules="rules.tagRules"
+                :loading="articleForm.searchLoading"
+                @update:search="getTag"
+            ></v-combobox>
+            <p class="d-flex">
+                <v-btn
+                    color="primary"
+                    variant="tonal"
+                    :loading="articleForm.loading"
+                    data-cuelume-press
+                    data-cuelume-release
+                    @click="publish"
+                    >{{ t(id ? 'edit' : 'publish') }}</v-btn
+                >
+                <v-btn
+                    color="primary"
+                    variant="tonal"
+                    class="ml-1"
+                    @click="reset"
+                    >{{ t('reset') }}</v-btn
+                >
+            </p>
+        </v-form>
+    </v-container>
 </template>
 
 <style scoped></style>
