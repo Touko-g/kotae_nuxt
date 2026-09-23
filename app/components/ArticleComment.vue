@@ -42,8 +42,10 @@
     })
 
     const getComments = async (params: CommentListParams) => {
-        comments.value = await getCommentList({ article, ...params })
-        search.count = Math.ceil(comments.value.count / 10)
+        const res = await getCommentList({ article, ...params })
+        comments.value = res
+        search.count = Math.ceil(res.count / 10)
+        return res
     }
 
     const onSelectEmoji = (emoji: any) => {
@@ -166,9 +168,27 @@
         return ip.match(/(.+)(?=省)/)?.[0] ?? ip
     }
 
-    useAsyncData('comments', () => getComments(search), {
-        watch: [refreshCount],
-    })
+    const { data: commentsData } = useAsyncData(
+        `comments-${article}`,
+        () => getComments(search),
+        {
+            watch: [refreshCount, () => article],
+        }
+    )
+
+    // 切换语言会带前缀跳转导致本组件重新挂载，此时 useAsyncData 命中
+    // 同名缓存不会再次执行 handler，需从缓存结果回填本地 comments，
+    // 既避免评论消失、也无需为与语言无关的评论数据重新请求
+    watch(
+        commentsData,
+        val => {
+            if (val) {
+                comments.value = val
+                search.count = Math.ceil(val.count / 10)
+            }
+        },
+        { immediate: true }
+    )
 </script>
 
 <template>
