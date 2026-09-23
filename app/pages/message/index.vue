@@ -1,13 +1,14 @@
 <script setup lang="ts">
     definePageMeta({ middleware: 'auth' })
 
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('message')),
         ogTitle: computed(() => t('message')),
     })
 
     const { getNoticeList, readNotice } = useNotice()
-    const { t } = useLocale()
     const { format } = useDayjs()
 
     const { data } = await useAsyncData('notice', () =>

@@ -5,13 +5,14 @@
         middleware: 'auth',
     })
 
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('like_article')),
         ogTitle: computed(() => t('like_article')),
     })
 
     const { getLikeList, delLike } = useLike()
-    const { t } = useLocale()
     const { show } = useSnackbar()
 
     const likes = ref<Like[]>([])
@@ -91,7 +92,7 @@
         />
 
         <!-- 列表 -->
-        <v-row>
+        <v-row class="stagger-up">
             <v-col
                 v-for="(like, index) in likes"
                 :key="like.id"
@@ -101,6 +102,7 @@
             >
                 <v-card
                     link
+                    class="hover-lift"
                     rounded="lg"
                     variant="outlined"
                     :prepend-avatar="like.article_info.avatar"

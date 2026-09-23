@@ -7,6 +7,7 @@ import pkg from './package.json'
 
 export default defineNuxtConfig({
     app: {
+        pageTransition: { name: 'page', mode: 'out-in' },
         head: {
             title: 'Kotae',
             htmlAttrs: {

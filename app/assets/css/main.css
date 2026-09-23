@@ -1,3 +1,291 @@
 body {
     font-family: 'Maple Mono CN SemiBold', sans-serif !important;
 }
+
+/* ==========================================================================
+   Kotae 全局动画系统
+   统一 token + keyframes + utility，风格偏鲜明活泼（带回弹缓动）
+   遵循 prefers-reduced-motion；组件通过添加 class 复用，避免内联 style
+   ========================================================================== */
+
+:root {
+    /* 时长 */
+    --k-speed-fast: 150ms;
+    --k-speed-base: 280ms;
+    --k-speed-slow: 460ms;
+    --k-stagger: 60ms;
+
+    /* 缓动 */
+    --k-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --k-ease-in: cubic-bezier(0.55, 0, 0.68, 0.19);
+    --k-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes k-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes k-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-14px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(48px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    60% {
+        transform: scale(1.04);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes k-heart {
+    0% {
+        transform: scale(1);
+    }
+    35% {
+        transform: scale(1.4);
+    }
+    70% {
+        transform: scale(0.85);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* --- 单次进场 utility --- */
+.anim {
+    animation-duration: var(--k-speed-base);
+    animation-fill-mode: both;
+}
+
+.anim-fade {
+    animation-name: k-fade-in;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-slide-up {
+    animation-name: k-slide-up;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-slide-down {
+    animation-name: k-slide-down;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-pop {
+    animation-name: k-pop;
+    animation-timing-function: var(--k-ease-spring);
+}
+
+/* --- 列表交错进场：容器加 .stagger-up，子元素依次入场 --- */
+/* 进场从上方下落（起始 translateY 为负）：动画期间子项始终处于或高于
+   最终位置，容器底部不会被撑高，从原理上避免在 flush 列表（如 v-list）
+   中撑出瞬时滚动条（若从下方 slide-up，末项向下溢出会顶出滚动条） */
+@keyframes k-drop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.stagger-up > * {
+    animation: k-drop-in var(--k-speed-slow) var(--k-ease-out) both;
+}
+
+.stagger-up > *:nth-child(1) {
+    animation-delay: calc(var(--k-stagger) * 0);
+}
+.stagger-up > *:nth-child(2) {
+    animation-delay: calc(var(--k-stagger) * 1);
+}
+.stagger-up > *:nth-child(3) {
+    animation-delay: calc(var(--k-stagger) * 2);
+}
+.stagger-up > *:nth-child(4) {
+    animation-delay: calc(var(--k-stagger) * 3);
+}
+.stagger-up > *:nth-child(5) {
+    animation-delay: calc(var(--k-stagger) * 4);
+}
+.stagger-up > *:nth-child(6) {
+    animation-delay: calc(var(--k-stagger) * 5);
+}
+.stagger-up > *:nth-child(7) {
+    animation-delay: calc(var(--k-stagger) * 6);
+}
+.stagger-up > *:nth-child(8) {
+    animation-delay: calc(var(--k-stagger) * 7);
+}
+.stagger-up > *:nth-child(9) {
+    animation-delay: calc(var(--k-stagger) * 8);
+}
+.stagger-up > *:nth-child(10) {
+    animation-delay: calc(var(--k-stagger) * 9);
+}
+/* 超过 10 个不再累加延迟，避免末尾等待过久 */
+.stagger-up > *:nth-child(n + 11) {
+    animation-delay: calc(var(--k-stagger) * 9);
+}
+
+/* --- 交互微动效：hover 抬升 / 按下缩放 --- */
+.hover-lift {
+    transition: transform var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-base) var(--k-ease-out),
+        border-color var(--k-speed-base) var(--k-ease-out);
+    will-change: transform;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+}
+
+.press {
+    transition: transform var(--k-speed-fast) var(--k-ease-out);
+}
+
+.press:active {
+    transform: scale(0.96);
+}
+
+.zoom-hover {
+    transition: transform var(--k-speed-base) var(--k-ease-spring);
+}
+
+.zoom-hover:hover {
+    transform: scale(1.05);
+}
+
+/* 点赞心跳（触发时通过 .is-liked 重放置换动画） */
+.like-pop {
+    display: inline-flex;
+}
+
+.like-pop.k-pop-run {
+    animation: k-heart 520ms var(--k-ease-spring);
+}
+
+/* --- 全局按钮 / 标签轻触感：按下微缩放 --- */
+.v-btn,
+.v-chip {
+    transition: transform var(--k-speed-fast) var(--k-ease-out),
+        background-color var(--k-speed-base) var(--k-ease-out),
+        border-color var(--k-speed-base) var(--k-ease-out),
+        color var(--k-speed-base) var(--k-ease-out) !important;
+}
+
+.v-btn:active:not(:disabled),
+.v-chip:active {
+    transform: scale(0.95);
+}
+
+/* --- 全局页面转场（配合 nuxt.config app.pageTransition name: 'page'） --- */
+.page-enter-active,
+.page-leave-active {
+    transition: opacity var(--k-speed-base) var(--k-ease-out),
+        transform var(--k-speed-base) var(--k-ease-out);
+}
+
+.page-enter-from {
+    opacity: 0;
+    transform: translateY(14px);
+}
+
+.page-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* --- DelayFade（评论区等 <TransitionGroup> 的 CSS 实现） --- */
+.delay-fade-group {
+    display: contents;
+}
+
+.delay-fade-enter-active {
+    transition: opacity var(--k-speed-slow) var(--k-ease-out),
+        transform var(--k-speed-slow) var(--k-ease-spring);
+}
+
+.delay-fade-enter-active:nth-child(2) {
+    transition-delay: calc(var(--k-stagger) * 1);
+}
+.delay-fade-enter-active:nth-child(3) {
+    transition-delay: calc(var(--k-stagger) * 2);
+}
+.delay-fade-enter-active:nth-child(4) {
+    transition-delay: calc(var(--k-stagger) * 3);
+}
+.delay-fade-enter-active:nth-child(n + 5) {
+    transition-delay: calc(var(--k-stagger) * 4);
+}
+
+.delay-fade-enter-from {
+    opacity: 0;
+    transform: translateX(64px);
+}
+
+/* ==========================================================================
+   无障碍：系统开启“减少动态效果”时降级为几乎无动画
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .hover-lift:hover,
+    .zoom-hover:hover,
+    .press:active,
+    .v-btn:active:not(:disabled),
+    .v-chip:active {
+        transform: none !important;
+    }
+}

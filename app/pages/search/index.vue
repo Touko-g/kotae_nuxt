@@ -91,11 +91,12 @@
             elevation="1"
             :text="t(`search_list`, route.query.query)"
         ></v-alert>
-        <v-row class="py-6">
+        <v-row class="py-6 stagger-up">
             <v-col v-for="(article, index) in articles" :key="article.id">
                 <v-card
                     v-intersect
                     link
+                    class="hover-lift"
                     variant="outlined"
                     rounded="lg"
                     :append-avatar="article.owner.avatar"

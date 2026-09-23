@@ -134,7 +134,7 @@
 <template>
     <v-container class="px-4 px-sm-6 py-6 py-sm-10">
         <v-row>
-            <v-col sm="12" md="8">
+            <v-col sm="12" md="8" class="stagger-up">
                 <v-skeleton-loader
                     v-for="(article, index) in articles"
                     :key="article.id"
@@ -144,7 +144,7 @@
                 >
                     <v-card
                         v-intersect
-                        class="mr-2 border-b last:!border-0 border-dashed"
+                        class="mr-2 border-b last:!border-0 border-dashed hover-lift"
                         link
                         :rounded="0"
                         transition="fade-transition"
@@ -229,7 +229,7 @@
                         <v-card-title class="border-b border-dashed">{{
                             t('popular')
                         }}</v-card-title>
-                        <v-list activatable>
+                        <v-list activatable class="stagger-up">
                             <v-list-item
                                 v-for="(article, key) in data?.hot?.results"
                                 :key="article.id"

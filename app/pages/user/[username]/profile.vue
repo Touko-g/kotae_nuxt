@@ -5,6 +5,8 @@
         middleware: 'auth',
     })
 
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('edit_user')),
         ogTitle: computed(() => t('edit_user')),
@@ -14,7 +16,6 @@
     const { updateUser } = useUser()
     const { rules } = useRules()
 
-    const { t } = useLocale()
     const { format } = useDayjs()
     const { show } = useSnackbar()
     const user = useCookie<User>('user')

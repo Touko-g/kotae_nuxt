@@ -2,12 +2,14 @@
     definePageMeta({
         middleware: 'auth',
     })
+
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('change_psw')),
         ogTitle: computed(() => t('change_psw')),
     })
 
-    const { t } = useLocale()
     const { show } = useSnackbar()
 
     const { logout } = useAuth()

@@ -5,6 +5,8 @@
         middleware: 'auth',
     })
 
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('user_info')),
         ogTitle: computed(() => t('user_info')),
@@ -20,7 +22,6 @@
     const { getCosKey } = useAuth()
 
     const { show } = useSnackbar()
-    const { t } = useLocale()
     const { fromNow, format } = useDayjs()
     const { width } = useDisplay()
 
@@ -145,7 +146,7 @@
 
 <template>
     <v-container class="px-4 px-sm-6 py-6 py-sm-10">
-        <v-row v-if="user">
+        <v-row v-if="user" class="stagger-up">
             <v-col cols="12" sm="12" md="4" lg="3">
                 <v-row>
                     <v-col cols="12">
@@ -302,6 +303,7 @@
                                 <v-list
                                     v-if="articles?.results.length"
                                     lines="two"
+                                    class="stagger-up"
                                 >
                                     <v-list-item
                                         v-for="article in articles?.results"

@@ -122,11 +122,18 @@
         }
     }
 
+    const likePop = ref(false)
+
     const handleLike = async () => {
         if (!isLogin.value) return
         try {
             await addLike({ article: article.value?.id })
             soundSparkle()
+            // 重触发心跳动画
+            likePop.value = false
+            await nextTick()
+            likePop.value = true
+            setTimeout(() => (likePop.value = false), 560)
             if (typeof refreshCount.value === 'number') {
                 refreshCount.value += 1
             }
@@ -410,6 +417,10 @@
                                         icon="mdi-thumb-up-outline"
                                         variant="text"
                                         :color="isLike ? 'primary' : ''"
+                                        :class="[
+                                            'like-pop',
+                                            likePop && 'k-pop-run',
+                                        ]"
                                         data-cuelume-manual
                                         @click="handleLike"
                                     />

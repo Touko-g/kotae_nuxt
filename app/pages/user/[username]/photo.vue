@@ -4,6 +4,8 @@
     definePageMeta({
         middleware: 'auth',
     })
+    const { t } = useLocale()
+
     useSeoMeta({
         title: computed(() => t('photo_album')),
         ogTitle: computed(() => t('photo_album')),
@@ -12,7 +14,6 @@
     const { getPhotoList, delPhoto } = usePhoto()
     const { show } = useSnackbar()
     const { format } = useDayjs()
-    const { t } = useLocale()
 
     const photos = ref<Photo[]>([])
     const cols = ref<number[]>([])
@@ -179,7 +180,7 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
-        <v-row>
+        <v-row class="stagger-up">
             <v-col
                 v-for="(photo, index) in photos"
                 :key="photo.id"
@@ -191,7 +192,10 @@
                         :src="photo.picture"
                         cover
                         height="100%"
-                        class="transition-all duration-300 cursor-pointer"
+                        :class="[
+                            'transition-transform duration-300 ease-out cursor-pointer overflow-hidden',
+                            isHovering ? 'scale-105' : 'scale-100',
+                        ]"
                         lazy-src="https://chen-1302611521.cos.ap-nanjing.myqcloud.com/blog/photo/Touko/thumbbig-287318.webp"
                         data-cuelume-press
                         data-cuelume-release
