@@ -15,6 +15,10 @@ export class HttpError extends Error {
     }
 }
 
+// 客户端共享的“正在进行的刷新” Promise，用于合并并发 401 的刷新请求
+// 仅在浏览器端使用，避免 SSR 下跨请求状态泄漏
+let pendingRefresh: Promise<boolean> | null = null
+
 export const useHttp = () => {
     const config = useRuntimeConfig()
     const { show } = useSnackbar()
@@ -26,7 +30,38 @@ export const useHttp = () => {
     const loadingCount = ref(0) // 并发安全 loading
     const loading = computed(() => loadingCount.value > 0)
 
-    const request = async <T>(url: string, options: HttpOptions = {}) => {
+    // 执行一次 token 刷新；成功返回 true。并发时由多个请求共享同一调用
+    const runRefresh = async (): Promise<boolean> => {
+        const tokenCookie = useCookie('token')
+        const refreshCookie = useCookie('refresh')
+        const userCookie = useCookie('user')
+        const { refresh, isLogin } = useAuth()
+        if (!refreshCookie.value) return false
+        isRefresh.value = true
+        try {
+            const data = await refresh({ refresh: refreshCookie.value })
+            tokenCookie.value = data.access
+            // 后端未轮换 refresh token 时 data.refresh 为空，避免误清空
+            if (data.refresh) refreshCookie.value = data.refresh
+            isLogin.value = true
+            refreshCount.value += 1
+            return true
+        } catch (e) {
+            tokenCookie.value = null
+            refreshCookie.value = null
+            userCookie.value = null
+            isLogin.value = false
+            return false
+        } finally {
+            isRefresh.value = false
+        }
+    }
+
+    const request = async <T>(
+        url: string,
+        options: HttpOptions = {},
+        allowRetry = true
+    ) => {
         if (options.showLoading) loadingCount.value++
         const token = useCookie('token')?.value
         try {
@@ -44,60 +79,63 @@ export const useHttp = () => {
                 onRequestError({ error }) {
                     show(error.message, 'error')
                 },
-                async onResponseError({ response }) {
-                    const data = response._data
-                    const token = useCookie('token')
-                    const refreshToken = useCookie('refresh')
-                    const user = useCookie('user')
-                    const { refresh, isLogin } = useAuth()
-
-                    // 避免 refresh 接口再次触发自身
-                    if (response.url.includes('/refresh')) {
-                        token.value = null
-                        refreshToken.value = null
-                        user.value = null
-                        isLogin.value = false
-                        show(t('auth_expired'), 'error')
-                        navigateTo('/')
-                        return
-                    }
-
-                    if (response.status === 401 && refreshToken.value) {
-                        if (isRefresh.value) {
-                            return
-                        }
-
-                        try {
-                            isRefresh.value = true
-                            const data = await refresh({
-                                refresh: refreshToken.value,
-                            })
-                            token.value = data.access
-                            refreshToken.value = data.refresh
-                            isLogin.value = true
-                            refreshCount.value += 1
-                        } catch (e) {
-                            token.value = null
-                            refreshToken.value = null
-                            isLogin.value = false
-                            user.value = null
-                        } finally {
-                            isRefresh.value = false
-                        }
-                    } else if (response.status === 500) {
+                onResponseError({ response }) {
+                    // 仅负责错误提示；401 的 token 刷新与重试交由外层 catch
+                    if (response.status === 500) {
                         show(response.statusText, 'error')
-                    } else {
+                    } else if (response.status !== 401) {
+                        const data = response._data
                         const showText = Object.values(data)[0]?.toString()
-
-                        // 处理请求错误
                         show(showText || response.statusText, 'error')
                     }
                 },
             })
         } catch (err: any) {
+            const tokenCookie = useCookie('token')
+            const refreshCookie = useCookie('refresh')
+            const userCookie = useCookie('user')
+            const { isLogin } = useAuth()
+            const isRefreshCall = url.includes('/refresh')
+            // verify 接口：token 放在 body 里由其自身判定有效性，
+            // 其 401 是“token 已过期”的正常答案，不触发刷新重发，交由调用方决定
+            const isVerifyCall = url.includes('/verify')
+            const status = err?.status
+
+            // refresh 接口自身 401：登录态彻底失效，清理凭据并跳首页
+            if (isRefreshCall && status === 401) {
+                tokenCookie.value = null
+                refreshCookie.value = null
+                userCookie.value = null
+                isLogin.value = false
+                show(t('auth_expired'), 'error')
+                navigateTo('/')
+                throw new HttpError(t('auth_expired'), status)
+            }
+
+            // 普通请求 401：刷新一次 token 后重发原请求（仅重试一次）
+            // 并发时共享同一次刷新，避免除首个外的请求直接失败导致页面空数据
+            if (
+                allowRetry &&
+                !isVerifyCall &&
+                status === 401 &&
+                refreshCookie.value
+            ) {
+                let refreshed: boolean
+                if (import.meta.client) {
+                    if (!pendingRefresh) {
+                        pendingRefresh = runRefresh().finally(() => {
+                            pendingRefresh = null
+                        })
+                    }
+                    refreshed = await pendingRefresh
+                } else {
+                    refreshed = await runRefresh()
+                }
+                if (refreshed) return await request<T>(url, options, false)
+            }
+
             const message =
                 err?.data?.message || err?.message || t('unknown_error')
-            const status = err?.status
             throw new HttpError(message, status)
         } finally {
             if (options.showLoading) loadingCount.value--
@@ -122,5 +160,13 @@ export const useHttp = () => {
         showLoading = false
     ) => request<T>(url, { method: 'DELETE', params, showLoading })
 
-    return { loading, request, get, post, put, del }
+    return {
+        loading,
+        request,
+        get,
+        post,
+        put,
+        del,
+        tryRefresh: runRefresh,
+    }
 }

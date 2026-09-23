@@ -23,6 +23,7 @@
     })
 
     const { isLogin, verify } = useAuth()
+    const { tryRefresh } = useHttp()
 
     const token = useCookie('token')
     const { current } = useTheme()
@@ -37,7 +38,10 @@
             try {
                 await verify({ token: token.value })
                 isLogin.value = true
-            } catch (e) {}
+            } catch (e) {
+                // access token 已过期：尝试用 refresh token 恢复登录态
+                isLogin.value = await tryRefresh()
+            }
         } else {
             isLogin.value = false
         }
