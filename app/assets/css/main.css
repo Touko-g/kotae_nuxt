@@ -79,16 +79,50 @@ body {
 
 @keyframes k-heart {
     0% {
-        transform: scale(1);
+        transform: scale(1) rotate(0deg);
     }
-    35% {
-        transform: scale(1.4);
+    18% {
+        transform: scale(0.78) rotate(-10deg);
     }
-    70% {
-        transform: scale(0.85);
+    42% {
+        transform: scale(1.35) rotate(8deg);
+    }
+    62% {
+        transform: scale(0.9) rotate(-4deg);
+    }
+    80% {
+        transform: scale(1.12) rotate(2deg);
     }
     100% {
-        transform: scale(1);
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* 点赞环形扩散 */
+@keyframes k-like-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+        opacity: 0.55;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.9);
+        opacity: 0;
+    }
+}
+
+/* 点赞计数跳动 */
+@keyframes k-count-pop {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+    30% {
+        transform: translateY(-6px) scale(1.25);
+    }
+    60% {
+        transform: translateY(2px) scale(0.95);
+    }
+    100% {
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -200,13 +234,44 @@ body {
     transform: scale(1.05);
 }
 
-/* 点赞心跳（触发时通过 .is-liked 重放置换动画） */
+/* 点赞：图标心跳 + 环形扩散 + 计数跳动（触发时加 .k-pop-run / .k-count-run） */
 .like-pop {
     display: inline-flex;
+    position: relative;
 }
 
-.like-pop.k-pop-run {
-    animation: k-heart 520ms var(--k-ease-spring);
+/* 心跳作用在图标本体（icon 按钮渲染于 .v-btn__content），避免覆盖 VBtn 按下缩放 */
+.like-pop.k-pop-run .v-btn__content {
+    display: inline-flex;
+    animation: k-heart 560ms var(--k-ease-spring);
+}
+
+/* 环形扩散层：仅点赞瞬间播放 */
+.like-pop::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgb(var(--v-theme-primary));
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.like-pop.k-pop-run::before {
+    animation: k-like-ring 600ms var(--k-ease-out);
+}
+
+.like-count {
+    display: inline-block;
+    min-width: 1ch;
+}
+
+.like-count.k-count-run {
+    animation: k-count-pop 420ms var(--k-ease-spring);
 }
 
 /* --- 全局按钮 / 标签轻触感：按下微缩放 --- */

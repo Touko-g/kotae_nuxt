@@ -4,7 +4,7 @@
     const route = useRoute()
 
     const { getArticle, delArticle } = useArticle()
-    const { getLikeList, addLike } = useLike()
+    const { getLikeList, addLike, delLike } = useLike()
 
     const { fromNow } = useDayjs()
     const { t } = useLocale()
@@ -123,30 +123,87 @@
     }
 
     const likePop = ref(false)
+    const countPop = ref(false)
 
-    const handleLike = async () => {
-        if (!isLogin.value) return
-        try {
-            await addLike({ article: article.value?.id })
-            soundSparkle()
-            // 重触发心跳动画
-            likePop.value = false
-            await nextTick()
-            likePop.value = true
-            setTimeout(() => (likePop.value = false), 560)
-            if (typeof refreshCount.value === 'number') {
-                refreshCount.value += 1
-            }
-        } catch (e) {}
+    // 展示用点赞数：本地点赞时即时 +1，服务端回流后自动对齐，避免数字来回跳
+    const displayedLikes = ref(0)
+    watch(
+        () => article.value?.likes ?? 0,
+        val => {
+            displayedLikes.value = val
+        },
+        { immediate: true }
+    )
+
+    // 点赞态与点赞记录 id：用本地 ref 维护，服务端 like 列表回流时回填。
+    // 点赞/取消后仅本地更新，不再 bump 全局 refreshCount，
+    // 避免连带触发 article / like / comment 三个接口
+    const isLike = ref(false)
+    const myLikeId = ref<number | undefined>(undefined)
+
+    watch(
+        () => like.value?.results,
+        results => {
+            const userId = user.value?.id
+            const mine =
+                userId && results
+                    ? results.find(item => item.user_info.id === userId)
+                    : undefined
+            isLike.value = !!mine
+            myLikeId.value = mine?.id
+        },
+        { immediate: true }
+    )
+
+    const likeLoading = ref(false)
+
+    // 计数跳动动画（点赞 +1 / 取消 -1 复用）
+    const popCount = async () => {
+        countPop.value = false
+        await nextTick()
+        countPop.value = true
+        setTimeout(() => (countPop.value = false), 460)
     }
 
-    const isLike = computed(() => {
-        if (like.value?.results && user.value) {
-            const userId = user.value.id
-            return like.value.results.some(item => item.user_info.id === userId)
+    const handleLike = async () => {
+        if (!isLogin.value || likeLoading.value) return
+        const liked = isLike.value
+        const likeId = myLikeId.value
+        // 取消点赞但拿不到记录 id（数据未就绪）时直接返回，避免误调接口
+        if (liked && likeId === undefined) return
+        likeLoading.value = true
+        try {
+            if (liked) {
+                // 取消点赞：仅本地更新 + 轻音效，不播放心跳/环形扩散
+                await delLike(likeId!)
+                soundTick()
+                isLike.value = false
+                myLikeId.value = undefined
+                displayedLikes.value = Math.max(0, displayedLikes.value - 1)
+                await popCount()
+            } else {
+                // 点赞：心跳 + 环形扩散 + 计数 +1
+                const rec = await addLike({ article: article.value?.id })
+                soundSparkle()
+                isLike.value = true
+                myLikeId.value = rec?.id
+                // 兜底：若创建响应未带回记录 id，仅刷新 like 列表回填
+                // （refreshNuxtData 定向刷新，不牵动 article / comment）
+                if (myLikeId.value === undefined) {
+                    await refreshNuxtData('like')
+                }
+                likePop.value = false
+                await nextTick()
+                likePop.value = true
+                setTimeout(() => (likePop.value = false), 600)
+                displayedLikes.value += 1
+                await popCount()
+            }
+        } catch (e) {
+        } finally {
+            likeLoading.value = false
         }
-        return false
-    })
+    }
 
     // --- TOC 目录导航 ---
     interface TocItem {
@@ -414,7 +471,11 @@
                                     />
                                     <v-btn
                                         v-permission
-                                        icon="mdi-thumb-up-outline"
+                                        :icon="
+                                            isLike
+                                                ? 'mdi-thumb-up'
+                                                : 'mdi-thumb-up-outline'
+                                        "
                                         variant="text"
                                         :color="isLike ? 'primary' : ''"
                                         :class="[
@@ -425,9 +486,13 @@
                                         @click="handleLike"
                                     />
                                     <span
-                                        v-if="article.likes"
-                                        :class="isLike && 'text-primary'"
-                                        >{{ article.likes }}</span
+                                        v-if="displayedLikes"
+                                        class="like-count ml-1"
+                                        :class="[
+                                            isLike && 'text-primary',
+                                            countPop && 'k-count-run',
+                                        ]"
+                                        >{{ displayedLikes }}</span
                                     >
                                 </div>
                             </div>
