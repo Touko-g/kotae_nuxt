@@ -128,6 +128,11 @@
                 </v-card>
             </v-col>
         </v-row>
+        <EmptyState
+            v-if="!likes.length"
+            icon="mdi-heart-outline"
+            :title="t('no_likes')"
+        />
         <div v-if="likes?.length" ref="scrollRef"></div>
     </v-container>
 </template>

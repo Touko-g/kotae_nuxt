@@ -221,6 +221,11 @@
                         </v-card-text>
                     </v-card>
                 </v-skeleton-loader>
+                <EmptyState
+                    v-if="!articles.length"
+                    icon="mdi-file-document-outline"
+                    :title="t('no_articles')"
+                />
             </v-col>
 
             <v-col sm="12" md="4">

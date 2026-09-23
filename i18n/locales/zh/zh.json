@@ -102,7 +102,11 @@
   "more": "更多",
   "first_one": "已经是第一张了",
   "last_one": "已经是最后一张了",
-  "no_messages": "没有消息",
+  "no_messages": "静悄悄的，暂时还没有新的消息",
+  "no_articles": "这里还很安静，等待第一篇内容的诞生",
+  "no_results": "没有找到相关内容，换个关键词试试吧",
+  "no_likes": "还没有喜欢的文章，遇到心动的就点个赞吧",
+  "no_photos": "相册还空着，等待第一张照片入驻",
 
   "login_success": "登录成功",
   "logout_success": "退出登录成功",

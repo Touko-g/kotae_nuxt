@@ -102,7 +102,11 @@
   "more": "More",
   "first_one": "This is the first one already",
   "last_one": "This is the last one already",
-  "no_messages": "No messages",
+  "no_messages": "All quiet — no new messages for now",
+  "no_articles": "It's still quiet here — waiting for the first article",
+  "no_results": "No matching results, try another keyword",
+  "no_likes": "No favorites yet — like the articles you love",
+  "no_photos": "The album is empty — waiting for the first photo",
 
   "login_success": "Login successful",
   "logout_success": "Logout successful",

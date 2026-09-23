@@ -226,15 +226,11 @@
                                         ></v-carousel-item>
                                     </v-carousel>
                                 </v-sheet>
-                                <v-sheet
+                                <EmptyState
                                     v-else
-                                    height="150"
-                                    class="d-flex justify-center align-center"
-                                >
-                                    <span class="font-weight-bold text-grey">{{
-                                        t('no_photo')
-                                    }}</span>
-                                </v-sheet>
+                                    icon="mdi-image-outline"
+                                    :title="t('no_photos')"
+                                />
                                 <v-sheet v-show="isSelf" class="mt-4">
                                     <v-file-input
                                         prepend-icon="mdi-image-plus"
@@ -359,9 +355,11 @@
                                         </template>
                                     </v-list-item>
                                 </v-list>
-                                <div v-else class="font-weight-bold text-grey">
-                                    {{ t('no_photo') }}
-                                </div>
+                                <EmptyState
+                                    v-else
+                                    icon="mdi-file-document-outline"
+                                    :title="t('no_articles')"
+                                />
                                 <v-pagination
                                     v-if="articleQuery.count"
                                     v-model="articleQuery.page"

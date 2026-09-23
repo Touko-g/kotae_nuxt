@@ -434,7 +434,7 @@
             @update:model-value="changePage"
         ></v-pagination>
     </div>
-    <div v-else class="my-2 text-grey">{{ t('noc') }}</div>
+    <EmptyState v-else icon="mdi-forum-outline" :title="t('noc')" />
     <v-dialog
         v-model="emojiDialog"
         width="auto"

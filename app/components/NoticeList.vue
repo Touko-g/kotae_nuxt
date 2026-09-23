@@ -2,10 +2,11 @@
 <template>
     <div class="stagger-up">
         <!-- 空状态 -->
-        <div v-if="!items?.length" class="text-center py-6 text-grey">
-            <v-icon icon="mdi-bell-off-outline" size="40" color="grey"></v-icon>
-            <div class="mt-2">{{ emptyText || t('no_messages') }}</div>
-        </div>
+        <EmptyState
+            v-if="!items?.length"
+            icon="mdi-bell-off-outline"
+            :title="emptyText || t('no_messages')"
+        />
 
         <!-- 列表内容 -->
         <v-list-item

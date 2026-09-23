@@ -246,10 +246,16 @@
             </v-col>
         </v-row>
 
+        <EmptyState
+            v-if="!photos.length"
+            icon="mdi-image-outline"
+            :title="t('no_photos')"
+        />
+
         <div v-if="photos?.length" ref="scrollRef"></div>
 
         <div
-            v-if="!loading && page.page >= page.count"
+            v-if="photos.length && !loading && page.page >= page.count"
             class="text-center text-gray-500 py-4"
         >
             {{ t('end_of_list') }}

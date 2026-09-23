@@ -486,7 +486,19 @@
                 </div>
             </v-col>
         </v-row>
-        <div v-else>{{ t('article_not_found') }}</div>
+        <EmptyState
+            v-else
+            icon="mdi-file-search-outline"
+            :title="t('article_not_found')"
+        >
+            <v-btn
+                color="primary"
+                variant="tonal"
+                class="mt-6"
+                @click="navigateTo('/')"
+                >{{ t('cmd_home') }}</v-btn
+            >
+        </EmptyState>
     </v-container>
 </template>
 

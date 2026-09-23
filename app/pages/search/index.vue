@@ -130,6 +130,11 @@
                 </v-card>
             </v-col>
         </v-row>
+        <EmptyState
+            v-if="!articles.length"
+            icon="mdi-file-search-outline"
+            :title="t('no_results')"
+        />
         <div v-if="articles?.length" ref="scrollRef"></div>
     </v-container>
 </template>
