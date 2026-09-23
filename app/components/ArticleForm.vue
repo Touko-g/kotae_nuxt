@@ -20,8 +20,8 @@
     const { id } = defineProps<Props>()
 
     useSeoMeta({
-        title: id ? '修改文章' : '创建文章',
-        ogTitle: id ? '修改文章' : '创建文章',
+        title: computed(() => t(id ? 'edit' : 'add')),
+        ogTitle: computed(() => t(id ? 'edit' : 'add')),
     })
 
     const articleFormRef = useTemplateRef('articleFormRef')

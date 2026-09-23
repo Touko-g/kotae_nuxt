@@ -6,8 +6,8 @@
     })
 
     useSeoMeta({
-        title: '喜欢的文章',
-        ogTitle: '喜欢的文章',
+        title: computed(() => t('like_article')),
+        ogTitle: computed(() => t('like_article')),
     })
 
     const { getLikeList, delLike } = useLike()

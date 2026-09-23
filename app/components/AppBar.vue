@@ -104,9 +104,9 @@
             divided
             color="primary"
         >
-            <v-btn append-icon="mdi-login" @click="loginDialog = true"
-                >login</v-btn
-            >
+            <v-btn append-icon="mdi-login" @click="loginDialog = true">{{
+                t('sign_in')
+            }}</v-btn>
             <!--            <v-btn append-icon="mdi-account-plus-outline">register</v-btn>-->
         </v-btn-group>
     </v-app-bar>

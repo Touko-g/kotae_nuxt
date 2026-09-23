@@ -18,6 +18,7 @@ export class HttpError extends Error {
 export const useHttp = () => {
     const config = useRuntimeConfig()
     const { show } = useSnackbar()
+    const { t } = useLocale()
 
     const isRefresh = useState('isRefresh', () => false)
     const refreshCount = useState('refreshCount', () => 0)
@@ -56,10 +57,7 @@ export const useHttp = () => {
                         refreshToken.value = null
                         user.value = null
                         isLogin.value = false
-                        show(
-                            'Authorization expired, please log in again',
-                            'error'
-                        )
+                        show(t('auth_expired'), 'error')
                         navigateTo('/')
                         return
                     }
@@ -98,7 +96,7 @@ export const useHttp = () => {
             })
         } catch (err: any) {
             const message =
-                err?.data?.message || err?.message || 'Unknown Error'
+                err?.data?.message || err?.message || t('unknown_error')
             const status = err?.status
             throw new HttpError(message, status)
         } finally {

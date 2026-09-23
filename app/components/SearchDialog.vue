@@ -140,7 +140,7 @@
                             :key="index"
                             color="primary"
                             class="mx-2 uppercase text-sm"
-                            :label="radio"
+                            :label="t(radio)"
                             :value="radio"
                         />
                     </v-radio-group>
@@ -158,7 +158,7 @@
                     clearable
                     :loading="loading"
                     class="mb-5"
-                    :hint="`by ${radioGroup}`"
+                    :hint="`${t('by')} ${t(radioGroup)}`"
                     @update:model-value="debounceSearch"
                 />
 

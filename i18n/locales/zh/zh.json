@@ -118,5 +118,30 @@
   "update_profile_success": "用户信息更新成功",
   "upload_success": "文件上传成功",
   "photo_delete_success": "照片删除成功",
-  "auth_expired": "授权过期，请重新登录"
+  "auth_expired": "授权过期，请重新登录",
+
+  "popular": "热门文章",
+  "reply_to": "回复",
+  "article_not_found": "该文章不存在或已被删除",
+  "end_of_list": "已经到底啦～",
+  "by": "来自",
+  "view_all": "查看全部",
+  "content": "内容",
+  "author": "作者",
+  "user_info": "个人信息",
+  "site_description": "Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。",
+
+  "username_required": "请输入用户名",
+  "password_required": "请输入密码",
+  "new_password_required": "请输入新密码",
+  "password_too_short": "密码太短，至少需要 8 个字符。",
+  "password_same_as_old": "新密码不能与旧密码相同",
+  "confirm_password_required": "请输入确认密码",
+  "password_not_match": "两次输入的密码不一致",
+  "email_required": "请输入邮箱",
+  "email_invalid": "邮箱格式不正确",
+  "code_required": "请输入验证码",
+  "title_required": "请输入标题",
+  "tag_required": "请选择标签",
+  "unknown_error": "未知错误"
 }

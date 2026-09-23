@@ -118,5 +118,30 @@
   "update_profile_success": "User profile updated successfully",
   "upload_success": "File uploaded successfully",
   "photo_delete_success": "Photo deleted successfully",
-  "auth_expired": "Authorization expired, please log in again"
+  "auth_expired": "Authorization expired, please log in again",
+
+  "popular": "Popular Articles",
+  "reply_to": "To",
+  "article_not_found": "This article does not exist or has been deleted",
+  "end_of_list": "You've reached the end",
+  "by": "by",
+  "view_all": "View All",
+  "content": "Content",
+  "author": "Author",
+  "user_info": "Profile",
+  "site_description": "Kotae - technology and life notes, recording and sharing front-end, back-end and full-stack experience every day to help you grow and find your own answers.",
+
+  "username_required": "Username is required",
+  "password_required": "Password is required",
+  "new_password_required": "New Password is required",
+  "password_too_short": "This password is too short. It must contain at least 8 characters.",
+  "password_same_as_old": "The New Password cannot be the same as the Old Password",
+  "confirm_password_required": "Confirm Password is required",
+  "password_not_match": "Passwords do not match",
+  "email_required": "Email is required",
+  "email_invalid": "E-mail must be valid",
+  "code_required": "Code is required",
+  "title_required": "Title is required",
+  "tag_required": "Tag is required",
+  "unknown_error": "Unknown Error"
 }

@@ -1,7 +1,10 @@
 <script setup lang="ts">
     definePageMeta({ middleware: 'auth' })
 
-    useSeoMeta({ title: '消息', ogTitle: '消息' })
+    useSeoMeta({
+        title: computed(() => t('message')),
+        ogTitle: computed(() => t('message')),
+    })
 
     const { getNoticeList, readNotice } = useNotice()
     const { t } = useLocale()

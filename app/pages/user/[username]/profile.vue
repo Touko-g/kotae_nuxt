@@ -6,8 +6,8 @@
     })
 
     useSeoMeta({
-        title: '修改个人信息',
-        ogTitle: '修改个人信息',
+        title: computed(() => t('edit_user')),
+        ogTitle: computed(() => t('edit_user')),
     })
 
     const { getCosKey } = useAuth()

@@ -435,7 +435,9 @@
         @click:outside="handleReset"
     >
         <v-card width="300">
-            <v-card-title> To : {{ data.reply_info.reply_user }} </v-card-title>
+            <v-card-title>
+                {{ t('reply_to') }} : {{ data.reply_info.reply_user }}
+            </v-card-title>
             <v-card-text>
                 <v-textarea
                     v-model.trim="data.reply_info.content"

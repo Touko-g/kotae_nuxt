@@ -3,8 +3,8 @@
         middleware: 'auth',
     })
     useSeoMeta({
-        title: '修改密码',
-        ogTitle: '修改密码',
+        title: computed(() => t('change_psw')),
+        ogTitle: computed(() => t('change_psw')),
     })
 
     const { t } = useLocale()
@@ -25,21 +25,17 @@
         password2: '',
         loading: false,
         oldPswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'Password is required',
+            (v: string) => (!!v && !!v.trim()) || t('password_required'),
         ],
         pswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'New Password is required',
-            (v: string) =>
-                (v && v.length >= 8) ||
-                'This password is too short. It must contain at least 8 characters.',
-            (v: string) =>
-                checkPsw1(v) ||
-                'The New Password cannot be the same as the Old Password',
+            (v: string) => (!!v && !!v.trim()) || t('new_password_required'),
+            (v: string) => (v && v.length >= 8) || t('password_too_short'),
+            (v: string) => checkPsw1(v) || t('password_same_as_old'),
         ],
         psw2Rules: [
             (v: string) =>
-                (!!v && !!v.trim()) || 'Confirm Password is required',
-            (v: string) => checkPsw(v) || 'Confirm Password does not match',
+                (!!v && !!v.trim()) || t('confirm_password_required'),
+            (v: string) => checkPsw(v) || t('password_not_match'),
         ],
     })
 

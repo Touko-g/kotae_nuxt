@@ -6,8 +6,8 @@
     })
 
     useSeoMeta({
-        title: '个人信息',
-        ogTitle: '个人信息',
+        title: computed(() => t('user_info')),
+        ogTitle: computed(() => t('user_info')),
     })
 
     const route = useRoute()

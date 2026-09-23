@@ -36,8 +36,8 @@
     }
 
     const password2Rules = [
-        (v: string) => (!!v && !!v.trim()) || 'Password is required',
-        (v: string) => checkPsw(v) || 'Password does not match',
+        (v: string) => (!!v && !!v.trim()) || t('password_required'),
+        (v: string) => checkPsw(v) || t('password_not_match'),
     ]
 
     const handleCode = async () => {

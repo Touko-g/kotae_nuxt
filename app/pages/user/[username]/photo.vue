@@ -5,8 +5,8 @@
         middleware: 'auth',
     })
     useSeoMeta({
-        title: '摄影集',
-        ogTitle: '摄影集',
+        title: computed(() => t('photo_album')),
+        ogTitle: computed(() => t('photo_album')),
     })
 
     const { getPhotoList, delPhoto } = usePhoto()
@@ -220,7 +220,10 @@
                                 <div class="font-semibold truncate">
                                     {{ photo.name }}
                                 </div>
-                                <div>by {{ photo.user_info.username }}</div>
+                                <div>
+                                    {{ t('by') }}
+                                    {{ photo.user_info.username }}
+                                </div>
                                 <div class="text-[10px]">
                                     {{ format(photo.create_time) }}
                                 </div>
@@ -245,7 +248,7 @@
             v-if="!loading && page.page >= page.count"
             class="text-center text-gray-500 py-4"
         >
-            已经到底啦～
+            {{ t('end_of_list') }}
         </div>
 
         <!-- ✅ 图片预览 Dialog -->

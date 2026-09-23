@@ -45,11 +45,9 @@
 
     useSeoMeta({
         title: 'Kotae',
-        description:
-            'Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。',
+        description: computed(() => t('site_description')),
         ogTitle: 'Kotae',
-        ogDescription:
-            'Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。',
+        ogDescription: computed(() => t('site_description')),
         ogUrl: 'https://kotae.cn/',
         robots: 'index, follow',
     })
@@ -228,9 +226,9 @@
             <v-col sm="12" md="4">
                 <div class="sticky top-[6.5rem]">
                     <v-card>
-                        <v-card-title class="border-b border-dashed"
-                            >Popular Articles</v-card-title
-                        >
+                        <v-card-title class="border-b border-dashed">{{
+                            t('popular')
+                        }}</v-card-title>
                         <v-list activatable>
                             <v-list-item
                                 v-for="(article, key) in data?.hot?.results"

@@ -475,7 +475,7 @@
                 </div>
             </v-col>
         </v-row>
-        <div v-else>该文章不存在或已被删除</div>
+        <div v-else>{{ t('article_not_found') }}</div>
     </v-container>
 </template>
 
