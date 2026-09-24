@@ -97,8 +97,10 @@
                     : 'javascript'
                 return highlighter.codeToHtml(decoded, {
                     lang: realLang,
-                    theme:
-                        themeName === 'light' ? 'github-light' : 'github-dark',
+                    // light/glass 为亮色系，dark/rainy 为暗色系
+                    theme: ['light', 'glass'].includes(themeName)
+                        ? 'github-light'
+                        : 'github-dark',
                 })
             }
         )
@@ -361,7 +363,7 @@
         <v-row v-if="article">
             <!-- 主内容 -->
             <v-col :cols="toc.length && !mobile ? 9 : 12">
-                <v-card variant="text">
+                <v-card variant="text" class="k-card pa-2 pa-sm-4">
                     <v-card-title>
                         <div class="d-flex">
                             <v-btn
@@ -401,7 +403,7 @@
                     </v-card-title>
                     <v-card-text class="mt-4">
                         <h2 class="text-4xl my-4 leading-tight tracking-tight">
-                            {{ article.title }}
+                            <span class="k-highlight">{{ article.title }}</span>
                         </h2>
                         <div>
                             <!-- eslint-disable vue/no-v-html -->
@@ -505,7 +507,7 @@
 
             <!-- TOC 目录 -->
             <v-col v-if="toc.length && !mobile" cols="3">
-                <div class="toc-wrapper sticky top-[5.5rem]">
+                <div class="toc-wrapper k-card pa-4 sticky top-[5.5rem]">
                     <div class="d-flex align-center mb-2">
                         <p
                             class="font-semibold text-uppercase mb-0 font-weight-medium"

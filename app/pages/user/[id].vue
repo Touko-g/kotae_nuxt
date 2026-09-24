@@ -150,7 +150,7 @@
             <v-col cols="12" sm="12" md="4" lg="3">
                 <v-row>
                     <v-col cols="12">
-                        <v-card>
+                        <v-card class="k-card">
                             <v-card-text>
                                 <div class="mx-auto text-center">
                                     <v-avatar size="100">
@@ -161,7 +161,9 @@
                                         ></v-img>
                                     </v-avatar>
                                     <h1 class="my-4 text-3xl">
-                                        {{ user.username }}
+                                        <span class="k-highlight">{{
+                                            user.username
+                                        }}</span>
                                     </h1>
                                     <p class="text-xs mt-1">
                                         {{ user.email }}
@@ -191,7 +193,7 @@
                         </v-card>
                     </v-col>
                     <v-col cols="12">
-                        <v-card>
+                        <v-card class="k-card">
                             <v-card-title>
                                 <v-sheet class="d-flex align-center">
                                     <v-icon class="mr-2">mdi-camera</v-icon>
@@ -275,7 +277,7 @@
             <v-col cols="12" sm="12" md="8" lg="9">
                 <v-row>
                     <v-col cols="12">
-                        <v-card>
+                        <v-card class="k-card">
                             <v-card-title>
                                 <div class="d-flex">
                                     {{ t('my_article') }}

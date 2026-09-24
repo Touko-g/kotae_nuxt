@@ -85,8 +85,19 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('password') }}</span>
+            </h1>
+        </header>
         <v-row class="d-flex justify-center">
-            <v-card width="500" variant="text" class="mt-12 pa-6" rounded="lg">
+            <v-card
+                width="500"
+                variant="text"
+                class="k-card mt-4 pa-6"
+                rounded="lg"
+            >
                 <v-form ref="form" v-model="data.valid" lazy-validation>
                     <v-text-field
                         v-model="data.old_password"

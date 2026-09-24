@@ -38,8 +38,9 @@
     const editorLoad = ref(true)
     const editorConfig = reactive({
         skin_url: computed(() => {
-            const val = ['light', 'dark'].includes(theme.global.name.value)
-                ? theme.global.name.value
+            // rainy 属暗色系，glass 属亮色系，统一映射到 TinyMCE 两套皮肤
+            const val = ['dark', 'rainy'].includes(theme.global.name.value)
+                ? 'dark'
                 : 'light'
             return `https://chen-1302611521.cos.ap-nanjing.myqcloud.com/tinymce/${val}/skins/ui/${val}`
         }),
@@ -169,18 +170,12 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
-        <p
-            class="my-6 text-2xl text-uppercase d-flex align-center justify-center"
-        >
-            <v-icon
-                :icon="
-                    id ? 'mdi-circle-edit-outline' : 'mdi-circle-edit-outline'
-                "
-                class="mr-3"
-            ></v-icon>
-            {{ id ? t('edit') : t('add') }}
-        </p>
-        <v-divider color="surface" />
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ id ? t('edit') : t('add') }}</span>
+            </h1>
+        </header>
         <v-form
             id="articleForm"
             ref="articleFormRef"

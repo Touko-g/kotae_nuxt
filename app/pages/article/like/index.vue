@@ -84,12 +84,12 @@
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
         <!-- 标题栏 -->
-        <v-alert
-            class="mb-8 text-lg font-semibold tracking-wide border border-gray-700 dark:border-gray-600 bg-transparent text-gray-200"
-            variant="outlined"
-            elevation="1"
-            :text="t('like_list')"
-        />
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('like_list') }}</span>
+            </h1>
+        </header>
 
         <!-- 列表 -->
         <v-row class="stagger-up">
@@ -102,7 +102,7 @@
             >
                 <v-card
                     link
-                    class="hover-lift"
+                    class="k-card--sm hover-lift"
                     rounded="lg"
                     variant="outlined"
                     :prepend-avatar="like.article_info.avatar"

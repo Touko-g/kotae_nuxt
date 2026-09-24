@@ -11,7 +11,14 @@ export const useExtractText = () => {
 
         // SSR + Client 通用
         try {
-            return convert(html, { wordwrap: false })
+            return convert(html, {
+                wordwrap: false,
+                // 预览纯文本：链接不追加 [href]、图片不泄漏 [src]，避免摘要里出现裸 URL
+                selectors: [
+                    { selector: 'a', options: { ignoreHref: true } },
+                    { selector: 'img', format: 'skip' },
+                ],
+            })
         } catch (e) {
             // 如果 html-to-text 出问题，在客户端 fallback DOM 方案
             if (process.client) {

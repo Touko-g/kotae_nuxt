@@ -234,6 +234,12 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('photo') }}</span>
+            </h1>
+        </header>
         <div class="stagger-up columns-2 gap-4 sm:columns-3 lg:columns-4">
             <div
                 v-for="(photo, index) in photos"

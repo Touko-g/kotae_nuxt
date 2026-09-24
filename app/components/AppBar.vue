@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    const theme = useTheme()
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
     const loginDialog = useState('login')
@@ -8,6 +7,7 @@
 
     const user = useCookie<User | null>('user')
     const { soundToggle, soundTick, soundEnabled, toggleSound } = useSound()
+    const { cycleTheme, themeIcon, themeLabelKey } = useThemeCycle()
 
     const toggleLocal = () => {
         const newLocale = current.value === 'zh' ? 'en' : 'zh'
@@ -18,9 +18,9 @@
 </script>
 
 <template>
-    <v-app-bar elevation="3">
+    <v-app-bar class="k-appbar" elevation="3">
         <v-app-bar-title
-            class="text-primary cursor-pointer"
+            class="k-gradient-text cursor-pointer"
             data-cuelume-press
             data-cuelume-release
             @click="navigateTo('/')"
@@ -31,6 +31,9 @@
         <v-btn icon @click="searchDialog = true">
             <v-icon>mdi-magnify</v-icon>
         </v-btn>
+        <span class="k-kbd d-none d-md-inline-flex mr-2" aria-hidden="true">
+            Ctrl K
+        </span>
         <v-btn v-show="isLogin" icon @click="navigateTo('/article/like')">
             <v-icon>mdi-heart</v-icon>
         </v-btn>
@@ -39,12 +42,17 @@
             data-cuelume-manual
             @click="
                 () => {
-                    theme.toggle()
+                    cycleTheme()
                     soundToggle()
                 }
             "
         >
-            <v-icon>mdi-theme-light-dark</v-icon>
+            <v-icon :icon="themeIcon" data-allow-mismatch />
+            <v-tooltip
+                activator="parent"
+                location="bottom"
+                :text="t(themeLabelKey)"
+            />
         </v-btn>
         <v-btn icon data-cuelume-manual @click="toggleLocal">
             <v-icon>mdi-translate</v-icon>

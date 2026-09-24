@@ -52,9 +52,15 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('message') }}</span>
+            </h1>
+        </header>
         <v-row>
             <v-col>
-                <v-card>
+                <v-card class="k-card">
                     <!-- 主分类 -->
                     <v-tabs v-model="activeTab" color="primary" centered>
                         <v-tab value="reply">

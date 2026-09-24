@@ -104,7 +104,13 @@
 
 <template>
     <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
-        <v-card variant="text">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('edit_user') }}</span>
+            </h1>
+        </header>
+        <v-card variant="text" class="k-card pa-4 pa-sm-6">
             <v-card-text>
                 <v-form
                     ref="userFormRef"

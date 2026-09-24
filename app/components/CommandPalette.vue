@@ -10,7 +10,7 @@
     }
 
     const { t, current } = useLocale()
-    const theme = useTheme()
+    const { cycleTheme } = useThemeCycle()
     const { setLocale } = useDayjs()
     const { soundWhisper, soundToggle, soundTick, toggleSound } = useSound()
     const { isLogin, performLogout } = useAuth()
@@ -109,11 +109,12 @@
             {
                 id: 'theme',
                 title: t('cmd_toggle_theme'),
-                keywords: 'theme dark light 主题 深色 浅色 夜间',
+                keywords:
+                    'theme dark light rainy glass 主题 深色 浅色 夜间 雨夜 闪电 玻璃 磨砂',
                 icon: 'mdi-theme-light-dark',
                 group: 'action',
                 run: () => {
-                    theme.toggle()
+                    cycleTheme()
                     soundToggle()
                 },
             },
