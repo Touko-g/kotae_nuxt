@@ -36,6 +36,22 @@
                 group: 'nav',
                 run: () => navigateTo('/'),
             },
+            {
+                id: 'tags',
+                title: t('cmd_tags'),
+                keywords: 'tag tags cloud 标签 标签云 主题 biaoqian',
+                icon: 'mdi-tag-multiple-outline',
+                group: 'nav',
+                run: () => navigateTo('/tags'),
+            },
+            {
+                id: 'archive',
+                title: t('cmd_archive'),
+                keywords: 'archive timeline 归档 时间线 时间 guidang',
+                icon: 'mdi-calendar-clock-outline',
+                group: 'nav',
+                run: () => navigateTo('/archive'),
+            },
         ]
         if (isLogin.value) {
             list.push({

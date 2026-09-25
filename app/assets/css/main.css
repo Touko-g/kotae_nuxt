@@ -364,8 +364,28 @@ body,
 
 /* ==========================================================================
    Kotae 首页创意抬头（Hero / Featured / Marquee / Rank）
-   统一走主题变量，兼容浅色(红 primary)/深色(绿 primary)；SSR 友好，无随机
+   统一走主题变量，兼容 light / dark / rainy / glass 四主题；SSR 友好，无随机
+   约定：需要"提亮/压深"时一律混 --k-surface-c（主题表面色）或 --k-shade，
+   不混字面量 #fff / #000 —— 前者随主题明暗自动换方向，后者只保证压深
    ========================================================================== */
+
+/* 主题派生的花饰用变量：压深色（做封面暗端，配合常驻白字）与主题表面色（做提亮端）。
+   注：荧光笔划 --k-highlight-soft 仍混白，那是高亮笔物理质感，且文字在其上为墨色，不受影响 */
+.v-application {
+    --k-shade: rgba(0, 0, 0, 0.82);
+    --k-surface-c: #f9fafb;
+}
+
+/* Vuetify 主题类在 .v-application 自身，用复合选择器提高优先级覆盖默认值 */
+.v-application.v-theme--dark {
+    --k-surface-c: #1e1e1e;
+}
+.v-application.v-theme--rainy {
+    --k-surface-c: #141e33;
+}
+.v-application.v-theme--glass {
+    --k-surface-c: #ffffff;
+}
 
 /* 渐变流动文字（wordmark） */
 @keyframes k-gradient-shift {
@@ -384,7 +404,7 @@ body,
     background-image: linear-gradient(
         120deg,
         rgb(var(--v-theme-primary)),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 45%, #ffffff),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 45%, var(--k-surface-c)),
         rgb(var(--v-theme-primary))
     );
     background-size: 220% 100%;
@@ -441,7 +461,7 @@ body,
     padding-bottom: 46%;
     background: radial-gradient(
         circle at 70% 70%,
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, #ffffff),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, var(--k-surface-c)),
         transparent 70%
     );
     animation-delay: -6s;
@@ -486,7 +506,9 @@ body,
     animation-play-state: paused;
 }
 
-/* 头条 Featured 封面：按 id 取模的同色系深浅渐变（服务端/客户端一致） */
+/* 头条 Featured 封面：按 id 取模的同色系深浅渐变（服务端/客户端一致）。
+   亮端混主题表面色（浅底变白、雨夜等深底变暗，保持金/蓝等主题色相不洗白），
+   暗端混 --k-shade 保证常驻白字有对比 */
 .featured-cover {
     position: relative;
     color: #fff;
@@ -497,29 +519,29 @@ body,
 .featured-cover--0 {
     background-image: linear-gradient(
         135deg,
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 90%, #ffffff),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 60%, #000000)
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 90%, var(--k-shade)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 60%, var(--k-shade))
     );
 }
 .featured-cover--1 {
     background-image: linear-gradient(
         135deg,
-        rgb(var(--v-theme-primary)),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 48%, #000000)
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 92%, var(--k-surface-c)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 48%, var(--k-shade))
     );
 }
 .featured-cover--2 {
     background-image: linear-gradient(
         120deg,
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 78%, #ffffff),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 52%, #000000)
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 78%, var(--k-surface-c)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 52%, var(--k-shade))
     );
 }
 .featured-cover--3 {
     background-image: linear-gradient(
         160deg,
-        rgb(var(--v-theme-primary)),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, #000000)
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 96%, var(--k-surface-c)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, var(--k-shade))
     );
 }
 
@@ -563,13 +585,13 @@ body,
     background: linear-gradient(
         to bottom,
         rgb(var(--v-theme-primary)),
-        color-mix(in srgb, rgb(var(--v-theme-primary)) 50%, #ffffff)
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 50%, var(--k-surface-c))
     );
     transform-origin: bottom;
     animation: k-bar-grow var(--k-speed-slow) var(--k-ease-spring) both;
 }
 
-/* 热门榜名次徽章：Top3 金属色，其余中性（符合列表规范） */
+/* 热门榜名次徽章：Top3 随主题递进强调，其余中性淡墨（符合列表规范） */
 .rank-badge {
     display: inline-flex;
     align-items: center;
@@ -588,20 +610,19 @@ body,
     transition: transform var(--k-speed-base) var(--k-ease-spring);
 }
 
-.rank-badge--1,
-.rank-badge--2,
-.rank-badge--3 {
-    color: #fff;
-}
-
+/* 热门榜 Top3 徽章：配合主题的递进强调——#1 primary / #2 secondary / #3 墨色，
+   文字用 Vuetify 自动生成的 on-* 与配对 --k-surface-c，四主题下对比度均成立 */
 .rank-badge--1 {
-    background: linear-gradient(135deg, #eab308, #b45309);
+    background: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary));
 }
 .rank-badge--2 {
-    background: linear-gradient(135deg, #94a3b8, #475569);
+    background: rgb(var(--v-theme-secondary));
+    color: rgb(var(--v-theme-on-secondary));
 }
 .rank-badge--3 {
-    background: linear-gradient(135deg, #c2743a, #8a4b21);
+    background: var(--k-ink);
+    color: var(--k-surface-c);
 }
 
 .v-list-item:hover .rank-badge {
@@ -610,16 +631,9 @@ body,
 
 /* ==========================================================================
    Kotae 首页活泼插画风（doodle / sticker / highlight / 硬阴影卡）
-   大胆撞色但可控：亮色只用于小面积贴纸/花饰/阴影，主结构仍走主题色
+   撞色可控：花饰/贴纸的亮色一律由 --k-accent-* 从主题 primary / secondary 派生，
+   随四主题换色；榜单前三名同样走主题（primary / secondary / 墨色递进强调）
    ========================================================================== */
-:root {
-    --k-pop-coral: #ff5d5d;
-    --k-pop-amber: #ffb020;
-    --k-pop-cyan: #2fd0e0;
-    --k-pop-violet: #8b5cff;
-    --k-pop-mint: #37d39a;
-    --k-pop-pink: #ff6bb5;
-}
 
 /* 描边墨色：浅色近黑、深色近白，双主题都有粗轮廓感。
    按 Vuetify 主题类显式定义字面量色，避免 rgb(var(--v-theme-on-surface) / a) 的混用语法失效 */
@@ -756,11 +770,11 @@ body,
     opacity: 0.9;
 }
 
-/* 贴纸风标签：亮色循环 + 粗描边 + 硬阴影 + 微旋转 */
+/* 贴纸风标签：主题撞色 + 粗描边 + 硬阴影 + 微旋转 */
 .sticker {
     border: 2px solid var(--k-ink) !important;
     box-shadow: 2px 2px 0 var(--k-ink) !important;
-    color: #fff !important;
+    color: rgb(var(--v-theme-on-primary)) !important;
     font-weight: 700;
     transition:
         transform var(--k-speed-fast) var(--k-ease-spring),

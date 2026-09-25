@@ -3,7 +3,7 @@
     import type { ConfirmDialog } from '#components'
     const route = useRoute()
 
-    const { getArticle, delArticle } = useArticle()
+    const { getArticle, getArticleList, delArticle } = useArticle()
     const { getLikeList, addLike, delLike } = useLike()
 
     const { fromNow } = useDayjs()
@@ -12,7 +12,9 @@
     const { name } = useTheme()
     const { show } = useSnackbar()
     const { extractText } = useExtractText()
+    const { countWords, readingMinutes } = useReadingTime()
     const { soundSparkle, soundTick } = useSound()
+    const { fire: fireConfetti } = useConfetti()
 
     const highlighter = await useShiki()
     const refreshCount = useState('refreshCount')
@@ -34,6 +36,28 @@
     const { data: like } = await useAsyncData(
         'like',
         () => getLikeList({ article: id, pagesize: 10000 }),
+        { watch: [refreshCount] }
+    )
+
+    // --- 预计阅读时间 / 字数（纯函数，SSR 与客户端一致）---
+    const wordCount = computed(() =>
+        article.value ? countWords(extractText(article.value.content)) : 0
+    )
+    const readMinutes = computed(() => readingMinutes(wordCount.value))
+
+    // --- 相关阅读：取本文首个标签的同标签文章，排除自身最多 5 篇 ---
+    const { data: relatedArticles } = await useAsyncData(
+        'relatedArticles',
+        async () => {
+            const firstTag = article.value?.tag?.[0]?.name
+            if (!firstTag) return [] as Article[]
+            const { results } = await getArticleList({
+                page: 1,
+                pagesize: 7,
+                tag: firstTag,
+            })
+            return (results || []).filter(a => a.id !== Number(id)).slice(0, 5)
+        },
         { watch: [refreshCount] }
     )
 
@@ -127,6 +151,38 @@
     const likePop = ref(false)
     const countPop = ref(false)
 
+    // --- 分享：优先调用系统原生分享，不支持/失败则复制链接到剪贴板 ---
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text)
+        } catch (err) {
+            // 非安全上下文降级方案
+            const ta = document.createElement('textarea')
+            ta.value = text
+            document.body.appendChild(ta)
+            ta.select()
+            document.execCommand('copy')
+            ta.remove()
+        }
+    }
+
+    const handleShare = async () => {
+        const url = window.location.href
+        const title = article.value?.title ?? ''
+        if (typeof navigator.share === 'function') {
+            try {
+                await navigator.share({ title, url })
+                return
+            } catch (err) {
+                // 用户主动取消则不打扰，其他异常降级为复制
+                if ((err as DOMException)?.name === 'AbortError') return
+            }
+        }
+        await copyToClipboard(url)
+        soundTick()
+        show(t('link_copied'), 'success')
+    }
+
     // 展示用点赞数：本地点赞时即时 +1，服务端回流后自动对齐，避免数字来回跳
     const displayedLikes = ref(0)
     watch(
@@ -167,7 +223,7 @@
         setTimeout(() => (countPop.value = false), 460)
     }
 
-    const handleLike = async () => {
+    const handleLike = async (e?: MouseEvent) => {
         if (!isLogin.value || likeLoading.value) return
         const liked = isLike.value
         const likeId = myLikeId.value
@@ -184,9 +240,13 @@
                 displayedLikes.value = Math.max(0, displayedLikes.value - 1)
                 await popCount()
             } else {
-                // 点赞：心跳 + 环形扩散 + 计数 +1
+                // 点赞：心跳 + 环形扩散 + 撒花 + 计数 +1
                 const rec = await addLike({ article: article.value?.id })
                 soundSparkle()
+                fireConfetti(
+                    e ? { x: e.clientX, y: e.clientY } : undefined,
+                    120
+                )
                 isLike.value = true
                 myLikeId.value = rec?.id
                 // 兜底：若创建响应未带回记录 id，仅刷新 like 列表回填
@@ -336,6 +396,30 @@
         }, 1500)
     }
 
+    // --- 正文图片 Lightbox ---
+    const lightboxVisible = ref(false)
+    const lightboxImages = ref<{ src: string; caption?: string }[]>([])
+    const lightboxIndex = ref(0)
+
+    // 事件委托：点正文 <img> 收集全部图片并打开预览
+    const onImageClick = (e: Event) => {
+        const node = e.target as Element
+        const img = node?.closest?.(
+            '.markdown-body img'
+        ) as HTMLImageElement | null
+        if (!img) return
+        const container = markdownRef.value
+        if (!container) return
+        const imgs = Array.from(container.querySelectorAll('img'))
+        const idx = imgs.indexOf(img)
+        lightboxImages.value = imgs.map(el => ({
+            src: el.getAttribute('src') || el.currentSrc || '',
+            caption: el.getAttribute('alt') || '',
+        }))
+        lightboxIndex.value = idx >= 0 ? idx : 0
+        if (lightboxImages.value.length) lightboxVisible.value = true
+    }
+
     onMounted(() => {
         if (article.value) {
             article.value.content = DOMPurify.sanitize(
@@ -348,12 +432,14 @@
             })
         }
         markdownRef.value?.addEventListener('click', onCodeCopy)
+        markdownRef.value?.addEventListener('click', onImageClick)
         window.addEventListener('scroll', onScroll, { passive: true })
         onScroll()
     })
 
     onUnmounted(() => {
         markdownRef.value?.removeEventListener('click', onCodeCopy)
+        markdownRef.value?.removeEventListener('click', onImageClick)
         window.removeEventListener('scroll', onScroll)
     })
 </script>
@@ -397,6 +483,16 @@
                                             article.comments
                                         }}</span
                                     >
+                                    <template v-if="!mobile">
+                                        <span class="mx-2">|</span>
+                                        <span
+                                            >{{ t('min_short', readMinutes) }}
+                                            ·
+                                            {{
+                                                t('words_count', wordCount)
+                                            }}</span
+                                        >
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -448,6 +544,14 @@
                                         icon="mdi-comment-outline"
                                     ></v-btn>
                                     <span>{{ article.comments }}</span>
+                                    <v-btn
+                                        variant="text"
+                                        icon="mdi-share-variant-outline"
+                                        class="ml-3"
+                                        :aria-label="t('share')"
+                                        :title="t('share')"
+                                        @click="handleShare"
+                                    />
                                 </div>
                                 <div class="d-flex align-center">
                                     <v-btn
@@ -498,6 +602,67 @@
                                     >
                                 </div>
                             </div>
+                        </div>
+                        <!-- 相关阅读：同标签推荐 -->
+                        <div v-if="relatedArticles?.length" class="mt-10">
+                            <div class="d-flex align-center mb-4">
+                                <span
+                                    class="section-bar mr-3"
+                                    aria-hidden="true"
+                                ></span>
+                                <h3 class="text-h6 font-weight-bold mb-0">
+                                    {{ t('related_articles') }}
+                                </h3>
+                            </div>
+                            <v-row>
+                                <v-col
+                                    v-for="r in relatedArticles"
+                                    :key="r.id"
+                                    cols="12"
+                                    sm="6"
+                                >
+                                    <v-card
+                                        :to="`/article/${r.id}`"
+                                        variant="flat"
+                                        class="k-card--sm pa-4 h-100"
+                                    >
+                                        <div
+                                            class="text-subtitle-1 font-weight-bold line-clamp-2 mb-2 leading-snug"
+                                        >
+                                            {{ r.title }}
+                                        </div>
+                                        <div
+                                            class="d-flex align-center text-caption text-medium-emphasis"
+                                        >
+                                            <div
+                                                class="flex items-center gap-4"
+                                            >
+                                                <span
+                                                    class="flex items-center gap-1"
+                                                >
+                                                    <v-icon
+                                                        size="14"
+                                                        icon="mdi-eye-outline"
+                                                    />
+                                                    {{ r.views }}
+                                                </span>
+                                                <span
+                                                    class="flex items-center gap-1"
+                                                >
+                                                    <v-icon
+                                                        size="14"
+                                                        icon="mdi-heart-outline"
+                                                    />
+                                                    {{ r.likes }}
+                                                </span>
+                                            </div>
+                                            <span class="ml-auto">{{
+                                                fromNow(r.create_time)
+                                            }}</span>
+                                        </div>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
                         </div>
                         <ArticleComment :article="article.id" />
                     </v-card-text>
@@ -566,6 +731,13 @@
                 >{{ t('cmd_home') }}</v-btn
             >
         </EmptyState>
+
+        <!-- 正文图片预览 Lightbox -->
+        <ImageLightbox
+            v-model="lightboxVisible"
+            :images="lightboxImages"
+            :start="lightboxIndex"
+        />
     </v-container>
 </template>
 
@@ -758,6 +930,7 @@
         height: auto;
         display: block;
         margin: 1em 0;
+        cursor: zoom-in;
     }
 
     .markdown-body pre {

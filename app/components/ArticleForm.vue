@@ -5,6 +5,7 @@
     const theme = useTheme()
     const { format } = useDayjs()
     const { show } = useSnackbar()
+    const { fire: fireConfetti } = useConfetti()
     const { t } = useLocale()
     const { rules } = useRules()
 
@@ -144,6 +145,7 @@
                             tag: tags,
                         })
                         show(t('article_edit_success'), 'success')
+                        fireConfetti(undefined, 140)
                     } else {
                         await createArticle({
                             title: articleForm.title,
@@ -151,6 +153,7 @@
                             tag: tags,
                         })
                         show(t('article_create_success'), 'success')
+                        fireConfetti(undefined, 160)
                     }
                     reset()
                 } catch (err) {

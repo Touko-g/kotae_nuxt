@@ -32,143 +32,18 @@
         count: 0,
     })
 
-    // ✅ 图片预览
-    const previewDialog = ref(false)
-    const currentIndex = ref(0)
-
-    // ✅ 缩放、旋转与拖拽控制
-    const zoom = ref(1)
-    const rotation = ref(0)
-    const offset = reactive({ x: 0, y: 0 })
-    const dragging = ref(false)
-    const dragStart = reactive({ x: 0, y: 0 })
-    const loadingImg = ref<boolean[]>([])
+    // 图片预览：复用通用 ImageLightbox 组件（缩放/旋转/拖拽/键盘/轮播均在组件内实现）
+    const lightboxVisible = ref(false)
+    const lightboxIndex = ref(0)
+    const lightboxImages = computed(() =>
+        photos.value.map(p => ({ src: p.picture, caption: p.name }))
+    )
 
     // 打开预览
     const openPreview = (index: number) => {
-        currentIndex.value = index
-        previewDialog.value = true
+        lightboxIndex.value = index
+        lightboxVisible.value = true
     }
-
-    // 关闭预览
-    const closePreview = () => {
-        previewDialog.value = false
-    }
-
-    // 图片加载动画
-    const onImgLoad = (index: number) => {
-        loadingImg.value[index] = false
-    }
-
-    // 鼠标滚轮缩放
-    const handleWheel = (e: WheelEvent) => {
-        e.preventDefault()
-        if (e.deltaY < 0) zoom.value = Math.min(zoom.value + 0.2, 4)
-        else zoom.value = Math.max(zoom.value - 0.2, 0.5)
-    }
-
-    // 放大/缩小
-    const zoomIn = () => (zoom.value = Math.min(zoom.value + 0.2, 4))
-    const zoomOut = () => (zoom.value = Math.max(zoom.value - 0.2, 0.5))
-
-    // 复位视图（缩放/旋转/位移）
-    const resetTransform = () => {
-        zoom.value = 1
-        rotation.value = 0
-        offset.x = 0
-        offset.y = 0
-    }
-    const resetZoom = resetTransform
-
-    // 旋转：将角度规整到 (-180, 180]，支持任意角度与滑块联动
-    const normalizeAngle = (deg: number) => {
-        const angle = ((deg % 360) + 360) % 360
-        return angle > 180 ? angle - 360 : angle
-    }
-    const rotateBy = (delta: number) => {
-        rotation.value = normalizeAngle(rotation.value + delta)
-    }
-    const rotateRight = () => rotateBy(90)
-    const rotateLeft = () => rotateBy(-90)
-
-    // 上一张 / 下一张
-    const goPrev = () => {
-        if (currentIndex.value > 0) currentIndex.value--
-    }
-    const goNext = () => {
-        if (currentIndex.value < photos.value.length - 1) currentIndex.value++
-    }
-
-    // 键盘快捷键（仅在预览打开时生效）
-    const onKeydown = (e: KeyboardEvent) => {
-        switch (e.key) {
-            case 'ArrowLeft':
-                goPrev()
-                break
-            case 'ArrowRight':
-                goNext()
-                break
-            case '+':
-            case '=':
-                zoomIn()
-                break
-            case '-':
-                zoomOut()
-                break
-            case '0':
-                resetTransform()
-                break
-            case 'r':
-                rotateRight()
-                break
-            case 'R':
-                rotateLeft()
-                break
-            case 'Escape':
-                closePreview()
-                break
-            default:
-                return
-        }
-        e.preventDefault()
-    }
-
-    // 拖拽逻辑
-    const startDrag = (e: MouseEvent) => {
-        if (zoom.value === 1) return
-        dragging.value = true
-        dragStart.x = e.clientX - offset.x
-        dragStart.y = e.clientY - offset.y
-    }
-    const onDrag = (e: MouseEvent) => {
-        if (!dragging.value || zoom.value === 1) return
-        offset.x = e.clientX - dragStart.x
-        offset.y = e.clientY - dragStart.y
-    }
-    const endDrag = () => {
-        dragging.value = false
-    }
-
-    // 光标状态：与拖拽热区（外层容器）保持一致，仅放大后可拖拽
-    const dragCursor = computed(() => {
-        if (zoom.value > 1) return dragging.value ? 'grabbing' : 'grab'
-        return 'default'
-    })
-
-    // 打开/关闭预览：初始化视图并挂载/卸载键盘监听
-    watch(previewDialog, val => {
-        if (!import.meta.client) return
-        if (val) {
-            resetTransform()
-            loadingImg.value = photos.value.map(() => true)
-            window.addEventListener('keydown', onKeydown)
-        } else {
-            window.removeEventListener('keydown', onKeydown)
-        }
-    })
-
-    // 切换图片时复位视图，避免带着上一张的缩放/旋转态
-    watch(currentIndex, () => resetTransform())
 
     // 瀑布流：按索引循环取一组固定宽高比，制造错落节奏（确定性，SSR 安全）
     const ASPECTS = [0.8, 1, 1.33, 0.75, 1.2, 1, 0.85, 1.5]
@@ -228,7 +103,6 @@
 
     onUnmounted(() => {
         observer.value?.disconnect()
-        if (import.meta.client) window.removeEventListener('keydown', onKeydown)
     })
 </script>
 
@@ -323,188 +197,14 @@
             {{ t('end_of_list') }}
         </div>
 
-        <!-- ✅ 图片预览 Dialog -->
-        <v-dialog
-            v-model="previewDialog"
-            fullscreen
-            transition="dialog-bottom-transition"
-            persistent
-        >
-            <v-card class="bg-black relative overflow-hidden">
-                <v-toolbar dense flat color="black">
-                    <v-btn
-                        icon="mdi-close"
-                        color="white"
-                        @click="closePreview"
-                    />
-                    <v-spacer></v-spacer>
-                    <div class="text-white text-sm pr-4">
-                        {{ currentIndex + 1 }} / {{ photos.length }}
-                    </div>
-                </v-toolbar>
-
-                <v-carousel
-                    v-model="currentIndex"
-                    hide-delimiters
-                    show-arrows
-                    height="80vh"
-                >
-                    <v-carousel-item v-for="(photo, i) in photos" :key="i">
-                        <div
-                            class="relative w-full h-full flex items-center justify-center bg-black overflow-hidden"
-                            :style="{ cursor: dragCursor }"
-                            @wheel="handleWheel"
-                            @mousedown="startDrag"
-                            @mousemove="onDrag"
-                            @mouseup="endDrag"
-                            @mouseleave="endDrag"
-                        >
-                            <!-- 环境光背景：同图放大模糊，增强沉浸感 -->
-                            <img
-                                :src="photo.picture"
-                                alt=""
-                                aria-hidden="true"
-                                class="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-30 blur-3xl"
-                            />
-                            <v-progress-circular
-                                v-if="loadingImg[i]"
-                                indeterminate
-                                color="white"
-                                size="64"
-                                class="absolute z-20"
-                            />
-
-                            <!-- ✅ 保证图片完整显示，按比例适应屏幕 -->
-                            <v-img
-                                :src="photo.picture"
-                                class="select-none relative z-10 preview-img"
-                                :style="{
-                                    transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg) scale(${zoom})`,
-                                    transition: dragging
-                                        ? 'none'
-                                        : 'transform 0.25s ease',
-                                    'max-height': '80vh',
-                                    'max-width': '90vw',
-                                    'object-fit': 'contain',
-                                    'user-select': 'none',
-                                }"
-                                @load="onImgLoad(i)"
-                            />
-                        </div>
-                    </v-carousel-item>
-                </v-carousel>
-
-                <!-- 预览控制栏：旋转滑杆 + 操作按钮 + 快捷键提示 -->
-                <div
-                    class="absolute bottom-5 left-1/2 z-30 flex w-[min(92vw,560px)] -translate-x-1/2 flex-col gap-1 rounded-2xl bg-white/10 px-4 py-2.5 text-white ring-1 ring-white/15 backdrop-blur-md"
-                >
-                    <div class="flex items-center gap-3">
-                        <v-icon size="18" color="white">
-                            mdi-rotate-right
-                        </v-icon>
-                        <v-slider
-                            v-model="rotation"
-                            :min="-180"
-                            :max="180"
-                            step="1"
-                            density="compact"
-                            hide-details
-                            thumb-size="14"
-                            class="flex-1"
-                        />
-                        <span class="w-12 text-right text-xs tabular-nums">
-                            {{ rotation }}°
-                        </span>
-                    </div>
-
-                    <div class="flex items-center justify-center gap-2">
-                        <v-btn
-                            icon
-                            variant="text"
-                            color="white"
-                            data-cuelume-press
-                            data-cuelume-release
-                            @click="rotateLeft"
-                        >
-                            <v-icon icon="mdi-rotate-left" />
-                            <v-tooltip activator="parent" location="top">
-                                {{ t('rotate_left') }}
-                            </v-tooltip>
-                        </v-btn>
-                        <v-btn
-                            icon
-                            variant="text"
-                            color="white"
-                            data-cuelume-press
-                            data-cuelume-release
-                            @click="zoomOut"
-                        >
-                            <v-icon icon="mdi-magnify-minus-outline" />
-                            <v-tooltip activator="parent" location="top">
-                                {{ t('zoom_out') }}
-                            </v-tooltip>
-                        </v-btn>
-                        <v-btn
-                            icon
-                            variant="text"
-                            color="white"
-                            data-cuelume-press
-                            data-cuelume-release
-                            @click="resetZoom"
-                        >
-                            <v-icon icon="mdi-restore" />
-                            <v-tooltip activator="parent" location="top">
-                                {{ t('reset_view') }}
-                            </v-tooltip>
-                        </v-btn>
-                        <v-btn
-                            icon
-                            variant="text"
-                            color="white"
-                            data-cuelume-press
-                            data-cuelume-release
-                            @click="zoomIn"
-                        >
-                            <v-icon icon="mdi-magnify-plus-outline" />
-                            <v-tooltip activator="parent" location="top">
-                                {{ t('zoom_in') }}
-                            </v-tooltip>
-                        </v-btn>
-                        <v-btn
-                            icon
-                            variant="text"
-                            color="white"
-                            data-cuelume-press
-                            data-cuelume-release
-                            @click="rotateRight"
-                        >
-                            <v-icon icon="mdi-rotate-right" />
-                            <v-tooltip activator="parent" location="top">
-                                {{ t('rotate_right') }}
-                            </v-tooltip>
-                        </v-btn>
-                    </div>
-
-                    <div
-                        class="text-center text-[11px] tracking-wide text-white/55"
-                    >
-                        {{ t('preview_hint') }}
-                    </div>
-                </div>
-            </v-card>
-        </v-dialog>
+        <!-- 图片预览：复用通用 Lightbox -->
+        <ImageLightbox
+            v-model="lightboxVisible"
+            :images="lightboxImages"
+            :start="lightboxIndex"
+        />
         <ConfirmDialog ref="confirmRef" />
     </v-container>
 </template>
 
-<style scoped>
-    .select-none {
-        user-select: none;
-        pointer-events: auto;
-    }
-
-    /* 预览主图阴影，与模糊背景拉开层次 */
-    .preview-img {
-        filter: drop-shadow(0 12px 32px rgb(0 0 0 / 0.55));
-    }
-</style>
+<style scoped></style>

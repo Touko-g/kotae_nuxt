@@ -1,6 +1,7 @@
 <script setup lang="ts">
     const { getArticleList } = useArticle()
     const { extractText } = useExtractText()
+    const { countWords, readingMinutes } = useReadingTime()
     const { fromNow } = useDayjs()
     const { t } = useLocale()
     const { isLogin } = useAuth()
@@ -340,6 +341,24 @@
                                                 icon="mdi-heart-outline"
                                             />
                                             {{ article.likes }}
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <v-icon
+                                                size="14"
+                                                icon="mdi-clock-outline"
+                                            />
+                                            {{
+                                                t(
+                                                    'min_short',
+                                                    readingMinutes(
+                                                        countWords(
+                                                            extractText(
+                                                                article.content
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            }}
                                         </span>
                                     </div>
                                     <span>{{
