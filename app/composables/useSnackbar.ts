@@ -18,11 +18,17 @@ let idCounter = 0
 const timers = new Map<number, ReturnType<typeof setTimeout>>()
 
 export const useSnackbar = () => {
+    const { sound } = useSound()
+
     const show = (
         text: string,
         color = 'primary',
         options: Partial<Omit<SnackOptions, 'text' | 'color'>> = {}
     ) => {
+        // 根据通知类型播放对应音效
+        if (color === 'success') sound('success')
+        else if (color === 'error') sound('error')
+
         const id = ++idCounter
         const msg: SnackMessage = {
             id,

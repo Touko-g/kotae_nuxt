@@ -1,3 +1,1352 @@
-body {
-    font-family: 'Maple Mono CN SemiBold', sans-serif !important;
+/* 字体：Vuetify 会在 .v-application 与所有 text-* 排版类上硬编码 Roboto，
+   仅靠 body 规则无法继承覆盖，必须显式命中子元素与 text-* 类 */
+html,
+body,
+.v-application,
+.v-application
+    :is(
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        span,
+        a,
+        li,
+        button,
+        input,
+        textarea,
+        label,
+        div,
+        td,
+        th
+    ) {
+    font-family:
+        'Maple Mono CN SemiBold', 'Noto Sans SC', sans-serif !important;
+}
+
+/* ==========================================================================
+   Kotae 全局动画系统
+   统一 token + keyframes + utility，风格偏鲜明活泼（带回弹缓动）
+   遵循 prefers-reduced-motion；组件通过添加 class 复用，避免内联 style
+   ========================================================================== */
+
+:root {
+    /* 时长 */
+    --k-speed-fast: 150ms;
+    --k-speed-base: 280ms;
+    --k-speed-slow: 460ms;
+    --k-stagger: 60ms;
+
+    /* 缓动 */
+    --k-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --k-ease-in: cubic-bezier(0.55, 0, 0.68, 0.19);
+    --k-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes k-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes k-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-14px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(48px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes k-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    60% {
+        transform: scale(1.04);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes k-heart {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    18% {
+        transform: scale(0.78) rotate(-10deg);
+    }
+    42% {
+        transform: scale(1.35) rotate(8deg);
+    }
+    62% {
+        transform: scale(0.9) rotate(-4deg);
+    }
+    80% {
+        transform: scale(1.12) rotate(2deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* 点赞环形扩散 */
+@keyframes k-like-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+        opacity: 0.55;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.9);
+        opacity: 0;
+    }
+}
+
+/* 点赞计数跳动 */
+@keyframes k-count-pop {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+    30% {
+        transform: translateY(-6px) scale(1.25);
+    }
+    60% {
+        transform: translateY(2px) scale(0.95);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* --- 单次进场 utility --- */
+.anim {
+    animation-duration: var(--k-speed-base);
+    animation-fill-mode: both;
+}
+
+.anim-fade {
+    animation-name: k-fade-in;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-slide-up {
+    animation-name: k-slide-up;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-slide-down {
+    animation-name: k-slide-down;
+    animation-timing-function: var(--k-ease-out);
+}
+
+.anim-pop {
+    animation-name: k-pop;
+    animation-timing-function: var(--k-ease-spring);
+}
+
+/* --- 列表交错进场：容器加 .stagger-up，子元素依次入场 --- */
+/* 进场从上方下落（起始 translateY 为负）：动画期间子项始终处于或高于
+   最终位置，容器底部不会被撑高，从原理上避免在 flush 列表（如 v-list）
+   中撑出瞬时滚动条（若从下方 slide-up，末项向下溢出会顶出滚动条） */
+@keyframes k-drop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.stagger-up > * {
+    animation: k-drop-in var(--k-speed-slow) var(--k-ease-out) both;
+}
+
+.stagger-up > *:nth-child(1) {
+    animation-delay: calc(var(--k-stagger) * 0);
+}
+.stagger-up > *:nth-child(2) {
+    animation-delay: calc(var(--k-stagger) * 1);
+}
+.stagger-up > *:nth-child(3) {
+    animation-delay: calc(var(--k-stagger) * 2);
+}
+.stagger-up > *:nth-child(4) {
+    animation-delay: calc(var(--k-stagger) * 3);
+}
+.stagger-up > *:nth-child(5) {
+    animation-delay: calc(var(--k-stagger) * 4);
+}
+.stagger-up > *:nth-child(6) {
+    animation-delay: calc(var(--k-stagger) * 5);
+}
+.stagger-up > *:nth-child(7) {
+    animation-delay: calc(var(--k-stagger) * 6);
+}
+.stagger-up > *:nth-child(8) {
+    animation-delay: calc(var(--k-stagger) * 7);
+}
+.stagger-up > *:nth-child(9) {
+    animation-delay: calc(var(--k-stagger) * 8);
+}
+.stagger-up > *:nth-child(10) {
+    animation-delay: calc(var(--k-stagger) * 9);
+}
+/* 超过 10 个不再累加延迟，避免末尾等待过久 */
+.stagger-up > *:nth-child(n + 11) {
+    animation-delay: calc(var(--k-stagger) * 9);
+}
+
+/* --- 交互微动效：hover 抬升 / 按下缩放 --- */
+.hover-lift {
+    transition:
+        transform var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-base) var(--k-ease-out),
+        border-color var(--k-speed-base) var(--k-ease-out);
+    will-change: transform;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+}
+
+.press {
+    transition: transform var(--k-speed-fast) var(--k-ease-out);
+}
+
+.press:active {
+    transform: scale(0.96);
+}
+
+.zoom-hover {
+    transition: transform var(--k-speed-base) var(--k-ease-spring);
+}
+
+.zoom-hover:hover {
+    transform: scale(1.05);
+}
+
+/* 点赞：图标心跳 + 环形扩散 + 计数跳动（触发时加 .k-pop-run / .k-count-run） */
+.like-pop {
+    display: inline-flex;
+    position: relative;
+}
+
+/* 心跳作用在图标本体（icon 按钮渲染于 .v-btn__content），避免覆盖 VBtn 按下缩放 */
+.like-pop.k-pop-run .v-btn__content {
+    display: inline-flex;
+    animation: k-heart 560ms var(--k-ease-spring);
+}
+
+/* 环形扩散层：仅点赞瞬间播放 */
+.like-pop::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgb(var(--v-theme-primary));
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.like-pop.k-pop-run::before {
+    animation: k-like-ring 600ms var(--k-ease-out);
+}
+
+.like-count {
+    display: inline-block;
+    min-width: 1ch;
+}
+
+.like-count.k-count-run {
+    animation: k-count-pop 420ms var(--k-ease-spring);
+}
+
+/* --- 全局按钮 / 标签轻触感：按下微缩放 --- */
+.v-btn,
+.v-chip {
+    transition:
+        transform var(--k-speed-fast) var(--k-ease-out),
+        background-color var(--k-speed-base) var(--k-ease-out),
+        border-color var(--k-speed-base) var(--k-ease-out),
+        color var(--k-speed-base) var(--k-ease-out) !important;
+}
+
+.v-btn:active:not(:disabled),
+.v-chip:active {
+    transform: scale(0.95);
+}
+
+/* --- 全局页面转场（配合 nuxt.config app.pageTransition name: 'page'） --- */
+.page-enter-active,
+.page-leave-active {
+    transition:
+        opacity var(--k-speed-base) var(--k-ease-out),
+        transform var(--k-speed-base) var(--k-ease-out);
+}
+
+.page-enter-from {
+    opacity: 0;
+    transform: translateY(14px);
+}
+
+.page-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* --- DelayFade（评论区等 <TransitionGroup> 的 CSS 实现） --- */
+.delay-fade-group {
+    display: contents;
+}
+
+.delay-fade-enter-active {
+    transition:
+        opacity var(--k-speed-slow) var(--k-ease-out),
+        transform var(--k-speed-slow) var(--k-ease-spring);
+}
+
+.delay-fade-enter-active:nth-child(2) {
+    transition-delay: calc(var(--k-stagger) * 1);
+}
+.delay-fade-enter-active:nth-child(3) {
+    transition-delay: calc(var(--k-stagger) * 2);
+}
+.delay-fade-enter-active:nth-child(4) {
+    transition-delay: calc(var(--k-stagger) * 3);
+}
+.delay-fade-enter-active:nth-child(n + 5) {
+    transition-delay: calc(var(--k-stagger) * 4);
+}
+
+.delay-fade-enter-from {
+    opacity: 0;
+    transform: translateX(64px);
+}
+
+/* ==========================================================================
+   Kotae 首页创意抬头（Hero / Featured / Marquee / Rank）
+   统一走主题变量，兼容浅色(红 primary)/深色(绿 primary)；SSR 友好，无随机
+   ========================================================================== */
+
+/* 渐变流动文字（wordmark） */
+@keyframes k-gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.k-gradient-text {
+    background-image: linear-gradient(
+        120deg,
+        rgb(var(--v-theme-primary)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 45%, #ffffff),
+        rgb(var(--v-theme-primary))
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: k-gradient-shift 8s var(--k-ease-out) infinite;
+}
+
+/* 极光辉光背景团 */
+@keyframes k-aurora-drift {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    33% {
+        transform: translate3d(6%, -8%, 0) scale(1.12);
+    }
+    66% {
+        transform: translate3d(-6%, 6%, 0) scale(0.94);
+    }
+}
+
+.k-hero {
+    isolation: isolate;
+}
+
+.hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+    opacity: 0.32;
+    z-index: -1;
+    pointer-events: none;
+    animation: k-aurora-drift 14s ease-in-out infinite;
+}
+
+.hero-blob--a {
+    top: -30%;
+    left: -6%;
+    width: 42%;
+    padding-bottom: 42%;
+    background: radial-gradient(
+        circle at 30% 30%,
+        rgb(var(--v-theme-primary) / 0.75),
+        transparent 70%
+    );
+}
+
+.hero-blob--b {
+    right: -8%;
+    bottom: -40%;
+    width: 46%;
+    padding-bottom: 46%;
+    background: radial-gradient(
+        circle at 70% 70%,
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, #ffffff),
+        transparent 70%
+    );
+    animation-delay: -6s;
+}
+
+/* 标签跑马灯 */
+@keyframes k-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 8%,
+        #000 92%,
+        transparent
+    );
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 8%,
+        #000 92%,
+        transparent
+    );
+}
+
+.marquee-track {
+    display: inline-flex;
+    width: max-content;
+    gap: 0.75rem;
+    animation: k-marquee 28s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+    animation-play-state: paused;
+}
+
+/* 头条 Featured 封面：按 id 取模的同色系深浅渐变（服务端/客户端一致） */
+.featured-cover {
+    position: relative;
+    color: #fff;
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    background-size: cover;
+}
+
+.featured-cover--0 {
+    background-image: linear-gradient(
+        135deg,
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 90%, #ffffff),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 60%, #000000)
+    );
+}
+.featured-cover--1 {
+    background-image: linear-gradient(
+        135deg,
+        rgb(var(--v-theme-primary)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 48%, #000000)
+    );
+}
+.featured-cover--2 {
+    background-image: linear-gradient(
+        120deg,
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 78%, #ffffff),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 52%, #000000)
+    );
+}
+.featured-cover--3 {
+    background-image: linear-gradient(
+        160deg,
+        rgb(var(--v-theme-primary)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 40%, #000000)
+    );
+}
+
+/* 斜纹叠加，增加质感（极淡，不抢主体） */
+.featured-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.07;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+        45deg,
+        #fff 0,
+        #fff 1px,
+        transparent 1px,
+        transparent 14px
+    );
+}
+
+.featured-cover > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* 分区标题的强调竖条 */
+@keyframes k-bar-grow {
+    from {
+        transform: scaleY(0);
+    }
+    to {
+        transform: scaleY(1);
+    }
+}
+
+.section-bar {
+    display: inline-block;
+    width: 5px;
+    height: 1.4em;
+    border-radius: 999px;
+    background: linear-gradient(
+        to bottom,
+        rgb(var(--v-theme-primary)),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 50%, #ffffff)
+    );
+    transform-origin: bottom;
+    animation: k-bar-grow var(--k-speed-slow) var(--k-ease-spring) both;
+}
+
+/* 热门榜名次徽章：Top3 金属色，其余中性（符合列表规范） */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-inline-end: 12px;
+    border-radius: 0.625rem;
+    font-size: 0.8125rem;
+    line-height: 1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--k-ink-soft);
+    background: var(--k-ink-faint);
+    transition: transform var(--k-speed-base) var(--k-ease-spring);
+}
+
+.rank-badge--1,
+.rank-badge--2,
+.rank-badge--3 {
+    color: #fff;
+}
+
+.rank-badge--1 {
+    background: linear-gradient(135deg, #eab308, #b45309);
+}
+.rank-badge--2 {
+    background: linear-gradient(135deg, #94a3b8, #475569);
+}
+.rank-badge--3 {
+    background: linear-gradient(135deg, #c2743a, #8a4b21);
+}
+
+.v-list-item:hover .rank-badge {
+    transform: scale(1.12) rotate(-4deg);
+}
+
+/* ==========================================================================
+   Kotae 首页活泼插画风（doodle / sticker / highlight / 硬阴影卡）
+   大胆撞色但可控：亮色只用于小面积贴纸/花饰/阴影，主结构仍走主题色
+   ========================================================================== */
+:root {
+    --k-pop-coral: #ff5d5d;
+    --k-pop-amber: #ffb020;
+    --k-pop-cyan: #2fd0e0;
+    --k-pop-violet: #8b5cff;
+    --k-pop-mint: #37d39a;
+    --k-pop-pink: #ff6bb5;
+}
+
+/* 描边墨色：浅色近黑、深色近白，双主题都有粗轮廓感。
+   按 Vuetify 主题类显式定义字面量色，避免 rgb(var(--v-theme-on-surface) / a) 的混用语法失效 */
+.v-theme--light {
+    --k-ink: rgba(0, 0, 0, 0.9);
+    --k-ink-soft: rgba(0, 0, 0, 0.65);
+    --k-ink-faint: rgba(0, 0, 0, 0.08);
+}
+
+.v-theme--dark {
+    --k-ink: rgba(255, 255, 255, 0.9);
+    --k-ink-soft: rgba(255, 255, 255, 0.65);
+    --k-ink-faint: rgba(255, 255, 255, 0.1);
+}
+
+/* 漂浮花饰 */
+@keyframes k-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(var(--r, 0deg));
+    }
+    50% {
+        transform: translateY(-14px) rotate(var(--r, 0deg));
+    }
+}
+
+.k-doodle {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    animation: k-float 6s ease-in-out infinite;
+}
+
+.k-doodle--ring {
+    top: 16%;
+    right: 26%;
+    width: 74px;
+    height: 74px;
+    border: 7px solid var(--k-accent-b);
+    border-radius: 50%;
+    --r: 8deg;
+}
+
+.k-doodle--square {
+    right: 10%;
+    bottom: 22%;
+    width: 48px;
+    height: 48px;
+    background: var(--k-accent-c);
+    border-radius: 14px;
+    --r: 18deg;
+    animation-delay: -2s;
+}
+
+.k-doodle--dot {
+    top: 30%;
+    right: 8%;
+    width: 26px;
+    height: 26px;
+    background: var(--k-accent-a);
+    border-radius: 50%;
+    animation-delay: -4s;
+}
+
+.k-doodle--spark {
+    top: 20%;
+    left: 46%;
+    width: 34px;
+    height: 34px;
+    background: var(--k-accent-d);
+    --r: 0deg;
+    clip-path: polygon(
+        50% 0,
+        61% 39%,
+        100% 50%,
+        61% 61%,
+        50% 100%,
+        39% 61%,
+        0 50%,
+        39% 39%
+    );
+    animation-delay: -1s;
+}
+
+/* 主题派生色：荧光笔划线 + 花饰/贴纸撞色，全部由 primary / secondary 计算，
+   随 light / dark / rainy / glass 自动换色。
+   声明在 .v-application（与主题 token 同级）而非 :root，跟着当前主题类走 */
+.v-application {
+    --k-highlight: rgb(var(--v-theme-primary));
+    --k-highlight-soft: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 55%,
+        #fff
+    );
+    /* 四个可区分且对比安全的点缀色：主色 / 副色 / 调暗(亮)后的主色 / 调暗(亮)后的副色。
+       注：不可直接混 primary + secondary，互补色相（如 rainy 的金+蓝）会灰成脏色；
+       改为往 on-surface 方向调明度，浅底变深、深底变亮，饱和度得以保留 */
+    --k-accent-a: rgb(var(--v-theme-primary));
+    --k-accent-b: rgb(var(--v-theme-secondary));
+    --k-accent-c: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 70%,
+        rgb(var(--v-theme-on-surface))
+    );
+    --k-accent-d: color-mix(
+        in srgb,
+        rgb(var(--v-theme-secondary)) 70%,
+        rgb(var(--v-theme-on-surface))
+    );
+}
+
+/* 荧光笔划线（wordmark 下方） */
+.k-highlight {
+    position: relative;
+    z-index: 0;
+    display: inline-block;
+}
+
+.k-highlight::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: -0.06em;
+    right: -0.06em;
+    bottom: 0.04em;
+    height: 0.32em;
+    border-radius: 0.3em;
+    background: linear-gradient(
+        90deg,
+        var(--k-highlight),
+        var(--k-highlight-soft)
+    );
+    transform: rotate(-1.4deg);
+    opacity: 0.9;
+}
+
+/* 贴纸风标签：亮色循环 + 粗描边 + 硬阴影 + 微旋转 */
+.sticker {
+    border: 2px solid var(--k-ink) !important;
+    box-shadow: 2px 2px 0 var(--k-ink) !important;
+    color: #fff !important;
+    font-weight: 700;
+    transition:
+        transform var(--k-speed-fast) var(--k-ease-spring),
+        box-shadow var(--k-speed-fast) var(--k-ease-out) !important;
+}
+
+.sticker:hover {
+    transform: translate(-1px, -2px) rotate(-2deg) !important;
+    box-shadow: 4px 4px 0 var(--k-ink) !important;
+}
+
+/* 撞色改为主题 primary / secondary 交替：文字用 Vuetify 自动生成的 on-* token，
+   保证任意主题下对比度都成立（原 6 色彩虹循环不随主题变化） */
+.sticker:nth-child(2n + 1) {
+    background: rgb(var(--v-theme-primary)) !important;
+    color: rgb(var(--v-theme-on-primary)) !important;
+}
+.sticker:nth-child(2n) {
+    background: rgb(var(--v-theme-secondary)) !important;
+    color: rgb(var(--v-theme-on-secondary)) !important;
+}
+
+/* 硬阴影贴纸卡（Featured / 侧栏卡）：Vuetify .v-card 在本文件之后加载，需 !important 压过 */
+.k-card {
+    border: 2.5px solid var(--k-ink) !important;
+    border-radius: 18px !important;
+    box-shadow: 6px 6px 0 var(--k-ink) !important;
+    transition:
+        transform var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-base) var(--k-ease-out) !important;
+}
+
+.k-card:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 10px 10px 0 rgb(var(--v-theme-primary)) !important;
+}
+
+/* 轻量贴纸卡：用于重复网格卡（搜索/喜欢等），描边/阴影更收敛 */
+.k-card--sm {
+    border: 2px solid var(--k-ink) !important;
+    border-radius: 14px !important;
+    box-shadow: 4px 4px 0 var(--k-ink) !important;
+    transition:
+        transform var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-base) var(--k-ease-out) !important;
+}
+
+.k-card--sm:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 rgb(var(--v-theme-primary)) !important;
+}
+
+/* 首页 Latest 列表信息流：比网格卡更轻，常态无描边保持呼吸感，hover 才贴纸化 */
+.k-feed {
+    padding: 1.25rem 1.25rem 1rem !important;
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    transition:
+        transform var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-base) var(--k-ease-out),
+        background-color var(--k-speed-base) var(--k-ease-out) !important;
+}
+
+.k-feed:hover {
+    transform: translate(-2px, -2px);
+    border: 2px solid var(--k-ink) !important;
+    border-radius: 16px !important;
+    background: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 5%,
+        transparent
+    ) !important;
+    box-shadow: 6px 6px 0 rgb(var(--v-theme-primary)) !important;
+}
+
+/* 标题：hover 时荧光笔划线从左到右擦出 */
+.k-feed .k-feed__title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 0.3em;
+    width: 100%;
+    border-radius: 0.3em;
+    background: linear-gradient(
+        90deg,
+        var(--k-highlight),
+        var(--k-highlight-soft)
+    );
+    transform: rotate(-1deg) scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--k-speed-base) var(--k-ease-out);
+    z-index: -1;
+}
+
+.k-feed:hover .k-feed__title::after {
+    transform: rotate(-1deg) scaleX(1);
+}
+
+.k-feed__title {
+    position: relative;
+    z-index: 0;
+    display: inline-block;
+}
+
+/* 旋转角贴纸 */
+.k-sticker-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border: 2px solid var(--k-ink);
+    border-radius: 999px;
+    background: rgb(var(--v-theme-secondary));
+    color: rgb(var(--v-theme-on-secondary));
+    font-weight: 800;
+    box-shadow: 2px 2px 0 var(--k-ink);
+    transform: rotate(-4deg);
+}
+
+/* ==========================================================================
+   全站贴纸主题层：让所有页面继承首页的描边 + 硬阴影插画风
+   原则：chip / 主按钮全局贴纸化；卡片按“面板强 / 列表轻”的首页既有层级，
+   由页面显式加 .k-card（面板）或保持默认（列表项）。
+   浮层（对话框/菜单/选择器/命令面板/加载）内一律重置为干净表面，避免污染
+   ========================================================================== */
+
+/* 标签/胶囊：全站贴纸化（描边 + 硬阴影 + 加粗），hover 微旋上浮 */
+.v-chip {
+    border: 2px solid var(--k-ink) !important;
+    box-shadow: 2px 2px 0 var(--k-ink) !important;
+    font-weight: 700;
+}
+
+.v-chip:hover {
+    transform: translate(-1px, -1px) rotate(-1.5deg);
+    box-shadow: 3px 3px 0 rgb(var(--v-theme-primary)) !important;
+}
+
+/* 主按钮（flat / elevated / tonal）：贴纸质感；text / outlined / icon 保持干净 */
+.v-btn--variant-flat,
+.v-btn--variant-elevated,
+.v-btn--variant-tonal {
+    border: 2px solid var(--k-ink) !important;
+    box-shadow: 3px 3px 0 var(--k-ink) !important;
+    font-weight: 700;
+}
+
+.v-btn--variant-flat:hover,
+.v-btn--variant-elevated:hover,
+.v-btn--variant-tonal:hover {
+    transform: translate(-1px, -2px);
+    box-shadow: 5px 5px 0 rgb(var(--v-theme-primary)) !important;
+}
+
+.v-btn--variant-flat:active:not(:disabled),
+.v-btn--variant-elevated:active:not(:disabled),
+.v-btn--variant-tonal:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--k-ink) !important;
+}
+
+/* 弹窗（v-dialog）：套用与全站一致的贴纸描边 + 硬阴影，主按钮保持贴纸质感 */
+.v-dialog .v-card {
+    border: 2.5px solid var(--k-ink) !important;
+    border-radius: 18px !important;
+    box-shadow: 8px 8px 0 var(--k-ink) !important;
+}
+
+/* 全屏图片预览弹窗：保持无边框干净表面 */
+.v-dialog--fullscreen .v-card {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* 菜单 / 自动补全等非对话框浮层内的卡：保持 Vuetify 原生表面 */
+.v-menu .v-card {
+    border: none !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* 浮层内的标签：保持干净（下拉/多选里的 chip 不做贴纸） */
+.v-overlay .v-chip {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.v-overlay .v-chip:hover {
+    transform: none;
+    box-shadow: none !important;
+}
+
+/* 图标按钮（含弹窗关闭 X、工具栏图标）不做贴纸方块，保持圆形干净 */
+.v-btn--icon {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.v-btn--icon:hover {
+    transform: none;
+    box-shadow: none !important;
+}
+
+/* 页面抬头（page-hero）：各页顶部统一的插画风标题条，复用首页视觉基因 */
+.page-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 2.5px solid var(--k-ink);
+    border-radius: 18px;
+    box-shadow: 6px 6px 0 var(--k-ink);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 12%, transparent),
+        transparent 62%
+    );
+    padding: clamp(1.25rem, 3vw, 2rem);
+    margin-bottom: 2rem;
+}
+
+.page-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: rgb(var(--v-theme-primary));
+    margin-bottom: 0.35rem;
+}
+
+.page-hero__title {
+    position: relative;
+    z-index: 0;
+    display: inline-block;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+/* ==========================================================================
+   全站布局外壳（AppBar / 侧边抽屉）贴纸描边：与页面卡同源的粗轮廓
+   ========================================================================== */
+
+/* 顶栏：底部一条硬描边，让 AppBar 与内容区“贴纸边界”统一 */
+.k-appbar {
+    border-bottom: 2px solid var(--k-ink) !important;
+}
+
+/* 侧边抽屉：内侧描边（左抽屉右边框 / 右抽屉左边框） */
+.k-drawer--left {
+    border-right: 2px solid var(--k-ink) !important;
+}
+
+.k-drawer--right {
+    border-left: 2px solid var(--k-ink) !important;
+}
+
+/* 内容区纸张质感：淡墨点阵网格，像贴纸底纸 */
+.k-paper {
+    background-image: radial-gradient(
+        var(--k-ink-faint) 1px,
+        transparent 1.3px
+    );
+    background-size: 22px 22px;
+}
+
+/* 左抽屉竖排品牌条 */
+.k-rail-brand {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 0.35em;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.45;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* 键帽贴纸（Ctrl K 快捷提示） */
+.k-kbd {
+    align-items: center;
+    padding: 2px 8px;
+    border: 2px solid var(--k-ink);
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 var(--k-ink);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+/* 页脚：顶部硬描边 + 渐变 wordmark + 回到顶部贴纸按钮 */
+.k-footer {
+    border-top: 2.5px solid var(--k-ink);
+}
+
+.k-footer__inner {
+    max-width: 64rem;
+}
+
+/* 页脚低速跑马灯条：复用 .marquee，拉长时间更从容 */
+.marquee--slow .marquee-track {
+    animation-duration: 48s;
+}
+
+.k-footer__marquee {
+    border-bottom: 2px dashed var(--k-ink-faint);
+}
+
+.k-footer__marquee-item {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--k-ink-soft);
+}
+
+.k-footer__marquee-item:nth-child(even) {
+    color: rgb(var(--v-theme-primary));
+}
+
+/* 右抽屉：快捷入口栏顶部的漂浮花饰星 */
+.k-rail-spark {
+    font-size: 1.1rem;
+    line-height: 1;
+    user-select: none;
+    animation: k-float 4s ease-in-out infinite;
+}
+
+/* 右抽屉：贴纸工具箱面板（墨色描边 + 硬阴影胶囊，收纳快捷图标） */
+.k-rail-toolbox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 4px;
+    border: 2px solid var(--k-ink);
+    border-radius: 18px;
+    background: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 4%,
+        rgb(var(--v-theme-surface))
+    );
+    box-shadow: 3px 3px 0 var(--k-ink);
+}
+
+/* 单按钮的底部回到顶部块：更方正的小贴纸 */
+.k-rail-toolbox--single {
+    border-radius: 13px;
+}
+
+.k-rail-btn {
+    color: var(--k-ink-soft) !important;
+    transition:
+        color var(--k-speed-base) var(--k-ease-out),
+        transform var(--k-speed-base) var(--k-ease-spring) !important;
+}
+
+.k-rail-btn:hover {
+    color: rgb(var(--v-theme-primary)) !important;
+    transform: rotate(-6deg) scale(1.1);
+}
+
+.k-rail-btn:active {
+    transform: rotate(-6deg) scale(0.94);
+}
+
+/* ==========================================================================
+   新主题专区：雨夜闪电 (rainy) / 玻璃磨砂 (glass)
+   只补主题专属装饰，贴纸层通过 --k-ink 系变量自动适配
+   ========================================================================== */
+
+/* 墨色变体：贴纸风要求高对比——描边与硬偏移阴影必须"贴"得出来。
+   rainy 夜底用近乎不透明的亮墨（暗色新粗野主义），glass 亮底用深墨 */
+.v-theme--rainy {
+    --k-ink: rgba(238, 244, 255, 0.98);
+    --k-ink-soft: rgba(226, 232, 240, 0.72);
+    --k-ink-faint: rgba(226, 232, 240, 0.16);
+}
+
+.v-theme--glass {
+    --k-ink: rgba(15, 23, 42, 0.92);
+    --k-ink-soft: rgba(15, 23, 42, 0.62);
+    --k-ink-faint: rgba(15, 23, 42, 0.1);
+}
+
+/* 两主题都需要让主区透出 .v-application 上的背景渐变 */
+.v-theme--rainy .v-main,
+.v-theme--glass .v-main {
+    background-color: transparent !important;
+}
+
+/* ---------- 雨夜闪电：深夜雨空渐变底（主题类在 .v-application 自身，用复合选择器） ---------- */
+.v-application.v-theme--rainy {
+    background-image:
+        /* 顶部雷云被闪电映亮的冷蓝 */
+        radial-gradient(
+            60% 42% at 50% -8%,
+            rgba(70, 104, 178, 0.34),
+            transparent 72%
+        ),
+        /* 地平线冷紫氛围 */
+            radial-gradient(
+                45% 35% at 85% 112%,
+                rgba(70, 48, 120, 0.26),
+                transparent 70%
+            ),
+        /* 整体压暗的深夜渐变：上稍亮、下更黑 */
+            linear-gradient(
+                180deg,
+                rgba(3, 6, 15, 0.5) 0%,
+                rgba(3, 6, 15, 0) 34%,
+                rgba(2, 4, 11, 0.62) 100%
+            );
+    background-attachment: fixed;
+}
+
+/* 下雨效果：用两张内含大量随机雨丝的 SVG(随机位置/长度/透明度/粗细，斜落已烘焙进图) 平铺，
+   近/远两层不同 tile 尺寸与速度 → 视差；大 tile + 密集随机雨丝使重复阵列不可辨 */
+@keyframes k-rain {
+    to {
+        background-position:
+            0 480px,
+            0 400px;
+    }
+}
+
+.v-application.v-theme--rainy::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.38;
+    background-image: url('/rain-a.svg'), url('/rain-b.svg');
+    background-size:
+        320px 480px,
+        260px 400px;
+    background-repeat: repeat;
+    animation: k-rain 2.6s linear infinite;
+}
+
+/* 偶发闪电：14s 一轮，尾部两次短促闪烁 */
+@keyframes k-lightning {
+    0%,
+    89.9%,
+    92.2%,
+    94.6%,
+    100% {
+        opacity: 0;
+    }
+    90.6% {
+        opacity: 0.14;
+    }
+    91.4% {
+        opacity: 0.02;
+    }
+    93.2% {
+        opacity: 0.22;
+    }
+    93.9% {
+        opacity: 0.05;
+    }
+    94.3% {
+        opacity: 0.12;
+    }
+}
+
+.v-application.v-theme--rainy::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(199, 217, 255, 0.9) 0%,
+        rgba(199, 217, 255, 0.25) 35%,
+        transparent 60%
+    );
+    animation: k-lightning 14s ease-out infinite;
+}
+
+/* ---------- 玻璃磨砂：冷色雾斑 + 清晰点阵底 + 半透磨砂表面 ----------
+   玻璃感的关键：背景必须有清晰可辨的细节（点阵）供 backdrop-filter 模糊，
+   否则“模糊平滑渐变 = 还是平滑”，卡片只会看成半透明白板 */
+.v-application.v-theme--glass {
+    background-image:
+        radial-gradient(rgba(76, 110, 245, 0.26) 1.5px, transparent 1.6px),
+        radial-gradient(
+            62% 66% at 16% 8%,
+            rgba(96, 140, 250, 0.72),
+            transparent 72%
+        ),
+        radial-gradient(
+            64% 68% at 88% 94%,
+            rgba(124, 108, 240, 0.62),
+            transparent 72%
+        );
+    background-size:
+        22px 22px,
+        100% 100%,
+        100% 100%;
+    background-attachment: fixed;
+}
+
+.v-theme--glass .v-toolbar,
+.v-theme--glass .v-navigation-drawer,
+.v-theme--glass .v-card,
+.v-theme--glass .v-menu__content,
+.v-theme--glass .v-snackbar__surface,
+.v-theme--glass .k-rail-toolbox {
+    background-color: rgba(255, 255, 255, 0.18) !important;
+    backdrop-filter: blur(26px) saturate(2) brightness(1.06);
+    -webkit-backdrop-filter: blur(26px) saturate(2) brightness(1.06);
+}
+
+/* 玻璃内缘高光：用 outline 画在贴纸墨色描边内侧，
+   不占用 border/box-shadow（两者被贴纸描边与硬阴影占用），outline 跟随 border-radius */
+.v-theme--glass .v-card {
+    outline: 1px solid rgba(255, 255, 255, 0.7);
+    outline-offset: -4.5px;
+}
+
+/* 列表 hover 贴纸底色改为半透磨砂版 */
+.v-theme--glass .k-feed:hover {
+    background-color: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 10%,
+        rgba(255, 255, 255, 0.5)
+    ) !important;
+}
+
+/* ==========================================================================
+   无障碍：系统开启“减少动态效果”时降级为几乎无动画
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .hover-lift:hover,
+    .zoom-hover:hover,
+    .press:active,
+    .v-btn:active:not(:disabled),
+    .v-chip:active,
+    .v-chip:hover,
+    .v-btn--variant-flat:hover,
+    .v-btn--variant-elevated:hover,
+    .v-btn--variant-tonal:hover,
+    .k-card:hover,
+    .k-feed:hover,
+    .k-rail-btn:hover,
+    .k-rail-btn:active {
+        transform: none !important;
+    }
+
+    /* 首页无限循环动效降级为静态终态，避免冻结在中间帧 */
+    .k-gradient-text,
+    .hero-blob,
+    .marquee-track,
+    .k-doodle {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    /* 雨幕停成静态淡纹，避免持续下落动画 */
+    .v-application.v-theme--rainy::before {
+        animation: none !important;
+        opacity: 0.22 !important;
+    }
+
+    /* 雨夜闪电的雷光闪烁直接移除 */
+    .v-application.v-theme--rainy::after {
+        animation: none !important;
+        opacity: 0 !important;
+    }
 }

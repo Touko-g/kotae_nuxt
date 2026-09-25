@@ -84,18 +84,21 @@
 </script>
 
 <template>
-    <v-container class="max-w-5xl mx-auto px-4 py-10">
-        <v-alert
-            class="mt-5"
-            variant="outlined"
-            elevation="1"
-            :text="t(`search_list`, route.query.query)"
-        ></v-alert>
-        <v-row class="py-6">
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{
+                    t('search_list', route.query.query)
+                }}</span>
+            </h1>
+        </header>
+        <v-row class="py-6 stagger-up">
             <v-col v-for="(article, index) in articles" :key="article.id">
                 <v-card
                     v-intersect
                     link
+                    class="k-card--sm hover-lift"
                     variant="outlined"
                     rounded="lg"
                     :append-avatar="article.owner.avatar"
@@ -129,6 +132,11 @@
                 </v-card>
             </v-col>
         </v-row>
+        <EmptyState
+            v-if="!articles.length"
+            icon="mdi-file-search-outline"
+            :title="t('no_results')"
+        />
         <div v-if="articles?.length" ref="scrollRef"></div>
     </v-container>
 </template>

@@ -5,16 +5,17 @@
         middleware: 'auth',
     })
 
+    const { t } = useLocale()
+
     useSeoMeta({
-        title: '修改个人信息',
-        ogTitle: '修改个人信息',
+        title: computed(() => t('edit_user')),
+        ogTitle: computed(() => t('edit_user')),
     })
 
     const { getCosKey } = useAuth()
     const { updateUser } = useUser()
     const { rules } = useRules()
 
-    const { t } = useLocale()
     const { format } = useDayjs()
     const { show } = useSnackbar()
     const user = useCookie<User>('user')
@@ -102,83 +103,95 @@
 </script>
 
 <template>
-    <v-card class="ma-6" variant="text">
-        <v-card-text>
-            <v-form ref="userFormRef" v-model="userForm.valid" lazy-validation>
-                <v-row>
-                    <v-col cols="12" class="text-center">
-                        <v-avatar size="100">
-                            <v-img
-                                sizes="100"
-                                alt="avatar"
-                                :src="userForm.avatar"
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('edit_user') }}</span>
+            </h1>
+        </header>
+        <v-card variant="text" class="k-card pa-4 pa-sm-6">
+            <v-card-text>
+                <v-form
+                    ref="userFormRef"
+                    v-model="userForm.valid"
+                    lazy-validation
+                >
+                    <v-row>
+                        <v-col cols="12" class="text-center">
+                            <v-avatar size="100">
+                                <v-img
+                                    sizes="100"
+                                    alt="avatar"
+                                    :src="userForm.avatar"
+                                >
+                                </v-img>
+                            </v-avatar>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-file-input
+                                accept="image/png, image/jpeg, image/bmp"
+                                prepend-icon="mdi-camera"
+                                variant="outlined"
+                                :label="t('avatar')"
+                                :loading="userForm.cosLoading"
+                                @update:model-value="handleUpload"
+                            ></v-file-input>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-text-field
+                                v-model="userForm.username"
+                                :label="t('username')"
+                                color="primary"
+                                variant="outlined"
+                                density="comfortable"
+                                :rules="rules.nameRules"
                             >
-                            </v-img>
-                        </v-avatar>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-file-input
-                            accept="image/png, image/jpeg, image/bmp"
-                            prepend-icon="mdi-camera"
-                            variant="outlined"
-                            :label="t('avatar')"
-                            :loading="userForm.cosLoading"
-                            @update:model-value="handleUpload"
-                        ></v-file-input>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field
-                            v-model="userForm.username"
-                            :label="t('username')"
-                            color="primary"
-                            variant="outlined"
-                            density="comfortable"
-                            :rules="rules.nameRules"
-                        >
-                        </v-text-field>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field
-                            v-model="userForm.email"
-                            :label="t('email')"
-                            color="primary"
-                            variant="outlined"
-                            density="comfortable"
-                            :rules="rules.emailRules"
-                        >
-                        </v-text-field>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-textarea
-                            v-model="userForm.about"
-                            :label="t('about')"
-                            color="primary"
-                            variant="outlined"
-                            density="comfortable"
-                        >
-                        </v-textarea>
-                    </v-col>
-                    <v-col class="d-flex">
-                        <v-btn
-                            color="primary"
-                            variant="tonal"
-                            class="mr-1"
-                            :loading="userForm.loading"
-                            @click="handleEdit"
-                            >{{ t('confirm') }}
-                        </v-btn>
-                        <v-btn
-                            color="primary"
-                            variant="tonal"
-                            class="mr-1"
-                            @click="handleResetUserInfo"
-                            >{{ t('clear') }}</v-btn
-                        >
-                    </v-col>
-                </v-row>
-            </v-form>
-        </v-card-text>
-    </v-card>
+                            </v-text-field>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-text-field
+                                v-model="userForm.email"
+                                :label="t('email')"
+                                color="primary"
+                                variant="outlined"
+                                density="comfortable"
+                                :rules="rules.emailRules"
+                            >
+                            </v-text-field>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-textarea
+                                v-model="userForm.about"
+                                :label="t('about')"
+                                color="primary"
+                                variant="outlined"
+                                density="comfortable"
+                            >
+                            </v-textarea>
+                        </v-col>
+                        <v-col class="d-flex">
+                            <v-btn
+                                color="primary"
+                                variant="tonal"
+                                class="mr-1"
+                                :loading="userForm.loading"
+                                @click="handleEdit"
+                                >{{ t('confirm') }}
+                            </v-btn>
+                            <v-btn
+                                color="primary"
+                                variant="tonal"
+                                class="mr-1"
+                                @click="handleResetUserInfo"
+                                >{{ t('clear') }}</v-btn
+                            >
+                        </v-col>
+                    </v-row>
+                </v-form>
+            </v-card-text>
+        </v-card>
+    </v-container>
 </template>
 
 <style scoped></style>

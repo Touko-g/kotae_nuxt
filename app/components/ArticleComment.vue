@@ -42,8 +42,10 @@
     })
 
     const getComments = async (params: CommentListParams) => {
-        comments.value = await getCommentList({ article, ...params })
-        search.count = Math.ceil(comments.value.count / 10)
+        const res = await getCommentList({ article, ...params })
+        comments.value = res
+        search.count = Math.ceil(res.count / 10)
+        return res
     }
 
     const onSelectEmoji = (emoji: any) => {
@@ -166,9 +168,27 @@
         return ip.match(/(.+)(?=省)/)?.[0] ?? ip
     }
 
-    useAsyncData('comments', () => getComments(search), {
-        watch: [refreshCount],
-    })
+    const { data: commentsData } = useAsyncData(
+        `comments-${article}`,
+        () => getComments(search),
+        {
+            watch: [refreshCount, () => article],
+        }
+    )
+
+    // 切换语言会带前缀跳转导致本组件重新挂载，此时 useAsyncData 命中
+    // 同名缓存不会再次执行 handler，需从缓存结果回填本地 comments，
+    // 既避免评论消失、也无需为与语言无关的评论数据重新请求
+    watch(
+        commentsData,
+        val => {
+            if (val) {
+                comments.value = val
+                search.count = Math.ceil(val.count / 10)
+            }
+        },
+        { immediate: true }
+    )
 </script>
 
 <template>
@@ -196,6 +216,8 @@
                     color="primary"
                     class="ml-4"
                     :loading="commentLoading"
+                    data-cuelume-press
+                    data-cuelume-release
                     @click="handlePostComment"
                     >{{ t('post_comment') }}</v-btn
                 >
@@ -390,7 +412,9 @@
                                 {{ comment.comment_replies.length }}
                                 {{ t('replies') }}
                                 <span
-                                    class="text-primary"
+                                    class="text-primary cursor-pointer"
+                                    data-cuelume-press
+                                    data-cuelume-release
                                     @click="viewMore(comment.id)"
                                 >
                                     {{ t('view_more') }}
@@ -410,7 +434,7 @@
             @update:model-value="changePage"
         ></v-pagination>
     </div>
-    <div v-else class="my-2 text-grey">{{ t('noc') }}</div>
+    <EmptyState v-else icon="mdi-forum-outline" :title="t('noc')" />
     <v-dialog
         v-model="emojiDialog"
         width="auto"
@@ -431,7 +455,9 @@
         @click:outside="handleReset"
     >
         <v-card width="300">
-            <v-card-title> To : {{ data.reply_info.reply_user }} </v-card-title>
+            <v-card-title>
+                {{ t('reply_to') }} : {{ data.reply_info.reply_user }}
+            </v-card-title>
             <v-card-text>
                 <v-textarea
                     v-model.trim="data.reply_info.content"

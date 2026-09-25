@@ -5,6 +5,7 @@
     const { getSearchList, addSearch } = useSearch()
     const { getArticleList } = useArticle()
     const { fromNow } = useDayjs()
+    const { soundWhisper } = useSound()
     const searchDialog = useState('search', () => false)
 
     const search = reactive({
@@ -20,6 +21,7 @@
 
     watch(searchDialog, async value => {
         if (value) {
+            soundWhisper()
             try {
                 search.loading = true
                 const { results } = await getSearchList({
@@ -138,7 +140,7 @@
                             :key="index"
                             color="primary"
                             class="mx-2 uppercase text-sm"
-                            :label="radio"
+                            :label="t(radio)"
                             :value="radio"
                         />
                     </v-radio-group>
@@ -156,7 +158,7 @@
                     clearable
                     :loading="loading"
                     class="mb-5"
-                    :hint="`by ${radioGroup}`"
+                    :hint="`${t('by')} ${t(radioGroup)}`"
                     @update:model-value="debounceSearch"
                 />
 

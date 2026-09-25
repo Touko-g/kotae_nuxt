@@ -1,67 +1,66 @@
 <script setup lang="ts">
-    const route = useRoute()
-    const theme = useTheme()
     const { current, t } = useLocale()
     const { setLocale } = useDayjs()
     const loginDialog = useState('login')
     const searchDialog = useState('search')
-    const { isLogin, logout } = useAuth()
+    const { isLogin, performLogout } = useAuth()
 
     const user = useCookie<User | null>('user')
-    const { show } = useSnackbar()
-    const loading = useState('loading')
+    const { soundToggle, soundTick, soundEnabled, toggleSound } = useSound()
+    const { cycleTheme, themeIcon, themeLabelKey } = useThemeCycle()
 
     const toggleLocal = () => {
         const newLocale = current.value === 'zh' ? 'en' : 'zh'
         current.value = newLocale
         setLocale(newLocale === 'zh' ? 'zh-cn' : 'en')
-    }
-
-    const handleLogout = async () => {
-        const refresh = useCookie('refresh')
-        const token = useCookie('token')
-        if (refresh.value) {
-            loading.value = true
-            try {
-                await logout({ refresh_token: refresh.value })
-                isLogin.value = false
-                refresh.value = null
-                token.value = null
-                user.value = null
-                if (
-                    !(
-                        route.fullPath === '/' ||
-                        route.fullPath.startsWith('/article')
-                    )
-                ) {
-                    navigateTo('/')
-                }
-                show(t('logout_success'), 'success')
-            } catch (e) {
-            } finally {
-                loading.value = false
-            }
-        }
+        soundTick()
     }
 </script>
 
 <template>
-    <v-app-bar elevation="3">
-        <v-app-bar-title class="text-primary" @click="navigateTo('/')">
+    <v-app-bar class="k-appbar" elevation="3">
+        <v-app-bar-title
+            class="k-gradient-text cursor-pointer"
+            data-cuelume-press
+            data-cuelume-release
+            @click="navigateTo('/')"
+        >
             Kotae
         </v-app-bar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="searchDialog = true">
             <v-icon>mdi-magnify</v-icon>
         </v-btn>
+        <span class="k-kbd d-none d-md-inline-flex mr-2" aria-hidden="true">
+            Ctrl K
+        </span>
         <v-btn v-show="isLogin" icon @click="navigateTo('/article/like')">
             <v-icon>mdi-heart</v-icon>
         </v-btn>
-        <v-btn icon @click="theme.toggle()">
-            <v-icon>mdi-theme-light-dark</v-icon>
+        <v-btn
+            icon
+            data-cuelume-manual
+            @click="
+                () => {
+                    cycleTheme()
+                    soundToggle()
+                }
+            "
+        >
+            <v-icon :icon="themeIcon" data-allow-mismatch />
+            <v-tooltip
+                activator="parent"
+                location="bottom"
+                :text="t(themeLabelKey)"
+            />
         </v-btn>
-        <v-btn icon @click="toggleLocal">
+        <v-btn icon data-cuelume-manual @click="toggleLocal">
             <v-icon>mdi-translate</v-icon>
+        </v-btn>
+        <v-btn icon data-cuelume-manual @click="toggleSound">
+            <v-icon>{{
+                soundEnabled ? 'mdi-volume-high' : 'mdi-volume-off'
+            }}</v-icon>
         </v-btn>
         <v-divider v-if="!isLogin" inset vertical :opacity="0.7" class="mx-6" />
         <v-menu v-if="isLogin && user" location="bottom">
@@ -101,7 +100,7 @@
                 <!--                <v-list-item prepend-icon="mdi-palette">-->
                 <!--                    {{ t('color_palette') }}-->
                 <!--                </v-list-item>-->
-                <v-list-item prepend-icon="mdi-logout" @click="handleLogout">
+                <v-list-item prepend-icon="mdi-logout" @click="performLogout">
                     {{ t('logout') }}
                 </v-list-item>
             </v-list>
@@ -113,9 +112,9 @@
             divided
             color="primary"
         >
-            <v-btn append-icon="mdi-login" @click="loginDialog = true"
-                >login</v-btn
-            >
+            <v-btn append-icon="mdi-login" @click="loginDialog = true">{{
+                t('sign_in')
+            }}</v-btn>
             <!--            <v-btn append-icon="mdi-account-plus-outline">register</v-btn>-->
         </v-btn-group>
     </v-app-bar>
@@ -124,6 +123,7 @@
     <ResetDialog />
     <FetchLoading />
     <SearchDialog />
+    <CommandPalette />
 </template>
 
 <style scoped></style>

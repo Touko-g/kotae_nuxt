@@ -2,12 +2,14 @@
     definePageMeta({
         middleware: 'auth',
     })
-    useSeoMeta({
-        title: '修改密码',
-        ogTitle: '修改密码',
-    })
 
     const { t } = useLocale()
+
+    useSeoMeta({
+        title: computed(() => t('change_psw')),
+        ogTitle: computed(() => t('change_psw')),
+    })
+
     const { show } = useSnackbar()
 
     const { logout } = useAuth()
@@ -25,21 +27,17 @@
         password2: '',
         loading: false,
         oldPswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'Password is required',
+            (v: string) => (!!v && !!v.trim()) || t('password_required'),
         ],
         pswRules: [
-            (v: string) => (!!v && !!v.trim()) || 'New Password is required',
-            (v: string) =>
-                (v && v.length >= 8) ||
-                'This password is too short. It must contain at least 8 characters.',
-            (v: string) =>
-                checkPsw1(v) ||
-                'The New Password cannot be the same as the Old Password',
+            (v: string) => (!!v && !!v.trim()) || t('new_password_required'),
+            (v: string) => (v && v.length >= 8) || t('password_too_short'),
+            (v: string) => checkPsw1(v) || t('password_same_as_old'),
         ],
         psw2Rules: [
             (v: string) =>
-                (!!v && !!v.trim()) || 'Confirm Password is required',
-            (v: string) => checkPsw(v) || 'Confirm Password does not match',
+                (!!v && !!v.trim()) || t('confirm_password_required'),
+            (v: string) => checkPsw(v) || t('password_not_match'),
         ],
     })
 
@@ -86,62 +84,79 @@
 </script>
 
 <template>
-    <v-row class="d-flex justify-center">
-        <v-card width="500" variant="text" class="mt-12 pa-6" rounded="lg">
-            <v-form ref="form" v-model="data.valid" lazy-validation>
-                <v-text-field
-                    v-model="data.old_password"
-                    :label="t('old_psw')"
-                    type="password"
-                    autocomplete="current-password"
-                    :rules="data.oldPswRules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-4"
-                    clearable
-                />
-                <v-text-field
-                    v-model="data.password"
-                    :label="t('new_psw')"
-                    type="password"
-                    autocomplete="new-password"
-                    :rules="data.pswRules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-4"
-                    clearable
-                />
-                <v-text-field
-                    v-model="data.password2"
-                    :label="t('confirm_psw')"
-                    type="password"
-                    autocomplete="new-password"
-                    :rules="data.psw2Rules"
-                    color="primary"
-                    variant="outlined"
-                    density="comfortable"
-                    class="mb-6"
-                    clearable
-                />
-
-                <div class="d-flex justify-end gap-2">
-                    <v-btn
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ t('password') }}</span>
+            </h1>
+        </header>
+        <v-row class="d-flex justify-center">
+            <v-card
+                width="500"
+                variant="text"
+                class="k-card mt-4 pa-6"
+                rounded="lg"
+            >
+                <v-form ref="form" v-model="data.valid" lazy-validation>
+                    <v-text-field
+                        v-model="data.old_password"
+                        :label="t('old_psw')"
+                        type="password"
+                        autocomplete="current-password"
+                        :rules="data.oldPswRules"
                         color="primary"
-                        variant="tonal"
-                        :loading="data.loading"
-                        @click="handleEdit"
-                    >
-                        {{ t('confirm') }}
-                    </v-btn>
-                    <v-btn color="primary" variant="tonal" @click="handleReset">
-                        {{ t('clear') }}
-                    </v-btn>
-                </div>
-            </v-form>
-        </v-card>
-    </v-row>
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-4"
+                        clearable
+                    />
+                    <v-text-field
+                        v-model="data.password"
+                        :label="t('new_psw')"
+                        type="password"
+                        autocomplete="new-password"
+                        :rules="data.pswRules"
+                        color="primary"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-4"
+                        clearable
+                    />
+                    <v-text-field
+                        v-model="data.password2"
+                        :label="t('confirm_psw')"
+                        type="password"
+                        autocomplete="new-password"
+                        :rules="data.psw2Rules"
+                        color="primary"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-6"
+                        clearable
+                    />
+
+                    <div class="d-flex justify-end gap-2">
+                        <v-btn
+                            color="primary"
+                            variant="tonal"
+                            :loading="data.loading"
+                            @click="handleEdit"
+                        >
+                            {{ t('confirm') }}
+                        </v-btn>
+                        <v-btn
+                            color="primary"
+                            variant="tonal"
+                            @click="handleReset"
+                        >
+                            {{ t('clear') }}
+                        </v-btn>
+                    </div>
+                </v-form>
+            </v-card>
+        </v-row>
+    </v-container>
 </template>
 
 <style scoped></style>

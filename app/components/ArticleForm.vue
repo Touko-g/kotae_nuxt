@@ -20,8 +20,8 @@
     const { id } = defineProps<Props>()
 
     useSeoMeta({
-        title: id ? '修改文章' : '创建文章',
-        ogTitle: id ? '修改文章' : '创建文章',
+        title: computed(() => t(id ? 'edit' : 'add')),
+        ogTitle: computed(() => t(id ? 'edit' : 'add')),
     })
 
     const articleFormRef = useTemplateRef('articleFormRef')
@@ -38,8 +38,9 @@
     const editorLoad = ref(true)
     const editorConfig = reactive({
         skin_url: computed(() => {
-            const val = ['light', 'dark'].includes(theme.global.name.value)
-                ? theme.global.name.value
+            // rainy 属暗色系，glass 属亮色系，统一映射到 TinyMCE 两套皮肤
+            const val = ['dark', 'rainy'].includes(theme.global.name.value)
+                ? 'dark'
                 : 'light'
             return `https://chen-1302611521.cos.ap-nanjing.myqcloud.com/tinymce/${val}/skins/ui/${val}`
         }),
@@ -168,81 +169,83 @@
 </script>
 
 <template>
-    <p class="my-6 text-2xl text-uppercase d-flex align-center justify-center">
-        <v-icon
-            :icon="id ? 'mdi-circle-edit-outline' : 'mdi-circle-edit-outline'"
-            class="mr-3"
-        ></v-icon>
-        {{ id ? t('edit') : t('add') }}
-    </p>
-    <v-divider color="surface" />
-    <v-form
-        id="articleForm"
-        ref="articleFormRef"
-        v-model="articleForm.valid"
-        class="mb-6 mx-6"
-        lazy-validation
-    >
-        <v-text-field
-            v-model="articleForm.title"
-            :label="t('title')"
-            color="primary"
-            variant="outlined"
-            density="comfortable"
-            :rules="rules.titleRules"
-        ></v-text-field>
-        <Editor
-            id="tinymce-editor"
-            v-model="articleForm.content"
-            :init="editorConfig"
-            api-key="4aoi5vbw5t6v7q43jt2w6s6q9cpzikf3384bpre1tq2pftid"
-        />
-        <v-overlay
-            v-model="editorLoad"
-            color="primary"
-            class="d-flex justify-center align-center"
-            persistent
+    <v-container class="max-w-5xl px-4 px-sm-6 py-6 py-sm-10">
+        <header class="page-hero anim anim-slide-down">
+            <p class="page-hero__eyebrow">✦ Kotae</p>
+            <h1 class="text-h4 page-hero__title">
+                <span class="k-highlight">{{ id ? t('edit') : t('add') }}</span>
+            </h1>
+        </header>
+        <v-form
+            id="articleForm"
+            ref="articleFormRef"
+            v-model="articleForm.valid"
+            class="mb-6"
+            lazy-validation
         >
-            <div class="w-[120px]">
-                <v-progress-linear
-                    color="info"
-                    indeterminate
-                    rounded
-                    height="10"
-                ></v-progress-linear>
-            </div>
-        </v-overlay>
-        <v-combobox
-            v-model="articleForm.select"
-            class="my-10"
-            variant="outlined"
-            color="primary"
-            density="comfortable"
-            :items="articleForm.items"
-            :label="t('tag')"
-            multiple
-            chips
-            :rules="rules.tagRules"
-            :loading="articleForm.searchLoading"
-            @update:search="getTag"
-        ></v-combobox>
-        <p class="d-flex">
-            <v-btn
+            <v-text-field
+                v-model="articleForm.title"
+                :label="t('title')"
                 color="primary"
-                variant="tonal"
-                :loading="articleForm.loading"
-                @click="publish"
-                >{{ t(id ? 'edit' : 'publish') }}</v-btn
-            >
-            <v-btn
+                variant="outlined"
+                density="comfortable"
+                :rules="rules.titleRules"
+            ></v-text-field>
+            <Editor
+                id="tinymce-editor"
+                v-model="articleForm.content"
+                :init="editorConfig"
+                api-key="4aoi5vbw5t6v7q43jt2w6s6q9cpzikf3384bpre1tq2pftid"
+            />
+            <v-overlay
+                v-model="editorLoad"
                 color="primary"
-                variant="tonal"
-                class="ml-1"
-                @click="reset"
-                >{{ t('reset') }}</v-btn
+                class="d-flex justify-center align-center"
+                persistent
             >
-        </p>
-    </v-form>
+                <div class="w-[120px]">
+                    <v-progress-linear
+                        color="info"
+                        indeterminate
+                        rounded
+                        height="10"
+                    ></v-progress-linear>
+                </div>
+            </v-overlay>
+            <v-combobox
+                v-model="articleForm.select"
+                class="my-10"
+                variant="outlined"
+                color="primary"
+                density="comfortable"
+                :items="articleForm.items"
+                :label="t('tag')"
+                multiple
+                chips
+                :rules="rules.tagRules"
+                :loading="articleForm.searchLoading"
+                @update:search="getTag"
+            ></v-combobox>
+            <p class="d-flex">
+                <v-btn
+                    color="primary"
+                    variant="tonal"
+                    :loading="articleForm.loading"
+                    data-cuelume-press
+                    data-cuelume-release
+                    @click="publish"
+                    >{{ t(id ? 'edit' : 'publish') }}</v-btn
+                >
+                <v-btn
+                    color="primary"
+                    variant="tonal"
+                    class="ml-1"
+                    @click="reset"
+                    >{{ t('reset') }}</v-btn
+                >
+            </p>
+        </v-form>
+    </v-container>
 </template>
 
 <style scoped></style>
