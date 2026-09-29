@@ -87,7 +87,7 @@ export const useAuth = () => {
     const performLogout = async () => {
         const route = useRoute()
         const loading = useState('loading')
-        const { show } = useSnackbar()
+        const { show } = useToast()
 
         const refreshCookie = useCookie('refresh')
         const tokenCookie = useCookie('token')

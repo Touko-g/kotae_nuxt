@@ -1,6 +1,6 @@
 <script setup lang="ts">
     const { t } = useLocale()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { rules } = useRules()
     const { getCode, register } = useAuth()
     const { soundWhisper } = useSound()

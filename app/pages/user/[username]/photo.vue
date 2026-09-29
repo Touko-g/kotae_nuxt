@@ -12,7 +12,7 @@
     })
 
     const { getPhotoList, delPhoto } = usePhoto()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { format } = useDayjs()
 
     const currentUser = useCookie<User | null>('user')

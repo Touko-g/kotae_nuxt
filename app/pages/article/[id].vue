@@ -10,7 +10,7 @@
     const { t } = useLocale()
     const { mobile } = useDisplay()
     const { name } = useTheme()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { extractText } = useExtractText()
     const { countWords, readingMinutes } = useReadingTime()
     const { soundSparkle, soundTick } = useSound()
@@ -225,6 +225,16 @@
 
     const handleLike = async (e?: MouseEvent) => {
         if (!isLogin.value || likeLoading.value) return
+        // 同步捕获撒花原点：锚定到点赞按钮中心（await 之后 e.currentTarget 会失效）
+        const btn = e?.currentTarget as HTMLElement | undefined
+        const origin = btn
+            ? (() => {
+                  const r = btn.getBoundingClientRect()
+                  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+              })()
+            : e
+              ? { x: e.clientX, y: e.clientY }
+              : undefined
         const liked = isLike.value
         const likeId = myLikeId.value
         // 取消点赞但拿不到记录 id（数据未就绪）时直接返回，避免误调接口
@@ -243,10 +253,8 @@
                 // 点赞：心跳 + 环形扩散 + 撒花 + 计数 +1
                 const rec = await addLike({ article: article.value?.id })
                 soundSparkle()
-                fireConfetti(
-                    e ? { x: e.clientX, y: e.clientY } : undefined,
-                    120
-                )
+                // 从按钮中心向上绽放，避免花束直接下坠出视口
+                fireConfetti(origin, 120, { upward: 160 })
                 isLike.value = true
                 myLikeId.value = rec?.id
                 // 兜底：若创建响应未带回记录 id，仅刷新 like 列表回填

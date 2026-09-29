@@ -13,7 +13,7 @@
     })
 
     const { getLikeList, delLike } = useLike()
-    const { show } = useSnackbar()
+    const { show } = useToast()
 
     const likes = ref<Like[]>([])
     const loading = ref(false)

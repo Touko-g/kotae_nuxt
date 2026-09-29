@@ -70,6 +70,15 @@
                 group: 'nav',
                 run: () => navigateTo('/article/like'),
             })
+            list.push({
+                id: 'wishlist',
+                title: t('wishlist'),
+                keywords:
+                    'wish wishlist todo done list 想做的事 心愿 心愿单 愿望 待办 清单 事项 xiangdeshi',
+                icon: 'mdi-clipboard-list-outline',
+                group: 'nav',
+                run: () => navigateTo('/wishlist'),
+            })
         }
         list.push({
             id: 'write',

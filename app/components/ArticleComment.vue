@@ -9,7 +9,7 @@
     const { formatNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const isLogin = useState('isLogin')
     const refreshCount = useState<number>('refreshCount')
 

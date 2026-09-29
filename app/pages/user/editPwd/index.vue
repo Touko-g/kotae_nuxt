@@ -10,7 +10,7 @@
         ogTitle: computed(() => t('change_psw')),
     })
 
-    const { show } = useSnackbar()
+    const { show } = useToast()
 
     const { logout } = useAuth()
     const { editPassword } = useUser()

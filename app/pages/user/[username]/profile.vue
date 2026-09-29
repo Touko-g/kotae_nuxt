@@ -17,7 +17,7 @@
     const { rules } = useRules()
 
     const { format } = useDayjs()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const user = useCookie<User>('user')
 
     const userFormRef = useTemplateRef('userFormRef')

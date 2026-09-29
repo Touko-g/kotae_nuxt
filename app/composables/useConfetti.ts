@@ -26,7 +26,11 @@ const readPalette = (): string[] => {
 }
 
 export const useConfetti = () => {
-    const fire = (origin?: { x?: number; y?: number }, count = 90) => {
+    const fire = (
+        origin?: { x?: number; y?: number },
+        count = 90,
+        opts?: { upward?: number }
+    ) => {
         if (!import.meta.client) return
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
             return
@@ -34,6 +38,8 @@ export const useConfetti = () => {
         const palette = readPalette()
         const x = origin?.x ?? window.innerWidth / 2
         const y = origin?.y ?? window.innerHeight / 3
+        // upward：向上初速，用于从按钮处向上绽放；0 则维持原有下落雨效果
+        const upward = opts?.upward ?? 0
 
         for (let i = 0; i < count; i++) {
             const bit = document.createElement('span')
@@ -57,8 +63,11 @@ export const useConfetti = () => {
             const angle = Math.random() * Math.PI * 2
             const dist = 80 + Math.random() * 260
             const dx = Math.cos(angle) * dist
+            // 以放射为主，叠加轻微重力；upward 把落点整体上提，避免靠底按钮处直接下坠出屏
             const dy =
-                Math.sin(angle) * dist * 0.6 + (120 + Math.random() * 260)
+                Math.sin(angle) * dist * 0.7 +
+                (140 + Math.random() * 160) -
+                upward * (0.7 + Math.random() * 0.6)
             const rotate = Math.random() * 720 - 360
             const duration = 900 + Math.random() * 700
 

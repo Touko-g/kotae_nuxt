@@ -937,6 +937,15 @@ body,
     box-shadow: 1px 1px 0 var(--k-ink) !important;
 }
 
+/* 按钮组 / 切换组：Vuetify 默认 overflow-x:auto，而贴纸主按钮的
+   hover/active translate 会撑出横向滚动条，点击瞬间布局抖动导致事件丢失。
+   这两类容器内容不超出时无需滚动，放开 overflow 裁切（首尾按钮已由
+   Vuetify 单独设圆角，visible 不会让端头变方） */
+.v-btn-group,
+.v-btn-toggle {
+    overflow: visible !important;
+}
+
 /* 弹窗（v-dialog）：套用与全站一致的贴纸描边 + 硬阴影，主按钮保持贴纸质感 */
 .v-dialog .v-card {
     border: 2.5px solid var(--k-ink) !important;
@@ -1148,6 +1157,67 @@ body,
 }
 
 /* ==========================================================================
+   贴纸风 Toast（vue-sonner）：墨色描边 + 模切白边 + 硬偏移阴影，
+   与全站贴纸层同源；类型色取主题 on-* token（四主题均定义了
+   success / info / warning / error），雨夜暗底自动换用提亮变体
+   ========================================================================== */
+
+/* 结构性压回：sonner 默认的白色表面 + 柔和阴影 + 圆角让位给 VAlert 贴纸本体，
+   背景/文字色交回 Vuetify surface 体系 */
+.k-toast.k-toast {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: rgb(var(--v-theme-on-surface)) !important;
+    /* 进场/退场与堆叠位移交给 vue-sonner 原生 spring 动画：
+       自定义 transform 动画会与 sonner 写在内联 style 上的 transform 冲突，
+       动画结束（无 fill-mode）瞬间回弹到内联位移值 → 视觉卡顿，故不再叠加 */
+    will-change: transform;
+}
+
+/* 贴纸本体：粗墨描边 + 硬阴影，外叠一圈"模切白边"更像实体贴纸 */
+.k-toast .v-alert {
+    border: 2.5px solid var(--k-ink) !important;
+    border-radius: 16px !important;
+    /* 固定微倾挂在本体（不依赖兄弟序）：堆叠增删时不会翻面，避免抖动 */
+    rotate: -0.8deg;
+    box-shadow:
+        0 0 0 3px rgb(var(--v-theme-surface)) 100%,
+        0 0 0 4.5px var(--k-ink),
+        8px 8px 0 var(--k-ink) !important;
+    transition:
+        translate var(--k-speed-fast) var(--k-ease-spring),
+        rotate var(--k-speed-base) var(--k-ease-spring),
+        box-shadow var(--k-speed-fast) var(--k-ease-out) !important;
+}
+
+/* hover 揭起：倾角回正 + 上浮（rotate / translate 为独立属性，不碰 sonner 的 transform） */
+.k-toast .v-alert:hover {
+    rotate: 0deg;
+    translate: -2px -2px;
+    box-shadow:
+        0 0 0 3px rgb(var(--v-theme-surface)) 100%,
+        0 0 0 4.5px var(--k-ink),
+        10px 10px 0 var(--k-ink) !important;
+}
+
+/* 类型色进图标与文字提示 */
+.k-toast .v-alert--text-success {
+    color: rgb(var(--v-theme-success)) !important;
+}
+.k-toast .v-alert--text-info {
+    color: rgb(var(--v-theme-info)) !important;
+}
+.k-toast .v-alert--text-warning {
+    color: rgb(var(--v-theme-warning)) !important;
+}
+.k-toast .v-alert--text-error {
+    color: rgb(var(--v-theme-error)) !important;
+}
+
+/* ==========================================================================
    新主题专区：雨夜闪电 (rainy) / 玻璃磨砂 (glass)
    只补主题专属装饰，贴纸层通过 --k-ink 系变量自动适配
    ========================================================================== */
@@ -1314,6 +1384,24 @@ body,
     ) !important;
 }
 
+/* Toast 是瞬时且持续位移的浮层：在其上做 backdrop-filter 会逐帧重采样背景，
+   是玻璃主题卡顿主因。故 toast 去掉 backdrop-filter，改用高不透明磨砂纯色，
+   保留半透亮边环 + 硬阴影维持玻璃贴纸质感，合成成本几乎为零 */
+.v-theme--glass .k-toast .v-alert {
+    background: rgba(255, 255, 255, 0.72) !important;
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.85),
+        0 0 0 4.5px var(--k-ink),
+        8px 8px 0 var(--k-ink) !important;
+}
+
+.v-theme--glass .k-toast .v-alert:hover {
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.85),
+        0 0 0 4.5px var(--k-ink),
+        10px 10px 0 var(--k-ink) !important;
+}
+
 /* ==========================================================================
    无障碍：系统开启“减少动态效果”时降级为几乎无动画
    ========================================================================== */
@@ -1339,8 +1427,10 @@ body,
     .k-card:hover,
     .k-feed:hover,
     .k-rail-btn:hover,
-    .k-rail-btn:active {
+    .k-rail-btn:active,
+    .k-toast .v-alert:hover {
         transform: none !important;
+        translate: none !important;
     }
 
     /* 首页无限循环动效降级为静态终态，避免冻结在中间帧 */

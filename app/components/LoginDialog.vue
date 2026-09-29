@@ -2,7 +2,7 @@
     const { t } = useLocale()
     const { login, isLogin } = useAuth()
     const { getUser } = useUser()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { rules } = useRules()
     const { soundWhisper } = useSound()
     const loginDialog = useState('login', () => false)
@@ -66,7 +66,9 @@
                     loginDialog.value = false
 
                     show(t('login_success'), 'success')
-                } catch (e) {
+                } catch (e: any) {
+                    // 登录失败（401 等）：useHttp 已将后端 detail 归一到 message
+                    show(e?.message || t('login_failed'), 'error')
                 } finally {
                     loginForm.loading = false
                 }

@@ -20,8 +20,9 @@
     const { getArticleList } = useArticle()
     const { addPhoto, getPhotoList } = usePhoto()
     const { getCosKey } = useAuth()
+    const { getWishList } = useWish()
 
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { fromNow, format } = useDayjs()
     const { width } = useDisplay()
 
@@ -90,6 +91,16 @@
     const isSelf = computed(() => {
         return loginUser.value?.id === Number(id)
     })
+
+    // 「想做的事」接口只返回当前登录用户的数据，故仅在本人主页拉取展示
+    const { data: wishData } = await useAsyncData('wish', () =>
+        isSelf.value
+            ? getWishList({ pagesize: 1000, order: '-create_time' })
+            : Promise.resolve(undefined)
+    )
+    const wishPreview = computed(
+        () => wishData.value?.results.slice(0, 5) ?? []
+    )
 
     const handleUpload = async (file: File | File[]) => {
         if (!file || Array.isArray(file)) return
@@ -370,6 +381,70 @@
                                     density="compact"
                                     @update:model-value="changePage"
                                 ></v-pagination>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                    <v-col v-if="isSelf" cols="12">
+                        <v-card class="k-card">
+                            <v-card-title>
+                                <div class="d-flex align-center">
+                                    <v-icon class="mr-2"
+                                        >mdi-clipboard-list-outline</v-icon
+                                    >
+                                    {{ t('wishlist') }}
+                                    <v-spacer />
+                                    <v-btn
+                                        variant="text"
+                                        size="small"
+                                        append-icon="mdi-arrow-right"
+                                        @click="navigateTo('/wishlist')"
+                                        >{{ t('wish_manage') }}</v-btn
+                                    >
+                                </div>
+                            </v-card-title>
+                            <v-divider color="surface" />
+                            <v-card-text>
+                                <v-list
+                                    v-if="wishPreview.length"
+                                    lines="one"
+                                    class="stagger-up"
+                                >
+                                    <v-list-item
+                                        v-for="w in wishPreview"
+                                        :key="w.id"
+                                    >
+                                        <template #prepend>
+                                            <v-icon
+                                                :color="
+                                                    w.completed
+                                                        ? 'success'
+                                                        : 'grey'
+                                                "
+                                                size="small"
+                                            >
+                                                {{
+                                                    w.completed
+                                                        ? 'mdi-check-circle'
+                                                        : 'mdi-checkbox-blank-circle-outline'
+                                                }}
+                                            </v-icon>
+                                        </template>
+                                        <template #title>
+                                            <span
+                                                :class="{
+                                                    'line-through': w.completed,
+                                                    'opacity-60': w.completed,
+                                                }"
+                                                >{{ w.title }}</span
+                                            >
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
+                                <EmptyState
+                                    v-else
+                                    icon=""
+                                    :title="t('wish_empty')"
+                                />
                             </v-card-text>
                         </v-card>
                     </v-col>

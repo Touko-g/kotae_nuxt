@@ -1,5 +1,5 @@
 export interface HttpOptions {
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     headers?: Record<string, string>
     params?: Record<string, any>
     body?: any
@@ -21,11 +21,14 @@ let pendingRefresh: Promise<boolean> | null = null
 
 export const useHttp = () => {
     const config = useRuntimeConfig()
-    const { show } = useSnackbar()
+    const { show } = useToast()
     const { t } = useLocale()
 
     const isRefresh = useState('isRefresh', () => false)
     const refreshCount = useState('refreshCount', () => 0)
+    // 在 setup 上下文里预先拿到登录态，避免在异步回调中再次实例化 useAuth/useHttp
+    // （那会脱离组件 setup，导致 Vuetify 的 useLocale 取不到注入实例）
+    const isLogin = useState('isLogin', () => false)
 
     const loadingCount = ref(0) // 并发安全 loading
     const loading = computed(() => loadingCount.value > 0)
@@ -35,11 +38,14 @@ export const useHttp = () => {
         const tokenCookie = useCookie('token')
         const refreshCookie = useCookie('refresh')
         const userCookie = useCookie('user')
-        const { refresh, isLogin } = useAuth()
         if (!refreshCookie.value) return false
         isRefresh.value = true
         try {
-            const data = await refresh({ refresh: refreshCookie.value })
+            // 用本实例的 post 直接请求刷新接口，不再经由嵌套 useAuth()
+            const data = await post<{ access: string; refresh: string }>(
+                '/token/refresh/',
+                { refresh: refreshCookie.value }
+            )
             tokenCookie.value = data.access
             // 后端未轮换 refresh token 时 data.refresh 为空，避免误清空
             if (data.refresh) refreshCookie.value = data.refresh
@@ -94,7 +100,6 @@ export const useHttp = () => {
             const tokenCookie = useCookie('token')
             const refreshCookie = useCookie('refresh')
             const userCookie = useCookie('user')
-            const { isLogin } = useAuth()
             const isRefreshCall = url.includes('/refresh')
             // verify 接口：token 放在 body 里由其自身判定有效性，
             // 其 401 是“token 已过期”的正常答案，不触发刷新重发，交由调用方决定
@@ -134,8 +139,12 @@ export const useHttp = () => {
                 if (refreshed) return await request<T>(url, options, false)
             }
 
+            // 后端错误体字段不统一（detail / message），优先取可读文案
             const message =
-                err?.data?.message || err?.message || t('unknown_error')
+                err?.data?.detail ||
+                err?.data?.message ||
+                err?.message ||
+                t('unknown_error')
             throw new HttpError(message, status)
         } finally {
             if (options.showLoading) loadingCount.value--
@@ -154,6 +163,9 @@ export const useHttp = () => {
     const put = <T>(url: string, body?: any, showLoading = false) =>
         request<T>(url, { method: 'PUT', body, showLoading })
 
+    const patch = <T>(url: string, body?: any, showLoading = false) =>
+        request<T>(url, { method: 'PATCH', body, showLoading })
+
     const del = <T>(
         url: string,
         params?: Record<string, any>,
@@ -166,6 +178,7 @@ export const useHttp = () => {
         get,
         post,
         put,
+        patch,
         del,
         tryRefresh: runRefresh,
     }

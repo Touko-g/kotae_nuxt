@@ -39,6 +39,19 @@
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
+    // 右抽屉：贴纸 Toast 测试（仅开发环境）——依次弹出四种类型，
+    // 验证描边/模切白边/硬阴影、交错微倾与回弹进场
+    // 注：import.meta 不能在模板表达式里使用（模板编译器非 module 上下文），
+    // 需在 script 中求值后再交给模板
+    const isDev = import.meta.dev
+    const toast = useToast()
+    const testToasts = () => {
+        toast.success(t('toast_test_success'))
+        setTimeout(() => toast.info(t('toast_test_info')), 260)
+        setTimeout(() => toast.warning(t('toast_test_warning')), 520)
+        setTimeout(() => toast.error(t('toast_test_error')), 780)
+    }
+
     onMounted(async () => {
         if (token.value) {
             try {
@@ -164,6 +177,23 @@
                     </div>
                     <div class="k-rail-toolbox k-rail-toolbox--single">
                         <v-btn
+                            v-if="isDev"
+                            class="k-rail-btn"
+                            icon
+                            size="x-small"
+                            variant="text"
+                            :aria-label="t('toast_test')"
+                            @click="testToasts"
+                        >
+                            <v-icon icon="mdi-bell-ring-outline" size="18" />
+                            <v-tooltip
+                                activator="parent"
+                                location="start"
+                                :text="t('toast_test')"
+                                :open-delay="400"
+                            />
+                        </v-btn>
+                        <v-btn
                             class="k-rail-btn"
                             icon
                             size="x-small"
@@ -186,7 +216,6 @@
                 <slot />
             </v-main>
             <AppFooter />
-            <snake-bar />
             <Toaster />
             <!--        </v-layout>-->
         </v-app>
