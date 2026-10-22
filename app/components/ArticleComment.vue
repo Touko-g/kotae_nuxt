@@ -54,6 +54,12 @@
         } else comment.value += emoji.i
     }
 
+    const onSpeechResult = (text: string) => {
+        if (replyDialog.value) {
+            data.reply_info.content += text
+        } else comment.value += text
+    }
+
     const handlePostComment = async () => {
         if (!isLogin.value) return
 
@@ -208,6 +214,9 @@
                     variant="text"
                     @click="emojiDialog = true"
                 ></v-btn>
+            </template>
+            <template #append-inner>
+                <SpeechInput @result="onSpeechResult" />
             </template>
             <template #append>
                 <v-btn
@@ -464,7 +473,11 @@
                     density="comfortable"
                     color="primary"
                     variant="underlined"
-                />
+                >
+                    <template #append-inner>
+                        <SpeechInput @result="onSpeechResult" />
+                    </template>
+                </v-textarea>
                 <v-btn
                     icon="mdi-emoticon-sick-outline"
                     color="primary"

@@ -193,6 +193,13 @@
     "error_server_title": "Something went wrong",
     "error_server_text": "Our server hit a snag. Please try again in a moment.",
 
+    "speech_input": "Voice input",
+    "speech_listening": "Listening, please speak…",
+    "speech_mic_denied": "Microphone access denied — allow it in browser settings",
+    "speech_no_mic": "No microphone detected",
+    "speech_network_error": "Speech service unavailable, try again later",
+    "speech_error": "Speech recognition glitched — please try again",
+
     "username_required": "Username is required",
     "password_required": "Password is required",
     "new_password_required": "New Password is required",

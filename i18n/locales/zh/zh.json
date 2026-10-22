@@ -193,6 +193,13 @@
     "error_server_title": "出了一点小问题",
     "error_server_text": "服务器暂时开了个小差，请稍后再试。",
 
+    "speech_input": "语音输入",
+    "speech_listening": "正在聆听，请说话…",
+    "speech_mic_denied": "麦克风权限被拒绝，请在浏览器设置中允许",
+    "speech_no_mic": "没有检测到可用的麦克风",
+    "speech_network_error": "语音识别服务暂时不可用",
+    "speech_error": "语音识别出了点问题，请再试一次",
+
     "username_required": "请输入用户名",
     "password_required": "请输入密码",
     "new_password_required": "请输入新密码",
