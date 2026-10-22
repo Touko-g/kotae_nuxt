@@ -169,6 +169,24 @@
             articleFormRef.value.reset()
         }
     }
+
+    // 语音识别文本插入到 TinyMCE 光标处；编辑器未就绪时退回追加到 content
+    const onSpeechResult = (text: string) => {
+        const editor = (
+            window as unknown as {
+                tinymce?: { get: (id: string) => any }
+            }
+        ).tinymce?.get('tinymce-editor')
+        if (editor) {
+            const escaped = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+            editor.insertContent(escaped)
+        } else {
+            articleForm.content += text
+        }
+    }
 </script>
 
 <template>
@@ -194,6 +212,9 @@
                 density="comfortable"
                 :rules="rules.titleRules"
             ></v-text-field>
+            <div class="d-flex justify-end align-center">
+                <SpeechInput @result="onSpeechResult" />
+            </div>
             <Editor
                 id="tinymce-editor"
                 v-model="articleForm.content"

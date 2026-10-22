@@ -109,6 +109,11 @@
         search.topShow = true
     }
 
+    const onSpeechResult = (text: string) => {
+        search.searchValue += text
+        debounceSearch(search.searchValue)
+    }
+
     const { topShow, searchValue, results, radioGroup, radios, tops, loading } =
         toRefs(search)
 </script>
@@ -160,7 +165,11 @@
                     class="mb-5"
                     :hint="`${t('by')} ${t(radioGroup)}`"
                     @update:model-value="debounceSearch"
-                />
+                >
+                    <template #append-inner>
+                        <SpeechInput @result="onSpeechResult" />
+                    </template>
+                </v-text-field>
 
                 <!-- 顶部标题与按钮 -->
                 <div class="flex justify-between items-center mb-3">
