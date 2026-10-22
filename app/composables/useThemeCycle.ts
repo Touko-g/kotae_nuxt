@@ -2,7 +2,7 @@
  * 主题轮换：light → dark → rainy（雨夜闪电）→ glass（玻璃磨砂）→ light …
  * AppBar 与 CommandPalette 共用同一套顺序、图标与 i18n 标签
  */
-const THEME_ORDER = ['light', 'dark', 'rainy', 'glass'] as const
+export const THEME_ORDER = ['light', 'dark', 'rainy', 'glass'] as const
 
 const THEME_ICONS: Record<string, string> = {
     light: 'mdi-weather-sunny',

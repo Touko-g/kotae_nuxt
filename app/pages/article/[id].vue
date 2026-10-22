@@ -1,7 +1,7 @@
 <script setup lang="ts">
-    import DOMPurify from 'dompurify'
     import type { ConfirmDialog } from '#components'
     const route = useRoute()
+    const siteUrl = useRuntimeConfig().public.siteUrl
 
     const { getArticle, getArticleList, delArticle } = useArticle()
     const { getLikeList, addLike, delLike } = useLike()
@@ -39,6 +39,13 @@
         { watch: [refreshCount] }
     )
 
+    // 正文渲染：高亮 + 净化都在派生层完成，SSR 与客户端同一套结果
+    const { html: renderedHtml } = useArticleHtml({
+        html: () => article.value?.content,
+        themeName: () => name.value,
+        highlighter,
+    })
+
     // --- 预计阅读时间 / 字数（纯函数，SSR 与客户端一致）---
     const wordCount = computed(() =>
         article.value ? countWords(extractText(article.value.content)) : 0
@@ -64,7 +71,7 @@
     if (article.value) {
         const title = article.value.title
         const description = extractText(article.value.content).slice(0, 160)
-        const url = `https://kotae.cn/article/${article.value.id}`
+        const url = `${siteUrl}/article/${article.value.id}`
 
         useSeoMeta({
             title,
@@ -98,36 +105,6 @@
                 },
             ],
         })
-    }
-
-    /**
-     * 替换 HTML 字符串中的 <pre><code class="language-xxx">...</code></pre> 为高亮代码
-     * @param html 原始 HTML 内容
-     * @param themeName
-     */
-    const highlightCodeInHtml = (html: string, themeName: string) => {
-        return html.replace(
-            /<pre(?:\s+class="language-(\w+)")?>\s*<code[^>]*?>([\s\S]*?)<\/code>\s*<\/pre>/g,
-            (_, lang = 'text', code) => {
-                // 反转义 HTML 实体
-                const decoded = code
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&amp;/g, '&')
-
-                // 如果传入的lang不支持，默认用 javascript 处理
-                const realLang = highlighter.getLoadedLanguages().includes(lang)
-                    ? lang
-                    : 'javascript'
-                return highlighter.codeToHtml(decoded, {
-                    lang: realLang,
-                    // light/glass 为亮色系，dark/rainy 为暗色系
-                    theme: ['light', 'glass'].includes(themeName)
-                        ? 'github-light'
-                        : 'github-dark',
-                })
-            }
-        )
     }
 
     const handleEdit = () => {
@@ -428,17 +405,18 @@
         if (lightboxImages.value.length) lightboxVisible.value = true
     }
 
+    // 正文重新渲染（水合完成 / 切换主题 / 换文章）后，重建目录与代码复制按钮
+    const rebuildContentEnhancements = () => {
+        nextTick(() => {
+            buildToc()
+            enhanceCodeBlocks()
+        })
+    }
+
+    watch(renderedHtml, rebuildContentEnhancements)
+
     onMounted(() => {
-        if (article.value) {
-            article.value.content = DOMPurify.sanitize(
-                highlightCodeInHtml(article.value.content, name.value)
-            )
-            triggerRef(article)
-            nextTick(() => {
-                buildToc()
-                enhanceCodeBlocks()
-            })
-        }
+        rebuildContentEnhancements()
         markdownRef.value?.addEventListener('click', onCodeCopy)
         markdownRef.value?.addEventListener('click', onImageClick)
         window.addEventListener('scroll', onScroll, { passive: true })
@@ -514,7 +492,7 @@
                             <div
                                 ref="markdownRef"
                                 class="markdown-body"
-                                v-html="article.content"
+                                v-html="renderedHtml"
                             ></div>
                             <div class="d-sm-flex align-center mt-6">
                                 <h3

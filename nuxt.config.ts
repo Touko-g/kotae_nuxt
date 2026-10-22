@@ -5,6 +5,14 @@ import type {
 } from './app/composables/api/useArticle'
 import pkg from './package.json'
 
+// 站点地址与 API 地址统一从这里取：本地 / 预览环境可用环境变量覆盖，
+// 避免 canonical、og:url、sitemap 指向线上域名
+const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://kotae.cn'
+const apiBase = process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/'
+// 腾讯云 COS 直传配置（前端可见，非敏感）
+const cosBucket = process.env.NUXT_PUBLIC_COS_BUCKET || 'chen-1302611521'
+const cosRegion = process.env.NUXT_PUBLIC_COS_REGION || 'ap-nanjing'
+
 export default defineNuxtConfig({
     app: {
         pageTransition: { name: 'page', mode: 'out-in' },
@@ -30,7 +38,7 @@ export default defineNuxtConfig({
                     property: 'og:description',
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
                 },
-                { property: 'og:url', content: 'https://kotae.cn' },
+                { property: 'og:url', content: siteUrl },
                 { property: 'og:type', content: 'website' },
             ],
             noscript: [
@@ -65,14 +73,14 @@ export default defineNuxtConfig({
         ],
     },
     site: {
-        url: 'https://kotae.cn',
+        url: siteUrl,
         name: 'Kotae',
     },
     sitemap: {
         autoLastmod: true,
         exclude: ['/admin/**'],
         urls: async () => {
-            const fetchUrl = 'https://kotae.cn/api/article/'
+            const fetchUrl = `${apiBase}article/`
             const urls = []
             let page = 1
             let totalPages = 1
@@ -117,7 +125,10 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/',
+            apiBase,
+            siteUrl,
+            cosBucket,
+            cosRegion,
             versions: {
                 nuxt: {
                     version: pkg.dependencies.nuxt,

@@ -26,6 +26,7 @@
     "dayjs": "^1.11.18",
     "dompurify": "^3.2.7",
     "html-to-text": "^9.0.5",
+    "isomorphic-dompurify": "^4.6.0",
     "nuxt": "^4.1.2",
     "vue": "^3.5.21",
     "vue-router": "^4.5.1",

@@ -195,6 +195,7 @@
 
     "speech_input": "Voice input",
     "speech_listening": "Listening, please speak…",
+    "speech_stop": "Click to stop dictation",
     "speech_mic_denied": "Microphone access denied — allow it in browser settings",
     "speech_no_mic": "No microphone detected",
     "speech_network_error": "Speech service unavailable, try again later",

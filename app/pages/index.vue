@@ -9,6 +9,7 @@
 
     const config = useRuntimeConfig()
     const versions = config.public.versions
+    const siteUrl = config.public.siteUrl
 
     // --- 状态 ---
     const articles = ref<Article[]>([])
@@ -48,7 +49,7 @@
         description: computed(() => t('site_description')),
         ogTitle: 'Kotae',
         ogDescription: computed(() => t('site_description')),
-        ogUrl: 'https://kotae.cn/',
+        ogUrl: `${siteUrl}/`,
         robots: 'index, follow',
     })
 
@@ -63,7 +64,7 @@
                         (a, index) => ({
                             '@type': 'ListItem',
                             position: index + 1,
-                            url: `https://kotae.cn/article/${a.id}`,
+                            url: `${siteUrl}/article/${a.id}`,
                             name: a.title,
                         })
                     ),

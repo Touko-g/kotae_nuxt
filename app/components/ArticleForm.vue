@@ -1,16 +1,15 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
     import Editor from '@tinymce/tinymce-vue'
+    import { joinSpeechText } from '~/composables/useSpeechRecognition'
 
     const theme = useTheme()
-    const { format } = useDayjs()
     const { show } = useToast()
     const { fire: fireConfetti } = useConfetti()
     const { t } = useLocale()
     const { rules } = useRules()
+    const { upload } = useCosUpload()
 
-    const { getCosKey } = useAuth()
-    const { getArticle, createArticle, updateArticle } = useArticle()
+    const { createArticle, updateArticle, getArticle } = useArticle()
     const { getTagList } = useTag()
 
     interface Props {
@@ -63,42 +62,19 @@
             { text: 'Python', value: 'python' },
         ],
         branding: false,
-        // 图片上传回调
-        images_upload_handler: (blobInfo: any) =>
-            new Promise((resolve, reject) => {
-                const file = blobInfo.blob()
-                getCosKey()
-                    .then(res => {
-                        const cos = new COS({
-                            SecretId: res.credentials.tmpSecretId, // 身份识别ID
-                            SecretKey: res.credentials.tmpSecretKey, // 身份秘钥
-                            XCosSecurityToken: res.credentials.sessionToken,
-                        })
-                        cos.putObject(
-                            {
-                                Bucket: 'chen-1302611521' /* 存储桶 */,
-                                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                                Key: `/blog/article/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                                Body: file, // 上传文件对象
-                            },
-                            (err, data) => {
-                                // 上传成功之后
-                                if (data.statusCode === 200) {
-                                    const path = `https://${data.Location}`
-                                    resolve(path)
-                                }
-                                if (err) {
-                                    show(err.message, 'error')
-                                    reject(err)
-                                }
-                            }
-                        )
-                    })
-                    .catch(e => {
-                        reject(e)
-                    })
-            }),
+        // 图片上传：统一走 useCosUpload（临时密钥 + 直传 COS）
+        images_upload_handler: async (blobInfo: any) => {
+            const file = blobInfo.blob()
+            try {
+                return await upload(file, {
+                    dir: 'blog/article',
+                    name: file.name,
+                })
+            } catch (e: any) {
+                show(e?.message ?? String(e), 'error')
+                throw e
+            }
+        },
     })
 
     onMounted(async () => {
@@ -170,22 +146,36 @@
         }
     }
 
-    // 语音识别文本插入到 TinyMCE 光标处；编辑器未就绪时退回追加到 content
+    // 识别文本按 HTML 文本节点插入：先转义实体，再在英文/数字相接处补空格
+    const escapeSpeechHtml = (text: string) =>
+        text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
     const onSpeechResult = (text: string) => {
         const editor = (
             window as unknown as {
                 tinymce?: { get: (id: string) => any }
             }
         ).tinymce?.get('tinymce-editor')
-        if (editor) {
-            const escaped = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-            editor.insertContent(escaped)
-        } else {
-            articleForm.content += text
+
+        // 编辑器未就绪：退回追加到 content（同样要转义，避免文本被当成标签）
+        if (!editor) {
+            articleForm.content = joinSpeechText(
+                articleForm.content,
+                escapeSpeechHtml(text)
+            )
+            return
         }
+
+        const rng = editor.selection?.getRng?.()
+        const node = rng?.startContainer
+        const before =
+            node?.nodeType === 3
+                ? String(node.textContent ?? '').slice(0, rng.startOffset)
+                : ''
+        const needSpace =
+            /[A-Za-z0-9]$/.test(before) && /^[A-Za-z0-9]/.test(text)
+
+        editor.insertContent(`${needSpace ? ' ' : ''}${escapeSpeechHtml(text)}`)
     }
 </script>
 

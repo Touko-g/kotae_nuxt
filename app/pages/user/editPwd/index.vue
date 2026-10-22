@@ -43,11 +43,11 @@
 
     onMounted(async () => {})
 
-    const checkPsw1 = (v: string): boolean => {
+    const checkPsw1 = (_v: string): boolean => {
         return data.old_password !== data.password
     }
 
-    const checkPsw = (v: string): boolean => {
+    const checkPsw = (_v: string): boolean => {
         return data.password === data.password2
     }
 

@@ -27,23 +27,46 @@
         set: v => emit('update:modelValue', v),
     })
 
-    const resetTransform = () => {
+    // 复位：默认回到"最近的正立角度"（450° → 360°，只补间 90°），避免整圈倒转；
+    // instant 用于打开预览 / 切换图片，直接归零并跳过过渡动画
+    const snapping = ref(false)
+    const resetTransform = (mode: 'short' | 'instant' = 'short') => {
         zoom.value = 1
-        rotation.value = 0
         offset.x = 0
         offset.y = 0
+        if (mode === 'instant') {
+            snapping.value = true
+            rotation.value = 0
+            nextTick(() => {
+                snapping.value = false
+            })
+            return
+        }
+        rotation.value = Math.round(rotation.value / 360) * 360
     }
-    const resetZoom = resetTransform
+    const resetZoom = () => resetTransform()
 
     const normalizeAngle = (deg: number) => {
         const angle = ((deg % 360) + 360) % 360
         return angle > 180 ? angle - 360 : angle
     }
+    // 按钮旋转只累加、不归一到 ±180：
+    // 一旦归一，角度会从 180 跳到 -90，CSS 过渡就会反向扫 270°，看起来像"倒着转回去"
     const rotateBy = (delta: number) => {
-        rotation.value = normalizeAngle(rotation.value + delta)
+        rotation.value += delta
     }
     const rotateRight = () => rotateBy(90)
     const rotateLeft = () => rotateBy(-90)
+
+    // 滑杆受限于 -180~180，读写时把累计角度换算成等价角度，避免超出范围
+    const sliderAngle = computed({
+        get: () => normalizeAngle(rotation.value),
+        set: (deg: number) => {
+            // 取与当前累计角度最接近的等价角度，拖滑杆时不会突然反向大角度旋转
+            const turns = Math.round((rotation.value - deg) / 360)
+            rotation.value = deg + turns * 360
+        },
+    })
 
     const zoomIn = () => (zoom.value = Math.min(zoom.value + 0.2, 4))
     const zoomOut = () => (zoom.value = Math.max(zoom.value - 0.2, 0.5))
@@ -125,7 +148,7 @@
                 Math.max(props.start, 0),
                 Math.max(props.images.length - 1, 0)
             )
-            resetTransform()
+            resetTransform('instant')
             loading.value = props.images.map(() => true)
             window.addEventListener('keydown', onKeydown)
         } else {
@@ -133,7 +156,7 @@
         }
     })
 
-    watch(index, () => resetTransform())
+    watch(index, () => resetTransform('instant'))
 
     onUnmounted(() => {
         if (import.meta.client) window.removeEventListener('keydown', onKeydown)
@@ -193,9 +216,10 @@
                             class="select-none relative z-10 preview-img"
                             :style="{
                                 transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg) scale(${zoom})`,
-                                transition: dragging
-                                    ? 'none'
-                                    : 'transform 0.25s ease',
+                                transition:
+                                    dragging || snapping
+                                        ? 'none'
+                                        : 'transform 0.25s ease',
                                 'max-height': '80vh',
                                 'max-width': '90vw',
                                 'object-fit': 'contain',
@@ -220,7 +244,7 @@
                 <div class="flex items-center gap-3">
                     <v-icon size="18" color="white"> mdi-rotate-right </v-icon>
                     <v-slider
-                        v-model="rotation"
+                        v-model="sliderAngle"
                         :min="-180"
                         :max="180"
                         step="1"
@@ -230,7 +254,7 @@
                         class="flex-1"
                     />
                     <span class="w-12 text-right text-xs tabular-nums">
-                        {{ rotation }}°
+                        {{ sliderAngle }}°
                     </span>
                 </div>
 

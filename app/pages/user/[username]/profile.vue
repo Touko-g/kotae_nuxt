@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
-
     definePageMeta({
         middleware: 'auth',
     })
@@ -12,11 +10,10 @@
         ogTitle: computed(() => t('edit_user')),
     })
 
-    const { getCosKey } = useAuth()
     const { updateUser } = useUser()
     const { rules } = useRules()
+    const { upload } = useCosUpload()
 
-    const { format } = useDayjs()
     const { show } = useToast()
     const user = useCookie<User>('user')
 
@@ -44,25 +41,11 @@
         if (!file || Array.isArray(file)) return
         try {
             userForm.cosLoading = true
-            const { credentials } = await getCosKey()
-
-            const cos = new COS({
-                SecretId: credentials.tmpSecretId,
-                SecretKey: credentials.tmpSecretKey,
-                XCosSecurityToken: credentials.sessionToken,
+            userForm.avatar = await upload(file, {
+                dir: `blog/avatar/${user.value?.username ?? 'anonymous'}`,
             })
-
-            cos.putObject({
-                Bucket: 'chen-1302611521' /* 存储桶 */,
-                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                Key: `/blog/avatar/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                Body: file, // 上传文件对象
-                onProgress: () => {},
-            })
-                .then(res => (userForm.avatar = `https://${res.Location}`))
-                .catch(err => show(err, 'error'))
-        } catch (e) {
+        } catch (e: any) {
+            show(e?.message ?? String(e), 'error')
         } finally {
             userForm.cosLoading = false
         }

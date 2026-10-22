@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import EmojiPicker from 'vue3-emoji-picker'
     import 'vue3-emoji-picker/css'
+    import { joinSpeechText } from '~/composables/useSpeechRecognition'
     interface Props {
         article: number
     }
@@ -56,8 +57,11 @@
 
     const onSpeechResult = (text: string) => {
         if (replyDialog.value) {
-            data.reply_info.content += text
-        } else comment.value += text
+            data.reply_info.content = joinSpeechText(
+                data.reply_info.content,
+                text
+            )
+        } else comment.value = joinSpeechText(comment.value, text)
     }
 
     const handlePostComment = async () => {

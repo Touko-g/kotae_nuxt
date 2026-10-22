@@ -1,5 +1,6 @@
 <script setup lang="ts">
     import { useDebounce } from '~/composables/useDebounce'
+    import { joinSpeechText } from '~/composables/useSpeechRecognition'
 
     const { t } = useLocale()
     const { getSearchList, addSearch } = useSearch()
@@ -110,7 +111,7 @@
     }
 
     const onSpeechResult = (text: string) => {
-        search.searchValue += text
+        search.searchValue = joinSpeechText(search.searchValue, text)
         debounceSearch(search.searchValue)
     }
 

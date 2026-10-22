@@ -195,6 +195,7 @@
 
     "speech_input": "语音输入",
     "speech_listening": "正在聆听，请说话…",
+    "speech_stop": "点击停止听写",
     "speech_mic_denied": "麦克风权限被拒绝，请在浏览器设置中允许",
     "speech_no_mic": "没有检测到可用的麦克风",
     "speech_network_error": "语音识别服务暂时不可用",

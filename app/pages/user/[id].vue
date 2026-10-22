@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import COS from 'cos-js-sdk-v5'
-
     definePageMeta({
         middleware: 'auth',
     })
@@ -19,11 +17,11 @@
     const { getUser } = useUser()
     const { getArticleList } = useArticle()
     const { addPhoto, getPhotoList } = usePhoto()
-    const { getCosKey } = useAuth()
     const { getWishList } = useWish()
+    const { upload } = useCosUpload()
 
     const { show } = useToast()
-    const { fromNow, format } = useDayjs()
+    const { fromNow } = useDayjs()
     const { width } = useDisplay()
 
     const refreshCount = useState('refreshCount')
@@ -106,25 +104,11 @@
         if (!file || Array.isArray(file)) return
         try {
             photoData.cosLoading = true
-            const { credentials } = await getCosKey()
-
-            const cos = new COS({
-                SecretId: credentials.tmpSecretId,
-                SecretKey: credentials.tmpSecretKey,
-                XCosSecurityToken: credentials.sessionToken,
+            photoData.photoPath = await upload(file, {
+                dir: `blog/photo/${user.value?.username ?? 'anonymous'}`,
             })
-
-            cos.putObject({
-                Bucket: 'chen-1302611521' /* 存储桶 */,
-                Region: 'ap-nanjing' /* 存储桶所在地域，必须字段 */,
-                Key: `/blog/photo/${user.value?.username}/${format(new Date(), 'YYYY-MM-DDTHH:mm:ss')}-${file.name}` /* 文件名 */,
-                StorageClass: 'STANDARD', // 上传模式, 标准模式
-                Body: file, // 上传文件对象
-                onProgress: () => {},
-            })
-                .then(res => (photoData.photoPath = `https://${res.Location}`))
-                .catch(err => show(err, 'error'))
-        } catch (e) {
+        } catch (e: any) {
+            show(e?.message ?? String(e), 'error')
         } finally {
             photoData.cosLoading = false
         }
