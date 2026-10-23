@@ -139,8 +139,13 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         // ---- Qwen（阿里云百炼 DashScope）服务端配置：不进客户端 bundle ----
-        // 密钥只在这里读，前端一律走 /api/ai/* 代理
-        aiApiKey: process.env.NUXT_AI_API_KEY || '',
+        // 密钥只在这里读，前端一律走 /api/ai/* 代理。
+        //
+        // 这里**故意**不写 process.env.NUXT_AI_API_KEY：nuxt.config 是在构建时求值的，
+        // 写了就会把构建机上的密钥作为默认值序列化进 .output（明文）。
+        // 留空串，交给 Nitro 运行时按 NUXT_AI_API_KEY 覆盖即可
+        // （@nuxt/schema 把 nitro.envPrefix 设成了 NUXT_，见 applyEnv）。
+        aiApiKey: '',
         // OpenAI 兼容模式；新加坡站用 https://dashscope-intl.aliyuncs.com/compatible-mode/v1
         aiBaseUrl:
             process.env.NUXT_AI_BASE_URL ||
@@ -158,8 +163,13 @@ export default defineNuxtConfig({
             siteUrl,
             cosBucket,
             cosRegion,
-            // 仅暴露「有没有配密钥」的布尔值，供 UI 决定是否显示 AI 入口
-            aiEnabled: Boolean(process.env.NUXT_AI_API_KEY),
+            // 前端据此决定要不要渲染 AI 入口。
+            //
+            // 原来写的是 Boolean(process.env.NUXT_AI_API_KEY) —— 同样是构建时求值，
+            // 构建机上没配密钥就会把 false 固化进产物，之后运行时装了密钥按钮也不出现。
+            // 默认给 true：真没配密钥时点下去会拿到 503，比「按钮凭空消失」好排查；
+            // 确实想藏起来时，部署环境设 NUXT_PUBLIC_AI_ENABLED=false 即可。
+            aiEnabled: true,
             versions: {
                 nuxt: {
                     version: pkg.dependencies.nuxt,

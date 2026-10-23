@@ -322,7 +322,7 @@ export const useArticle = () => {
 浏览器 useAI()  →  /api/ai/*（Nitro）  →  dashscope.aliyuncs.com/compatible-mode/v1
 ```
 
-`runtimeConfig.aiApiKey` 仅服务端可读；`runtimeConfig.public.aiEnabled` 是个布尔值，前端据此决定是否渲染 AI 入口（未配密钥时按钮不出现）。
+`runtimeConfig.aiApiKey` 仅服务端可读；`runtimeConfig.public.aiEnabled` 是个布尔值，前端据此决定是否渲染 AI 入口（默认 `true`，设 `NUXT_PUBLIC_AI_ENABLED=false` 可隐藏）。
 
 ### 能力
 
@@ -439,7 +439,7 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 | `NUXT_PUBLIC_SITE_URL` | 站点地址（canonical / og:url / sitemap） | `https://kotae.cn` |
 | `NUXT_PUBLIC_COS_BUCKET` | COS 存储桶 | `chen-1302611521` |
 | `NUXT_PUBLIC_COS_REGION` | COS 地域 | `ap-nanjing` |
-| `NUXT_PUBLIC_AI_ENABLED` | 是否渲染 AI 入口 | 由 `NUXT_AI_API_KEY` 是否存在推导 |
+| `NUXT_PUBLIC_AI_ENABLED` | 是否渲染 AI 入口（设 `false` 可隐藏） | `true` |
 
 ### 仅服务端（`runtimeConfig`）
 
@@ -501,7 +501,6 @@ pm2 save
 ```cmd
 :: 管理员 CMD（/M 为机器级，服务也能读到）
 setx NUXT_AI_API_KEY "sk-xxx" /M
-setx NUXT_PUBLIC_AI_ENABLED "true" /M
 
 :: 必须杀掉 daemon 再起，单纯 pm2 restart 拿不到新值
 pm2 kill
