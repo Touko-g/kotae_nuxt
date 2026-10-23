@@ -27,6 +27,22 @@ body,
         'Maple Mono CN SemiBold', 'Noto Sans SC', sans-serif !important;
 }
 
+/* Vuetify 的排版类（.text-h6 / .text-sm-h4 / .text-body-1 …）每条都自己写死了
+   font-family: "Roboto"，而 dialog / menu / tooltip / snackbar 这些 overlay 默认
+   teleport 到 body 下的 .v-overlay-container —— 它们不在 .v-application 里，
+   上面那条规则够不着，元素自身的 Roboto 又会盖掉 body 继承下来的字体。
+   典型表现：AI 面板标题 <span class="text-h6"> 和旁边的正文不是一个字体。
+   这里按类名兜住，不依赖容器；[class*=] 顺带覆盖 .text-sm-h6 这类响应式变体。 */
+[class*='text-h'],
+[class*='text-subtitle'],
+[class*='text-body'],
+[class*='text-button'],
+[class*='text-caption'],
+[class*='text-overline'] {
+    font-family:
+        'Maple Mono CN SemiBold', 'Noto Sans SC', sans-serif !important;
+}
+
 /* ==========================================================================
    Kotae 全局动画系统
    统一 token + keyframes + utility，风格偏鲜明活泼（带回弹缓动）

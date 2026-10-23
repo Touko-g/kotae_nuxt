@@ -26,8 +26,12 @@ const SHIKI_THEMES: Record<string, string> = {
 const decodeEntities = (code: string) =>
     code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 
+// 语言名允许 c++ / c# 这类带符号的写法
 const CODE_BLOCK_RE =
-    /<pre(?:\s+class="language-(\w+)")?>\s*<code[^>]*?>([\s\S]*?)<\/code>\s*<\/pre>/g
+    /<pre(?:\s+class="language-([\w+#.-]+)")?>\s*<code[^>]*?>([\s\S]*?)<\/code>\s*<\/pre>/g
+
+// shiki 内置的纯文本语法：不在 getLoadedLanguages() 里，但 codeToHtml 认
+const PLAIN_LANGS = ['text', 'plaintext', 'txt']
 
 export interface ArticleHtmlOptions {
     /** 返回正文原始 HTML（后端返回的编辑器内容） */
@@ -43,7 +47,11 @@ export const useArticleHtml = (options: ArticleHtmlOptions) => {
         const loaded = options.highlighter.getLoadedLanguages()
 
         return raw.replace(CODE_BLOCK_RE, (_, lang = 'text', code: string) => {
-            const realLang = loaded.includes(lang) ? lang : 'javascript'
+            // 没写语言的代码块按纯文本渲染：以前会兜底成 javascript，颜色全错
+            const realLang =
+                PLAIN_LANGS.includes(lang) || loaded.includes(lang)
+                    ? lang
+                    : 'javascript'
             return options.highlighter.codeToHtml(decodeEntities(code), {
                 lang: realLang,
                 theme,

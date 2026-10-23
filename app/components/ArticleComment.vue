@@ -1,16 +1,20 @@
 <script setup lang="ts">
     import EmojiPicker from 'vue3-emoji-picker'
     import 'vue3-emoji-picker/css'
+    import type { AiAssistAction } from '#shared/types/ai'
     import { joinSpeechText } from '~/composables/useSpeechRecognition'
     interface Props {
         article: number
+        /** 文章标题：AI 生成评论时作为上下文 */
+        title?: string
     }
-    const { article } = defineProps<Props>()
+    const { article, title } = defineProps<Props>()
     const { getCommentList, postComment } = useComment()
     const { formatNow } = useDayjs()
     const { t } = useLocale()
     const { mobile } = useDisplay()
     const { show } = useToast()
+    const runtimeConfig = useRuntimeConfig()
     const isLogin = useState('isLogin')
     const refreshCount = useState<number>('refreshCount')
 
@@ -38,6 +42,8 @@
             content: '',
             replyIndex: 0,
             isReply: false,
+            /** 被回复的那条评论正文：AI 写回复时靠它才知道在回谁、回什么 */
+            reply_content: '',
         },
         flag_id: 0,
     })
@@ -62,6 +68,160 @@
                 text
             )
         } else comment.value = joinSpeechText(comment.value, text)
+    }
+
+    // ---------------- AI 评论助手 ----------------
+
+    const aiAvailable = computed(() => runtimeConfig.public.aiEnabled !== false)
+    const aiOpen = ref(false)
+    const aiAction = ref('polish')
+    const aiSource = ref('')
+    const aiActions = ref<AiAssistAction[]>([])
+    /** 结果写回哪个输入框 */
+    const aiTarget = ref<'comment' | 'reply'>('comment')
+
+    const AI_MENU = [
+        { key: 'polish', label: 'ai_polish', icon: 'mdi-auto-fix' },
+        {
+            key: 'shorten',
+            label: 'ai_shorten',
+            icon: 'mdi-arrow-collapse-horizontal',
+        },
+        {
+            key: 'friendly',
+            label: 'ai_friendly',
+            icon: 'mdi-emoticon-happy-outline',
+        },
+        {
+            key: 'translate_en',
+            label: 'ai_translate_en',
+            icon: 'mdi-translate',
+        },
+        {
+            key: 'translate_zh',
+            label: 'ai_translate_zh',
+            icon: 'mdi-translate',
+        },
+        {
+            key: 'generate',
+            label: 'ai_generate_comment',
+            icon: 'mdi-comment-plus-outline',
+        },
+    ] as const
+
+    const aiMenuFor = (target: 'comment' | 'reply') =>
+        AI_MENU.map(item => ({
+            ...item,
+            // 回复框里「帮我写一条」说不通，换成「帮我回一条」
+            text: t(
+                item.key === 'generate' && target === 'reply'
+                    ? 'ai_generate_reply'
+                    : item.label
+            ),
+        }))
+
+    const aiMenu = computed(() => aiMenuFor('comment'))
+    const aiMenuReply = computed(() => aiMenuFor('reply'))
+
+    /** 回复场景的上下文：对方是谁、说了什么。没有它就只是在凭空写评论 */
+    const replyContext = () =>
+        data.reply_info.reply_content
+            ? `你正在回复 ${data.reply_info.reply_user} 的评论，对方说：「${data.reply_info.reply_content}」。`
+            : `你正在回复 ${data.reply_info.reply_user} 的评论。`
+
+    /**
+     * 人味约束：模型默认会写成「客服腔 + 总结体」（先复述观点再来一句不痛不痒的评价）。
+     * 这里明说要像真人随手留言，并允许适度用 emoji —— 表情是最省力的「像人」信号，
+     * 但不能堆，一多就变成营销号。
+     */
+    const HUMAN_RULE =
+        '像一个真实读者刷完文章随手留的一句话，不要像 AI 助手或客服：' +
+        '有具体观点或情绪，可以吐槽、提问、自嘲，允许「哈哈」「啊」「吧」这类语气词；' +
+        '可以用 1 到 2 个 emoji，但别堆。' +
+        '不要总结文章、不要四字词堆砌、不要「总的来说」这种书面腔、不要空泛客套。'
+
+    const aiPrompt = (
+        key: string,
+        text: string,
+        target: 'comment' | 'reply'
+    ) => {
+        const isReply = target === 'reply'
+        const noun = isReply ? '回复' : '评论'
+        switch (key) {
+            case 'polish':
+                return `请润色下面这条${noun}：保持原意和语言不变，改掉语病、重复和啰嗦的地方，读起来更自然口语化。只输出${noun}正文，不要解释。\n\n${text}`
+            case 'shorten':
+                return `请把下面这条${noun}精简到 30 字以内，保留核心意思和原本语气。只输出${noun}正文，不要解释。\n\n${text}`
+            case 'friendly':
+                return `请把下面这条${noun}改写得更热情友善一些，保持原意，不要夸张也不要谄媚，可以加一个 emoji（也可以不加）。只输出${noun}正文，不要解释。\n\n${text}`
+            case 'translate_en':
+                return `请把下面这条${noun}翻译成英文，保持口语化的语气。只输出译文，不要解释。\n\n${text}`
+            case 'translate_zh':
+                return `请把下面这条${noun}翻译成简体中文，保持口语化的语气。只输出译文，不要解释。\n\n${text}`
+            case 'generate':
+                // 回复评论和评论文章是两件事：前者要接住对方的话，后者才是就文章发表看法
+                return isReply
+                    ? `请针对文章《${title ?? ''}》下的一条评论写一条回复。${replyContext()}要求：20 到 40 字，接住对方说的具体内容（同意、补充、解释、反驳或反问都行）。${HUMAN_RULE}不要重复对方的原话。只输出回复正文。`
+                    : `请针对文章《${title ?? ''}》写一条 20 到 40 字的中文评论。${HUMAN_RULE}可以提到文章里的某个点。只输出评论正文。`
+            default:
+                return text
+        }
+    }
+
+    const buildAiActions = (
+        text: string,
+        target: 'comment' | 'reply'
+    ): AiAssistAction[] => {
+        const keys = text
+            ? [
+                  'polish',
+                  'shorten',
+                  'friendly',
+                  'translate_en',
+                  'translate_zh',
+                  'generate',
+              ]
+            : ['generate']
+
+        return keys.map(key => {
+            const item = aiMenuFor(target).find(menu => menu.key === key)
+            return {
+                key,
+                label: item?.text ?? key,
+                icon: item?.icon ?? 'mdi-auto-fix',
+                prompt: aiPrompt(key, text, target),
+            }
+        })
+    }
+
+    const openAi = (target: 'comment' | 'reply', key: string) => {
+        const text = (
+            target === 'reply' ? data.reply_info.content : comment.value
+        ).trim()
+
+        if (key !== 'generate' && !text) {
+            show(t('ai_need_content'), 'warning')
+            return
+        }
+
+        aiTarget.value = target
+        aiAction.value = key
+        aiActions.value = buildAiActions(text, target)
+        // generate 没有原文可看：回复时展示被回复的那条评论，评论文章时展示标题
+        aiSource.value =
+            key === 'generate'
+                ? target === 'reply'
+                    ? data.reply_info.reply_content
+                    : (title ?? '')
+                : text
+        aiOpen.value = true
+    }
+
+    const applyAi = (result: string) => {
+        const text = result.trim()
+        if (!text) return
+        if (aiTarget.value === 'reply') data.reply_info.content = text
+        else comment.value = text
     }
 
     const handlePostComment = async () => {
@@ -131,6 +291,8 @@
         data.reply_info.reply_user = reply.user_info.username
         data.reply_info.replyIndex = index
         data.reply_info.isReply = isReply
+        // 存下对方原话，AI 写回复时要靠它
+        data.reply_info.reply_content = reply.content ?? ''
         replyDialog.value = true
     }
 
@@ -140,6 +302,7 @@
     const handleReset = () => {
         replyDialog.value = false
         data.reply_info.content = ''
+        data.reply_info.reply_content = ''
         replyLoading.value = false
     }
 
@@ -220,6 +383,12 @@
                 ></v-btn>
             </template>
             <template #append-inner>
+                <AiMenuButton
+                    v-if="aiAvailable"
+                    :items="aiMenu"
+                    location="top end"
+                    @select="key => openAi('comment', key)"
+                />
                 <SpeechInput @result="onSpeechResult" />
             </template>
             <template #append>
@@ -467,7 +636,7 @@
         transition="dialog-top-transition"
         @click:outside="handleReset"
     >
-        <v-card width="300">
+        <v-card width="min(460px, 92vw)">
             <v-card-title>
                 {{ t('reply_to') }} : {{ data.reply_info.reply_user }}
             </v-card-title>
@@ -477,20 +646,29 @@
                     density="comfortable"
                     color="primary"
                     variant="underlined"
-                >
-                    <template #append-inner>
-                        <SpeechInput @result="onSpeechResult" />
-                    </template>
-                </v-textarea>
-                <v-btn
-                    icon="mdi-emoticon-sick-outline"
-                    color="primary"
-                    class="mr-2"
-                    variant="plain"
-                    @click="emojiDialog = true"
-                ></v-btn>
+                ></v-textarea>
             </v-card-text>
             <v-card-actions>
+                <!--
+                    功能按钮从 textarea 的 #append-inner 挪到这一行：textarea 是 5 行高，
+                    图标塞在 affix 里只能贴顶或飘在中间，贴底又会压到右下角的 resize 手柄。
+                    放进 actions 行后跟「确认 / 取消」同一水平线，gap 由 .v-card-actions
+                    的 0.5rem 统一给。
+                -->
+                <v-btn
+                    icon="mdi-emoticon-sick-outline"
+                    size="small"
+                    color="primary"
+                    variant="text"
+                    @click="emojiDialog = true"
+                ></v-btn>
+                <AiMenuButton
+                    v-if="aiAvailable"
+                    :items="aiMenuReply"
+                    location="top end"
+                    @select="key => openAi('reply', key)"
+                />
+                <SpeechInput @result="onSpeechResult" />
                 <v-spacer />
                 <v-btn
                     color="primary"
@@ -502,6 +680,15 @@
             </v-card-actions>
         </v-card>
     </v-dialog>
+
+    <AiAssistDialog
+        v-model="aiOpen"
+        :actions="aiActions"
+        :initial-key="aiAction"
+        :source-text="aiSource"
+        :max-tokens="400"
+        @apply="applyAi"
+    />
 </template>
 
 <style scoped></style>

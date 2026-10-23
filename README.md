@@ -31,8 +31,11 @@ Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统�
 | 交互音效 | cuelume (Web Audio 实时合成) | ^0.1.2 |
 | 字体 | Maple Mono CN (@chinese-fonts/maple-mono-cn) | ^2.0.0 |
 | SEO | @nuxtjs/sitemap + @nuxtjs/robots | ^7.4.7 / ^5.5.6 |
-| 语言 | TypeScript | - |
+| 语言 | TypeScript | ^6.0.3 |
+| 类型检查 | vue-tsc（Volar） | ^3.3.13 |
 | 代码检查 | ESLint + Prettier | ^8.57.1 / ^3.6.2 |
+| AI 能力 | 阿里云百炼 Qwen（OpenAI 兼容模式） | - |
+| 语音输入 | Web Speech API | - |
 
 ---
 
@@ -40,7 +43,7 @@ Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统�
 
 ### 环境要求
 
-- Node.js >= 18
+- Node.js `^22.19.0 || ^24.11.0 || >=26.0.0`（Nuxt 4.5 的要求）
 - npm / pnpm / yarn / bun（任选其一）
 
 ### 安装与运行
@@ -67,6 +70,7 @@ npm run generate
 ```bash
 npm run lint       # ESLint 检查
 npm run lint:fix   # ESLint 自动修复
+npm run typecheck  # vue-tsc 类型检查（nuxt prepare + vue-tsc --noEmit）
 npm run format     # Prettier 格式化
 ```
 
@@ -81,6 +85,9 @@ kotae_nuxt/
 │   │   ├── css/main.css          # 全局样式与主题派生设计系统
 │   │   └── favicon.ico
 │   ├── components/               # Vue 组件（自动导入）
+│   │   ├── AiAssistDialog.vue    # AI 写作面板（流式输出 / 结果回填）
+│   │   ├── AiMenuButton.vue      # AI 功能菜单按钮（图标态 / 带文案态）
+│   │   ├── AiModelSelect.vue     # AI 模型选择（搜索 + 过滤）
 │   │   ├── AppBar.vue            # 顶部导航栏（主题 / 语言 / 音效开关）
 │   │   ├── AppFooter.vue         # 页脚
 │   │   ├── ArticleComment.vue    # 文章评论区
@@ -98,6 +105,7 @@ kotae_nuxt/
 │   │   ├── ResetDialog.vue       # 重置密码对话框
 │   │   ├── SearchDialog.vue      # 搜索对话框
 │   │   ├── SpeechInput.vue       # 语音输入（含实时转写浮条）
+│   │   ├── SpeechLiveBar.vue     # 实时转写浮条（Teleport 到 body）
 │   │   └── VToast.vue            # 贴纸风 Toast 外观
 │   ├── composables/              # 组合式函数（自动导入）
 │   │   ├── api/                  # API 接口模块
@@ -112,6 +120,9 @@ kotae_nuxt/
 │   │   │   ├── useTag.ts         # 标签
 │   │   │   ├── useUser.ts        # 用户资料
 │   │   │   └── useWish.ts        # 心愿单
+│   │   ├── useAI.ts              # AI 对话（非流式 ask / 流式 askStream）
+│   │   ├── useAiHtml.ts          # AI 富文本净化（白名单 → TinyMCE）
+│   │   ├── useAiModels.ts        # 模型列表与用量查询
 │   │   ├── useArticleHtml.ts     # 正文渲染：Shiki 高亮 + DOMPurify 净化
 │   │   ├── useConfetti.ts        # 撒花粒子动画
 │   │   ├── useCosUpload.ts       # 腾讯云 COS 直传（统一上传入口）
@@ -151,8 +162,21 @@ kotae_nuxt/
 │   ├── plugins/
 │   │   ├── cuelume.client.ts     # 音效全局委托（bind + 事件代理）
 │   │   ├── i18n-router.client.ts # 路由国际化前缀注入
-│   │   └── permissions.ts        # v-permission 权限指令
+│   │   ├── permissions.ts        # v-permission 权限指令
+│   │   └── theme.ts              # 主题 cookie 读写（SSR 直出对应主题）
 │   └── error.vue                 # 全局错误页
+├── server/                       # Nitro 服务端（server/utils 自动导入）
+│   ├── api/ai/
+│   │   ├── chat.post.ts          # POST /api/ai/chat（非流式）
+│   │   ├── chat-stream.post.ts   # POST /api/ai/chat-stream（SSE 流式）
+│   │   ├── models.get.ts         # GET  /api/ai/models
+│   │   └── quota.get.ts          # GET  /api/ai/quota
+│   └── utils/
+│       ├── ai.ts                 # 配置读取 / 限流 / 消息归一化 / 上游调用
+│       ├── aiCatalog.ts          # 内置模型清单 + 非对话模型过滤
+│       └── aiUsage.ts            # token 用量记账（.data/ai-usage.json）
+├── shared/                       # 前后端共用类型（#shared 别名）
+│   └── types/ai.ts               # AiMessage / AiChatOptions / AiUsage ...
 ├── i18n/
 │   ├── i18n.config.ts            # i18n 配置
 │   └── locales/
@@ -290,6 +314,49 @@ export const useArticle = () => {
 
 ---
 
+## AI 辅助写作
+
+写作页与评论区的 AI 能力走 **本站 Nitro 代理 → 阿里云百炼（DashScope）**，密钥只存在服务端，前端拿不到。
+
+```
+浏览器 useAI()  →  /api/ai/*（Nitro）  →  dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+`runtimeConfig.aiApiKey` 仅服务端可读；`runtimeConfig.public.aiEnabled` 是个布尔值，前端据此决定是否渲染 AI 入口（未配密钥时按钮不出现）。
+
+### 能力
+
+| 场景 | 入口 |
+|------|------|
+| 文章正文写作 / 润色 / 扩写 / 摘要 | `ArticleForm` 的 TinyMCE 工具栏 `kAiWriter` 菜单按钮 |
+| 评论、回复生成 | `ArticleComment` 输入框旁的 `AiMenuButton` |
+| 语音输入 | `SpeechInput`（按钮）与 `SpeechLiveBar`（实时转写浮条） |
+
+### 服务端约束（`server/utils/ai.ts`）
+
+- **限流**：单 IP 内存计数，默认 **20 次 / 60 秒**，超限返回 429 并带 `Retry-After`；`aiRateLimit: 0` 关闭
+- **消息归一化**：role 白名单（`system` / `user` / `assistant`）、单条截断 24000 字符、最多保留最近 40 条
+- **超时**：单次上游请求默认 60 秒，客户端断开时同步 abort 上游（避免继续计费）
+- **错误码**：`503` 未配置密钥 / `429` 限流 / `402` 免费额度用尽（`AllocationQuota.FreeTierOnly`）/ `502` 上游错误
+
+限流表是**进程内 `Map`**，用量统计写本地文件（`.data/ai-usage.json`），两者都只适合单实例部署。
+
+### 前端安全约束
+
+模型返回的 HTML **必须**经 `normalizeAiHtml()` 处理后再进 TinyMCE —— 它会拆掉包裹整段输出的代码围栏、把剩下的围栏转成 `<pre><code>`、纯文本按空行分段，最后用白名单净化（`style` / `class` / 事件属性一律剥离）。模型被诱导输出 `<script>` 或 `onerror` 就等于把 XSS 写进正文，所以不要直接把流式结果塞进编辑器。
+
+```typescript
+import { normalizeAiHtml } from '~/composables/useAiHtml'
+
+const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
+```
+
+### 模型
+
+`GET /api/ai/models` 优先探测上游 `/models`，连不上就回落到 `server/utils/aiCatalog.ts` 的内置清单（缓存 10 分钟），响应里的 `source` 会标明来源是 `upstream` 还是 `builtin`。内置清单只放**对话模型** —— rerank / embedding / tts / 图像模型走 `chat/completions` 会直接 502。
+
+---
+
 ## API 接口一览
 
 | 模块 | 接口 | 方法 | 说明 |
@@ -331,6 +398,17 @@ export const useArticle = () => {
 | Search | `/search/` | GET | 搜索 |
 | Search | `/search/` | POST | 记录搜索词 |
 
+### 本地 Nitro 端点
+
+以下端点在**本站**实现（`server/api/`），不属于上面的后端 API：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/ai/chat` | POST | 非流式对话，返回 `{ content, model, usage, finishReason }` |
+| `/api/ai/chat-stream` | POST | 流式对话，SSE 输出 `{ type: 'delta' \| 'done' \| 'error' }` |
+| `/api/ai/models` | GET | 可选模型列表（上游优先，失败回落内置清单） |
+| `/api/ai/quota` | GET | 本站自己的 token 用量统计 |
+
 ---
 
 ## 主题配置
@@ -353,12 +431,111 @@ export const useArticle = () => {
 
 ## 环境配置
 
+### 前端可见（`runtimeConfig.public`）
+
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `NUXT_PUBLIC_API_URL` | 后端 API 地址 | `https://kotae.cn/api/` |
 | `NUXT_PUBLIC_SITE_URL` | 站点地址（canonical / og:url / sitemap） | `https://kotae.cn` |
 | `NUXT_PUBLIC_COS_BUCKET` | COS 存储桶 | `chen-1302611521` |
 | `NUXT_PUBLIC_COS_REGION` | COS 地域 | `ap-nanjing` |
+| `NUXT_PUBLIC_AI_ENABLED` | 是否渲染 AI 入口 | 由 `NUXT_AI_API_KEY` 是否存在推导 |
+
+### 仅服务端（`runtimeConfig`）
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `NUXT_AI_API_KEY` | 百炼 API Key，**不配则 AI 端点全部 503** | - |
+| `NUXT_AI_BASE_URL` | OpenAI 兼容模式地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `NUXT_AI_MODEL` | 默认模型（需与账号可用型号一致，可用 `GET /api/ai/models` 确认） | `qwen3.8-flash` |
+| `NUXT_AI_TEMPERATURE` | 采样温度，0 ~ 2 | `0.7` |
+| `NUXT_AI_MAX_TOKENS` | 单次最大输出 token，1 ~ 8192 | `2048` |
+| `NUXT_AI_TIMEOUT` | 上游超时（毫秒），5000 ~ 300000 | `60000` |
+| `NUXT_AI_RATE_LIMIT` | 单 IP 窗口内请求数，`0` 表示关闭限流 | `20` |
+| `NUXT_AI_RATE_WINDOW` | 限流窗口（毫秒） | `60000` |
+
+`NUXT_` 前缀是 Nitro 的运行时覆盖机制：`NUXT_AI_API_KEY` 会自动映射到 `runtimeConfig.aiApiKey`，不需要在代码里读 `process.env`。
+
+---
+
+## 部署
+
+生产环境用 **PM2** 托管 Nitro 产物，跑在 **Windows Server** 上。
+
+### 构建
+
+```bash
+npm run build        # 产物在 .output/
+```
+
+### PM2 配置
+
+```js
+// ecosystem.config.cjs
+module.exports = {
+    apps: [{
+        name: 'kotae',
+        script: '.output/server/index.mjs',
+        cwd: 'D:/kotae',                 // 必须是项目根，见下方说明
+        instances: 1,
+        exec_mode: 'fork',
+        env: {
+            NODE_ENV: 'production',
+            NITRO_PORT: 3000,
+        },
+    }],
+}
+```
+
+```bash
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+**保持 `fork` + `instances: 1`**：AI 限流是进程内 `Map`，用量统计是对 `.data/ai-usage.json` 的读-改-写，多实例会让两者都失真。`cwd` 决定 `process.cwd()`，也就是 `.data/` 的落点 —— 设错了 `/api/ai/quota` 会一直显示 0。
+
+### 注入密钥
+
+`.env` **只在 `nuxt dev` / `nuxt build` 时加载**，`node .output/server/index.mjs` 不会读它。生产环境必须通过进程环境注入：
+
+```cmd
+:: 管理员 CMD（/M 为机器级，服务也能读到）
+setx NUXT_AI_API_KEY "sk-xxx" /M
+setx NUXT_PUBLIC_AI_ENABLED "true" /M
+
+:: 必须杀掉 daemon 再起，单纯 pm2 restart 拿不到新值
+pm2 kill
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+`setx` 只影响**之后创建**的进程，而 PM2 daemon 会缓存自己的环境，所以 `pm2 kill` 这一步不能省。
+
+也可以改用 env 文件，把密钥放在项目目录外：
+
+```js
+node_args: '--env-file=D:/kotae/env',
+```
+
+> 文件必须是 **UTF-8 无 BOM + LF**。带 BOM 会让首个键名变成 `\uFEFFNUXT_AI_API_KEY` 而匹配不上（一直 503）；CRLF 会让值尾部带 `\r`，密钥变成 `sk-xxx\r`（上游 401）。
+
+### 开机自启
+
+`pm2 startup` **不支持 Windows**，用任务计划程序：
+
+- **触发器**：启动时
+- **操作**：`C:\Users\<用户>\AppData\Roaming\npm\pm2.cmd`，参数 `resurrect`，起始于项目根目录
+- 勾选「不管用户是否登录都要运行」+「使用最高权限运行」
+
+前提是先 `pm2 save`，否则 `resurrect` 没有可恢复的进程列表。
+
+### 验证
+
+```cmd
+pm2 env 0                                     :: 看子进程实际拿到的环境变量
+curl -i http://localhost:3000/api/ai/models    :: 200 = 通了，503 = 密钥没注入
+pm2 logs kotae --lines 50
+```
 
 ---
 
@@ -382,7 +559,9 @@ export const useArticle = () => {
 5. **正文渲染**：一律走 `useArticleHtml`，不要直接 `v-html` 后端内容
 6. **文件上传**：一律走 `useCosUpload`，不要在页面里 new COS
 7. **自动导入**：`composables/` 及 `composables/api/` 目录下的函数自动导入，无需手动 import
-8. **类型检查**：当前已禁用（`typescript.typeCheck: false`），改动后请依赖 ESLint 兜底
+8. **类型检查**：`typescript.typeCheck: false`（避免 `nuxt dev` 卡在类型检查上），需要时手动跑 `npm run typecheck`。注意 `nuxi typecheck` 会和自己触发的 `nuxt prepare` 抢跑，同一份代码可能报出不同的错误集，所以脚本是 `nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.json`
 9. **字体**：品牌字体为 Maple Mono CN SemiBold
 10. **音效**：新增可交互元素默认由全局委托自动覆盖；需自定义音效时用 `data-cuelume-*` 声明；命令式管理时用 `data-cuelume-manual` 排除全局委托
 11. **非标准可点击元素**（`<span>`/`<p>`/`<div>` + `@click`）需显式添加 `data-cuelume-press` + `data-cuelume-release` 以获得音效反馈
+12. **AI 返回内容**：一律经 `normalizeAiHtml()` 再进编辑器，不要直接 `insertContent(raw)`
+13. **AI 密钥**：只在服务端（`runtimeConfig.aiApiKey`），不要写进 `public`、不要提交 `.env`、不要硬编码进 `nuxt.config.ts`

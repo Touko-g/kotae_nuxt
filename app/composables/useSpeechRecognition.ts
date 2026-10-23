@@ -136,11 +136,15 @@ export const useSpeechRecognition = (
             let finalText = ''
             let interimText = ''
             for (let i = event.resultIndex; i < event.results.length; i++) {
+                // results / 每条的候选都是稀疏的 SpeechRecognitionAlternative，
+                // 下标访问可能取到 undefined，取不到就跳过这一条
                 const result = event.results[i]
+                const alt = result?.[0]
+                if (!result || !alt) continue
                 if (result.isFinal) {
-                    finalText += result[0].transcript
+                    finalText += alt.transcript
                 } else {
-                    interimText += result[0].transcript
+                    interimText += alt.transcript
                 }
             }
             interim.value = interimText

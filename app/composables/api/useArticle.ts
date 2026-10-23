@@ -1,3 +1,10 @@
+// 这些类型/工具在 Nuxt 里是自动导入的（.nuxt/types/imports.d.ts 的 declare global），
+// 但 vue-tsc 对「自动导入的类型」解析不稳定，显式写出来更可靠，也方便跳转
+import { useHttp } from '../useHttp'
+import type { BaseParams, BaseResponse } from './base'
+import type { Tag } from './useTag'
+import type { User } from './useUser'
+
 // 如果 swagger 里有 Article 的定义，可以写在这里
 export interface Article {
     // 根据 #/definitions/Article 来补充属性

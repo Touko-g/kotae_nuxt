@@ -21,7 +21,10 @@ npm run preview          # Preview production build locally
 npm run lint             # Run ESLint on .js, .ts, .vue files
 npm run lint:fix         # Run ESLint with auto-fix
 npm run format           # Format code with Prettier
+npm run typecheck        # nuxt prepare && vue-tsc --noEmit (see note below)
 ```
+
+`npm run typecheck` deliberately runs `nuxt prepare` first. Calling `nuxi typecheck` on its own races with its own prepare step and can report a bogus error set (auto-imported globals like `useRuntimeConfig` / `ref` suddenly "not found", or errors jumping between files). If the result looks absurd, re-run it — or run `nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.json` manually.
 
 ## Architecture Overview
 
@@ -93,6 +96,14 @@ i18n/
 └── locales/
     ├── zh/              # Chinese translations
     └── en/              # English translations
+
+server/                  # Nitro server routes (auto-routed)
+├── api/ai/
+│   ├── chat.post.ts     # POST /api/ai/chat        (non-streaming)
+│   └── chat-stream.post.ts # POST /api/ai/chat-stream (SSE)
+└── utils/ai.ts          # Qwen config / upstream call / SSE normalize / rate limit
+
+shared/types/ai.ts       # AI types shared by app + server (`#shared/types/ai`)
 ```
 
 ## Key Patterns
@@ -185,6 +196,54 @@ Every page root MUST be a `v-container` with unified padding, no per-page `pa-*`
 - **Reading pages** (single column / grid flows: search, likes, photos, messages, profile edit, password edit, article form, message board): add `max-w-5xl` to the shell.
 - Spacing comes only from the shell (`px-4 px-sm-6 py-6 py-sm-10`); do not add `mx-auto` (v-container self-centers) or root-level margin/padding hacks.
 
+### AI Capability Layer (Qwen)
+
+Qwen (Alibaba Cloud Bailian / DashScope, OpenAI-compatible mode) is proxied through Nitro — **the API key never reaches the browser**. Do not call `dashscope.aliyuncs.com` from a component.
+
+```typescript
+const ai = useAI({ system: '你是中文写作助手' })
+
+await ai.askStream('帮我润色：……')        // streaming, text accumulates in ai.content
+const res = await ai.ask('起 5 个标题')   // non-streaming, returns { content, usage, ... }
+```
+
+- `POST /api/ai/chat` → `{ content, model, usage, finishReason }`
+- `POST /api/ai/chat-stream` → SSE, each `data:` is one normalized event: `{type:'delta'|'done'|'error'}`. The upstream provider format is normalized in `server/utils/ai.ts`, so swapping providers only touches that file.
+- `GET /api/ai/models` → `{ models, source, default }`. DashScope's compatible mode has no reliable `/models`, so the route probes it once (4 s timeout, 10 min cache) and falls back to `AI_MODEL_CATALOG` in `server/utils/aiCatalog.ts`; `source` tells the UI which one it got. `isChatModel()` filters out rerank / embedding / tts / image ids — those 502 on `chat/completions`.
+- `GET /api/ai/quota` → `{ today, total, officialAvailable, consoleUrl }`. **Free quota has no public API** (Bailian only exposes it in the console), so `officialAvailable` is always `false` and the UI links out instead of faking a number. `today` / `total` come from our own ledger: `recordAiUsage()` in `server/utils/aiUsage.ts` accumulates the `usage` each call returns, persisted to `.data/ai-usage.json` (30-day window, serialized writes).
+- `402` = `AllocationQuota.FreeTierOnly` (free quota exhausted). The message says to open the Bailian console; don't fold it into the generic `502`.
+- Request body (both routes): `{ messages: AiMessage[], model?, temperature?, maxTokens?, topP?, system?, extra? }`. `extra` is passed straight to the upstream body (e.g. `{ enable_search: true }`).
+- Guardrails live server-side in `server/utils/ai.ts`: message count / length caps, 40-message window, per-IP in-memory rate limit (`aiRateLimit`), upstream timeout, and abort propagation when the client disconnects.
+- Missing key → `503`; upstream failure → `502`; rate limited → `429` with `Retry-After`. `useAI` surfaces these as `error` + `onError`, not toasts — the UI decides.
+- `useRuntimeConfig().public.aiEnabled` is a boolean (key present or not) for hiding AI entry points; the key itself is only `runtimeConfig.aiApiKey`.
+- Streaming needs an unbuffered proxy: the route already sends `X-Accel-Buffering: no` + `Cache-Control: no-transform`. If output arrives in one chunk behind nginx, disable `proxy_buffering` there too.
+
+**UI layer.** Two shared components, both driven by `useAI`:
+
+- `AiMenuButton.vue` — the entry point (menu of actions). Pass `label` for a labeled button, omit it for an icon-only one. `items` is `{ key, text, icon }[]`, emits `select(key)`.
+- `AiAssistDialog.vue` — streaming result panel with action chips, source preview, copy / regenerate / stop / apply. It takes `actions: AiAssistAction[]` (each carries its own finished prompt) and `initialKey`, emits `apply(result, key)`. The caller decides what "apply" means.
+- `AiModelSelect.vue` + `useAiModels.ts` — model picker in the dialog title. The choice is stored in the `ai_model` cookie (SSR-safe, no flash). Switching it while a result exists only clears the result — it does **not** re-run the request, because a stray click on the picker shouldn't burn quota. The same composable exposes `quota` / `formatTokens` for the usage line.
+
+  Filtering is done **by hand**, same shape as the tag search in `ArticleForm.vue`: `no-filter` turns off Vuetify's chain, `@update:search` feeds a local `keyword` ref, and a `computed` replaces `:items`. Do **not** go back to `:custom-filter` — `v-autocomplete` defaults to `filterKeys: ['title']`, so the filter is invoked once per key with `(value, query, item)` where `value` is the *field* value, not the item. Reading `item.raw` off the first argument silently matches nothing, which is exactly how "输入 q 却提示没有匹配的模型" happened. Matching is plain substring after `normalize()` strips space / `_` / `.` / `-` / `/`, across `id` / `label` / `desc` (upstream can return dozens of models, and `desc` is where 超长上下文 lives). Two more guards: `@update:search` ignores the text Vuetify writes back on focus/select (compare against `currentLabel`), otherwise reopening the menu shows a single row; and the `update:modelValue` handler tolerates `null` — clearing the search box must not be read as "deselect the model". Don't add a `#selection` slot — a custom selection renderer fights the search input for the field's display area.
+
+Entry points: `ArticleForm.vue` (润色/扩写/缩写/标重点/续写/起标题/翻译) and `ArticleComment.vue` (评论 + 回复框：润色/缩写/更热情/翻译/生成). Both are hidden when `public.aiEnabled` is false.
+
+`ArticleComment.vue` has **two** AI contexts and they must not share a prompt: 评论文章 (`target: 'comment'`) and 回复评论 (`target: 'reply'`). A reply has to engage with what the other person said, so `handleOpen` stores the parent comment in `data.reply_info.reply_content` and `aiPrompt` injects it via `replyContext()`. Without that context the model just writes another generic comment about the article. The menu label also switches (`ai_generate_comment` → `ai_generate_reply`), and the result is routed back by `aiTarget`.
+
+Both `generate` prompts share `HUMAN_RULE`: a comment must read like a real reader's offhand remark — 语气词 / 吐槽 / 自嘲 allowed, 1–2 emoji allowed, but no 总结体, no 四字词堆砌, no 客服腔. Do **not** reintroduce a blanket "不要用表情符号" constraint; comments are plain text (`{{ comment.content }}`), so emoji need no sanitizing.
+
+**Color policy.** By default the model is told **not** to invent colors (`COLOR_RULE_OFF`) but to preserve inline styles already in the source — otherwise 润色 silently repaints the article. The one exception is the `highlight` (标重点) action, which uses `COLOR_RULE_ON` and may wrap 1–3 key sentences in `<span style="color:#e41b23">` (site primary; ~3.7:1 on the dark card). Change `HIGHLIGHT_COLOR` in `ArticleForm.vue` to repaint the whole feature. The sanitizer already whitelists `color` / `background-color` with hex/rgb/hsl values, so no sanitizer change is needed.
+
+Rules that matter when adding new AI actions:
+
+- Build the prompt in the parent (it owns the text) and put the finished prompt in `AiAssistAction.prompt`; the dialog never composes prompts.
+- Actions that rewrite text need a **selection**; only offer them when `editor.selection.getContent()` is non-empty, otherwise the user silently rewrites the whole article.
+- TinyMCE loses its selection when the dialog takes focus — snapshot `editor.selection.getBookmark(2, true)` on open and `moveToBookmark` before inserting.
+- Article actions are **rich text**: they send the selection as HTML (`getContent({ format: 'html' })`) and ask the model to return an HTML fragment, then run it through `app/composables/useAiHtml.ts` (`normalizeAiHtml`: strip ``` fences → fall back to `textToHtml` if the model ignored the instruction → DOMPurify whitelist). Never insert model HTML without that sanitizer.
+- Insert with `editor.insertContent(html)` for both replace and continue — it replaces the selection when there is one. `selection.setContent` leaves a stray `<p>&nbsp;</p>` on multi-block selections.
+- `AiAssistAction.format` (`'html' | 'text'`) drives the panel preview: `html` renders sanitized rich text, `text` shows pre-wrap plain text (titles, comments). The preview runs the **same** `normalizeAiHtml` pipeline as Apply, so what you see is what lands in the article.
+- Code blocks must be `<pre class="language-xxx"><code>…</code></pre>`. `useArticleHtml` only syntax-highlights that exact shape, so `sanitizeAiHtml` whitelists `class` **only** as `language-*` on `pre`/`code` (everything else is stripped). `normalizeAiHtml` also converts stray Markdown fences into that shape — leaving them alone puts a literal ```` ```js ```` line in the published article.
+
 ### Theming
 
 Four Vuetify themes: `light` → `dark` → `rainy` → `glass`, cycled by `useThemeCycle`. All decorative styles in `main.css` (highlighter, stickers, blobs) are derived from `primary` / `secondary` tokens — new themes need no CSS changes.
@@ -207,13 +266,21 @@ Runtime config in `nuxt.config.ts`:
 | `NUXT_PUBLIC_SITE_URL` | Site origin for canonical / og:url / sitemap | `https://kotae.cn` |
 | `NUXT_PUBLIC_COS_BUCKET` | COS bucket | `chen-1302611521` |
 | `NUXT_PUBLIC_COS_REGION` | COS region | `ap-nanjing` |
+| `NUXT_AI_API_KEY` | Qwen (DashScope) API key, **server-only** | — |
+| `NUXT_AI_BASE_URL` | OpenAI-compatible endpoint | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `NUXT_AI_MODEL` | Default model | `qwen-flash` |
+| `NUXT_AI_TEMPERATURE` / `NUXT_AI_MAX_TOKENS` / `NUXT_AI_TIMEOUT` | Generation params | `0.7` / `2048` / `60000` |
+| `NUXT_AI_RATE_LIMIT` / `NUXT_AI_RATE_WINDOW` | Per-IP limit (count / ms) | `20` / `60000` |
+
+Copy `.env.example` to `.env` and fill in `NUXT_AI_API_KEY` to enable AI.
 
 Never hardcode `https://kotae.cn` in pages — read `useRuntimeConfig().public.siteUrl`.
 
 ## Important Notes
 
-- Type checking is disabled (`typescript.typeCheck: false`); there are no tests and no CI, so `npm run lint` is the only automated gate
-- Auto-imports enabled for `composables/api/` directory
+- Type checking runs on demand via `npm run typecheck` (`vue-tsc`); `typescript.typeCheck` stays `false` so `nuxt build` doesn't pay for it. There are no tests and no CI, so lint + typecheck are the only automated gates
+- Auto-imports enabled for `composables/api/` directory. **Auto-imported types do not survive outside the Nuxt app context** — `nuxt.config.ts` imports `Article` / `ArticleListResponse` from `composables/api/useArticle`, so that file imports its types (`BaseParams`, `Tag`, `User`) explicitly instead of leaning on the generated globals
+- **vue-tsc gotcha**: a *static* attribute whose value contains `https://` (e.g. `lazy-src="https://…"`) makes Volar lose the enclosing slot scope, so every slot prop becomes "Cannot find name" (TS2304). It reproduced on `photo.vue`'s `<v-hover v-slot="{ isHovering, props }">`. Fix: hoist the URL into a `const` and bind it (`:lazy-src="LAZY_SRC"`). The slot syntax itself (`v-slot` on the element vs `<template #default>`) is irrelevant — don't "fix" it there
+- Sitemap generated dynamically from API data — the entry field is `loc`, **not** `url`; a `url` key is silently dropped by `@nuxtjs/sitemap`
 - Site deployed at `https://kotae.cn`
-- Sitemap generated dynamically from API data
 - `vue3-emoji-picker` calls `initialize()` at module scope and opens IndexedDB; on the server this logs `ReferenceError: indexedDB is not defined` as an unhandled rejection. It is harmless but noisy — render the picker client-side if it needs cleaning up

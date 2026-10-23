@@ -49,6 +49,15 @@
     const ASPECTS = [0.8, 1, 1.33, 0.75, 1.2, 1, 0.85, 1.5]
     const aspectOf = (index: number) => ASPECTS[index % ASPECTS.length]
 
+    /**
+     * 懒加载占位图。
+     * 必须走绑定（`:lazy-src`）而不是静态属性：vue-tsc（Volar）解析静态属性值里
+     * 的 `https://` 时会把外层插槽作用域搞丢，`isHovering` / `props` 全变成
+     * 「Cannot find name」——写成静态 `lazy-src="https://…"` 就能稳定复现。
+     */
+    const LAZY_SRC =
+        'https://chen-1302611521.cos.ap-nanjing.myqcloud.com/blog/photo/Touko/thumbbig-287318.webp'
+
     // 初始化加载
     const { data } = await useAsyncData('photos', () =>
         getPhotoList({ ...page })
@@ -131,7 +140,7 @@
                             'transition-transform duration-300 ease-out cursor-pointer overflow-hidden',
                             isHovering ? 'scale-105' : 'scale-100',
                         ]"
-                        lazy-src="https://chen-1302611521.cos.ap-nanjing.myqcloud.com/blog/photo/Touko/thumbbig-287318.webp"
+                        :lazy-src="LAZY_SRC"
                         data-cuelume-press
                         data-cuelume-release
                         @click="openPreview(index)"

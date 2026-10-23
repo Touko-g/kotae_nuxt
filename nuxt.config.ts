@@ -13,6 +13,18 @@ const apiBase = process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/'
 const cosBucket = process.env.NUXT_PUBLIC_COS_BUCKET || 'chen-1302611521'
 const cosRegion = process.env.NUXT_PUBLIC_COS_REGION || 'ap-nanjing'
 
+/**
+ * 环境变量读出来永远是字符串，直接 `process.env.X || 0.7` 会得到
+ * `string | number`，而 runtimeConfig 里这几项声明的是 number。
+ * 这里显式转一次；空串 / 非数字才回退到默认值（注意 0 是合法值，
+ * 比如 aiRateLimit = 0 表示关闭限流，不能被 `||` 吃掉）。
+ */
+const envNumber = (value: string | undefined, fallback: number) => {
+    if (value === undefined || value.trim() === '') return fallback
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? fallback : parsed
+}
+
 export default defineNuxtConfig({
     app: {
         pageTransition: { name: 'page', mode: 'out-in' },
@@ -99,7 +111,9 @@ export default defineNuxtConfig({
                     page += 1
                     urls.push(
                         ...data.results.map((a: Article) => ({
-                            url: `/article/${a.id}`,
+                            // 字段名是 loc，不是 url —— 写 url 会被 sitemap 模块当成
+                            // 「没有地址的条目」直接丢掉，文章页进不了 sitemap
+                            loc: `/article/${a.id}`,
                             lastmod: a.update_time || new Date().toISOString(),
                         }))
                     )
@@ -124,11 +138,28 @@ export default defineNuxtConfig({
         typeCheck: false,
     },
     runtimeConfig: {
+        // ---- Qwen（阿里云百炼 DashScope）服务端配置：不进客户端 bundle ----
+        // 密钥只在这里读，前端一律走 /api/ai/* 代理
+        aiApiKey: process.env.NUXT_AI_API_KEY || '',
+        // OpenAI 兼容模式；新加坡站用 https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+        aiBaseUrl:
+            process.env.NUXT_AI_BASE_URL ||
+            'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        aiModel: process.env.NUXT_AI_MODEL || 'qwen3.8-flash',
+        aiTemperature: envNumber(process.env.NUXT_AI_TEMPERATURE, 0.7),
+        aiMaxTokens: envNumber(process.env.NUXT_AI_MAX_TOKENS, 2048),
+        // 单次上游请求超时（毫秒）
+        aiTimeout: envNumber(process.env.NUXT_AI_TIMEOUT, 60000),
+        // 单 IP 限流：窗口内允许的请求数 / 窗口毫秒数，0 表示关闭
+        aiRateLimit: envNumber(process.env.NUXT_AI_RATE_LIMIT, 20),
+        aiRateWindow: envNumber(process.env.NUXT_AI_RATE_WINDOW, 60000),
         public: {
             apiBase,
             siteUrl,
             cosBucket,
             cosRegion,
+            // 仅暴露「有没有配密钥」的布尔值，供 UI 决定是否显示 AI 入口
+            aiEnabled: Boolean(process.env.NUXT_AI_API_KEY),
             versions: {
                 nuxt: {
                     version: pkg.dependencies.nuxt,

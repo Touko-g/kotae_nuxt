@@ -590,7 +590,7 @@
                             </div>
                         </div>
                         <!-- 相关阅读：同标签推荐 -->
-                        <div v-if="relatedArticles?.length" class="mt-10">
+                        <div v-if="relatedArticles?.length" class="mt-10 mb-5">
                             <div class="d-flex align-center mb-4">
                                 <span
                                     class="section-bar mr-3"
@@ -650,7 +650,10 @@
                                 </v-col>
                             </v-row>
                         </div>
-                        <ArticleComment :article="article.id" />
+                        <ArticleComment
+                            :article="article.id"
+                            :title="article.title"
+                        />
                     </v-card-text>
                     <ConfirmDialog ref="confirmRef" />
                 </v-card>

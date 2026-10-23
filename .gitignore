@@ -18,6 +18,9 @@ logs
 .fleet
 .idea
 
+# AI 工具本地数据（记忆日志、临时截图等）
+.workbuddy-ai
+
 # Local env files
 .env
 .env.*
