@@ -207,16 +207,17 @@ await ai.askStream('帮我润色：……')        // streaming, text accumulate
 const res = await ai.ask('起 5 个标题')   // non-streaming, returns { content, usage, ... }
 ```
 
-- `POST /api/ai/chat` → `{ content, model, usage, finishReason }`
-- `POST /api/ai/chat-stream` → SSE, each `data:` is one normalized event: `{type:'delta'|'done'|'error'}`. The upstream provider format is normalized in `server/utils/ai.ts`, so swapping providers only touches that file.
-- `GET /api/ai/models` → `{ models, source, default }`. DashScope's compatible mode has no reliable `/models`, so the route probes it once (4 s timeout, 10 min cache) and falls back to `AI_MODEL_CATALOG` in `server/utils/aiCatalog.ts`; `source` tells the UI which one it got. `isChatModel()` filters out rerank / embedding / tts / image ids — those 502 on `chat/completions`.
-- `GET /api/ai/quota` → `{ today, total, officialAvailable, consoleUrl }`. **Free quota has no public API** (Bailian only exposes it in the console), so `officialAvailable` is always `false` and the UI links out instead of faking a number. `today` / `total` come from our own ledger: `recordAiUsage()` in `server/utils/aiUsage.ts` accumulates the `usage` each call returns, persisted to `.data/ai-usage.json` (30-day window, serialized writes).
+- `POST {apiBase}ai/chat/` → `{ content, model, usage, finishReason }`
+- `POST {apiBase}ai/chat-stream/` → SSE, each `data:` is one normalized event: `{type:'delta'|'done'|'error'}`.
+- `GET {apiBase}ai/models/` → `{ models, source, default }`. DashScope's compatible mode has no reliable `/models`, so the backend probes it once (4 s timeout, 10 min cache, bucketed per user) and falls back to its built-in catalog; `source` tells the UI which one it got. `is_chat_model()` filters out rerank / embedding / tts / image ids — those 502 on `chat/completions`.
+- `GET {apiBase}ai/quota/` → `{ today, total, officialAvailable, consoleUrl }`. **Free quota has no public API** (Bailian only exposes it in the console), so `officialAvailable` is always `false` and the UI links out instead of faking a number. `today` / `total` come from the backend ledger (`AiUsage` table, one row per user/day/model).
+- `GET|PUT|DELETE {apiBase}ai/credential/` → the user's own API key. GET returns a mask only; PUT with an empty `api_key` keeps the stored one; the key is Fernet-encrypted at rest.
 - `402` = `AllocationQuota.FreeTierOnly` (free quota exhausted). The message says to open the Bailian console; don't fold it into the generic `502`.
-- Request body (both routes): `{ messages: AiMessage[], model?, temperature?, maxTokens?, topP?, system?, extra? }`. `extra` is passed straight to the upstream body (e.g. `{ enable_search: true }`).
-- Guardrails live server-side in `server/utils/ai.ts`: message count / length caps, 40-message window, per-IP in-memory rate limit (`aiRateLimit`), upstream timeout, and abort propagation when the client disconnects.
-- Missing key → `503`; upstream failure → `502`; rate limited → `429` with `Retry-After`. `useAI` surfaces these as `error` + `onError`, not toasts — the UI decides.
-- `useRuntimeConfig().public.aiEnabled` is a boolean (key present or not) for hiding AI entry points; the key itself is only `runtimeConfig.aiApiKey`.
-- Streaming needs an unbuffered proxy: the route already sends `X-Accel-Buffering: no` + `Cache-Control: no-transform`. If output arrives in one chunk behind nginx, disable `proxy_buffering` there too.
+- Request body (both chat routes): `{ messages: AiMessage[], model?, temperature?, maxTokens?, topP?, system?, extra? }`. `extra` is passed straight to the upstream body (e.g. `{ enable_search: true }`).
+- Guardrails live in `backend/ai/services.py`: message count / length caps, 40-message window, per-**user** DRF throttle (`AI_THROTTLE_RATE`), upstream timeout, and disconnect propagation.
+- Error codes (body `{detail, code}`): `400 ai_key_missing` / `400 ai_key_invalid` / `401` not logged in / `402 ai_quota_exhausted` / `429 ai_rate_limited` / `502 ai_upstream_error`. `useAI` surfaces these as `error` + `errorCode`; `needKey` flips on `ai_key_missing`.
+- AI requires login **and** a configured key. `useAiClient().available` = site switch ∧ logged in; `AiAssistDialog` additionally gates on `configured` and opens `AiCredentialDialog` instead of firing a request.
+- Streaming is served by `backend/ai/asgi.py`, **not** `StreamingHttpResponse` — Django 4.0's ASGI handler iterates streaming responses synchronously on the event loop, which would freeze Channels. Keep `X-Accel-Buffering: no`; behind nginx also disable `proxy_buffering`.
 
 **UI layer.** Two shared components, both driven by `useAI`:
 
@@ -266,13 +267,13 @@ Runtime config in `nuxt.config.ts`:
 | `NUXT_PUBLIC_SITE_URL` | Site origin for canonical / og:url / sitemap | `https://kotae.cn` |
 | `NUXT_PUBLIC_COS_BUCKET` | COS bucket | `chen-1302611521` |
 | `NUXT_PUBLIC_COS_REGION` | COS region | `ap-nanjing` |
-| `NUXT_AI_API_KEY` | Qwen (DashScope) API key, **server-only** | — |
-| `NUXT_AI_BASE_URL` | OpenAI-compatible endpoint | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `NUXT_AI_MODEL` | Default model | `qwen-flash` |
-| `NUXT_AI_TEMPERATURE` / `NUXT_AI_MAX_TOKENS` / `NUXT_AI_TIMEOUT` | Generation params | `0.7` / `2048` / `60000` |
-| `NUXT_AI_RATE_LIMIT` / `NUXT_AI_RATE_WINDOW` | Per-IP limit (count / ms) | `20` / `60000` |
+| `NUXT_PUBLIC_AI_ENABLED` | Site-level AI switch (hides all AI entry points when `false`) | `true` |
 
-Copy `.env.example` to `.env` and fill in `NUXT_AI_API_KEY` to enable AI.
+AI has **no** frontend server-side config any more: each user supplies their own key, stored encrypted by Django.
+Backend knobs (`backend/.env`): `AI_DEFAULT_BASE_URL`, `AI_DEFAULT_MODEL`, `AI_TEMPERATURE`, `AI_MAX_TOKENS`,
+`AI_CONNECT_TIMEOUT`, `AI_TIMEOUT`, `AI_THROTTLE_RATE`.
+
+Copy `.env.example` to `.env` for local public config; no AI key is needed on the frontend.
 
 Never hardcode `https://kotae.cn` in pages — read `useRuntimeConfig().public.siteUrl`.
 

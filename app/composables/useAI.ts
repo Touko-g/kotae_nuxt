@@ -7,7 +7,7 @@ import type {
 } from '#shared/types/ai'
 
 export interface UseAIOptions {
-    /** 默认模型，如 qwen-flash / qwen-max / qwen-long */
+    /** 默认模型，如 qwen3.8-flash / qwen-max / qwen-long */
     model?: string
     /** 默认系统提示词（人设 / 输出格式约束） */
     system?: string
@@ -27,16 +27,12 @@ const toMessages = (input: string | AiMessage[]): AiMessage[] =>
         ? [{ role: 'user', content: input }]
         : input.map(item => ({ role: item.role, content: item.content }))
 
-/** 从 $fetch / createError 的错误对象里抠出可读文案 */
-const toErrorMessage = (err: any): string =>
-    err?.data?.statusMessage ||
-    err?.data?.message ||
-    err?.statusMessage ||
-    err?.message ||
-    'AI request failed'
-
 /**
- * Qwen 对话能力（服务端代理，密钥不下发到浏览器）
+ * 对话能力（后端代理，API Key 存在服务端并加密，永远不下发到浏览器）
+ *
+ * 鉴权：请求带登录后的 JWT，后端据此取当前用户自己的 Key。
+ * 未配置 Key 时后端返回 400 + code=ai_key_missing，`needKey` 会置位，
+ * 面板据此引导用户去设置。
  *
  * ```ts
  * const ai = useAI({ system: '你是中文写作助手' })
@@ -45,18 +41,20 @@ const toErrorMessage = (err: any): string =>
  * ```
  */
 export const useAI = (options: UseAIOptions = {}) => {
-    const config = useRuntimeConfig()
-    /** 服务端是否配了密钥；false 时 UI 应该隐藏入口 */
-    const available = computed(() => config.public.aiEnabled !== false)
+    const client = useAiClient()
 
     const history = ref<AiMessage[]>([])
     /** 最近一次回复内容（流式时逐字累积） */
     const content = ref('')
     const usage = ref<AiUsage | null>(null)
     const error = ref<string | null>(null)
+    /** 后端错误码：ai_key_missing / ai_key_invalid 时 UI 引导去配置 */
+    const errorCode = ref<string | null>(null)
     const pending = ref(false)
     const streaming = ref(false)
     const busy = computed(() => pending.value || streaming.value)
+    /** 当前用户还没配 Key */
+    const needKey = computed(() => errorCode.value === 'ai_key_missing')
 
     let controller: AbortController | null = null
 
@@ -91,8 +89,9 @@ export const useAI = (options: UseAIOptions = {}) => {
         return result
     }
 
-    const fail = (message: string) => {
+    const fail = (message: string, code = 'ai_error') => {
         error.value = message
+        errorCode.value = code
         options.onError?.(message)
         return null
     }
@@ -103,6 +102,7 @@ export const useAI = (options: UseAIOptions = {}) => {
         content.value = ''
         usage.value = null
         error.value = null
+        errorCode.value = null
     }
 
     /** 中断进行中的请求（流式会保留已生成的部分） */
@@ -116,13 +116,17 @@ export const useAI = (options: UseAIOptions = {}) => {
         if (busy.value) return null
 
         error.value = null
+        errorCode.value = null
         pending.value = true
         controller = new AbortController()
 
         const incoming = toMessages(input)
         try {
-            const result = await $fetch<AiChatResult>('/api/ai/chat', {
+            const result = await $fetch<AiChatResult>(client.url('ai/chat/'), {
                 method: 'POST',
+                headers: client.headers({
+                    'Content-Type': 'application/json',
+                }),
                 body: buildBody(
                     withSystem([...history.value, ...incoming]),
                     opts
@@ -134,7 +138,8 @@ export const useAI = (options: UseAIOptions = {}) => {
             // 用 signal 判定是否为主动中断：$fetch 的中断错误会被包装成
             // FetchError（AbortError 在 cause 里），直接看 name 判不准
             if (controller?.signal.aborted) return null
-            return fail(toErrorMessage(err))
+            const info = parseAiError(err)
+            return fail(info.message, info.code)
         } finally {
             pending.value = false
             controller = null
@@ -149,6 +154,7 @@ export const useAI = (options: UseAIOptions = {}) => {
         if (busy.value) return null
 
         error.value = null
+        errorCode.value = null
         streaming.value = true
         content.value = ''
         controller = new AbortController()
@@ -161,9 +167,11 @@ export const useAI = (options: UseAIOptions = {}) => {
         let aborted = false
 
         try {
-            const res = await fetch('/api/ai/chat-stream', {
+            const res = await fetch(client.url('ai/chat-stream/'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: client.headers({
+                    'Content-Type': 'application/json',
+                }),
                 body: JSON.stringify(
                     buildBody(withSystem([...history.value, ...incoming]), opts)
                 ),
@@ -171,7 +179,10 @@ export const useAI = (options: UseAIOptions = {}) => {
             })
 
             if (!res.ok || !res.body) {
-                throw new Error(await readErrorResponse(res))
+                const info = await readErrorResponse(res)
+                throw Object.assign(new Error(info.message), {
+                    aiCode: info.code,
+                })
             }
 
             const reader = res.body.getReader()
@@ -218,7 +229,10 @@ export const useAI = (options: UseAIOptions = {}) => {
             if (controller?.signal.aborted) {
                 aborted = true
             } else {
-                return fail(toErrorMessage(err))
+                return fail(
+                    err?.message || 'AI 请求失败',
+                    err?.aiCode || 'ai_error'
+                )
             }
         } finally {
             streaming.value = false
@@ -242,11 +256,13 @@ export const useAI = (options: UseAIOptions = {}) => {
     }
 
     return {
-        available,
+        available: client.available,
         history,
         content,
         usage,
         error,
+        errorCode,
+        needKey,
         pending,
         streaming,
         busy,
@@ -257,17 +273,20 @@ export const useAI = (options: UseAIOptions = {}) => {
     }
 }
 
-/** 非 2xx 时从响应体里取服务端给出的文案 */
-const readErrorResponse = async (res: Response) => {
+/** 非 2xx 时从响应体里取后端给出的文案与错误码 */
+const readErrorResponse = async (
+    res: Response
+): Promise<{ message: string; code: string }> => {
     try {
         const data = await res.json()
-        return (
-            data?.statusMessage ||
-            data?.message ||
-            data?.data?.message ||
-            res.statusText
-        )
+        return {
+            message: data?.detail || data?.message || res.statusText,
+            code: data?.code || 'ai_error',
+        }
     } catch {
-        return res.statusText || `AI request failed (${res.status})`
+        return {
+            message: res.statusText || `AI request failed (${res.status})`,
+            code: 'ai_error',
+        }
     }
 }

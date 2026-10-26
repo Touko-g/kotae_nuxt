@@ -13,18 +13,6 @@ const apiBase = process.env.NUXT_PUBLIC_API_URL || 'https://kotae.cn/api/'
 const cosBucket = process.env.NUXT_PUBLIC_COS_BUCKET || 'chen-1302611521'
 const cosRegion = process.env.NUXT_PUBLIC_COS_REGION || 'ap-nanjing'
 
-/**
- * 环境变量读出来永远是字符串，直接 `process.env.X || 0.7` 会得到
- * `string | number`，而 runtimeConfig 里这几项声明的是 number。
- * 这里显式转一次；空串 / 非数字才回退到默认值（注意 0 是合法值，
- * 比如 aiRateLimit = 0 表示关闭限流，不能被 `||` 吃掉）。
- */
-const envNumber = (value: string | undefined, fallback: number) => {
-    if (value === undefined || value.trim() === '') return fallback
-    const parsed = Number(value)
-    return Number.isNaN(parsed) ? fallback : parsed
-}
-
 export default defineNuxtConfig({
     app: {
         pageTransition: { name: 'page', mode: 'out-in' },
@@ -138,37 +126,17 @@ export default defineNuxtConfig({
         typeCheck: false,
     },
     runtimeConfig: {
-        // ---- Qwen（阿里云百炼 DashScope）服务端配置：不进客户端 bundle ----
-        // 密钥只在这里读，前端一律走 /api/ai/* 代理。
-        //
-        // 这里**故意**不写 process.env.NUXT_AI_API_KEY：nuxt.config 是在构建时求值的，
-        // 写了就会把构建机上的密钥作为默认值序列化进 .output（明文）。
-        // 留空串，交给 Nitro 运行时按 NUXT_AI_API_KEY 覆盖即可
-        // （@nuxt/schema 把 nitro.envPrefix 设成了 NUXT_，见 applyEnv）。
-        aiApiKey: '',
-        // OpenAI 兼容模式；新加坡站用 https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-        aiBaseUrl:
-            process.env.NUXT_AI_BASE_URL ||
-            'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        aiModel: process.env.NUXT_AI_MODEL || 'qwen3.8-flash',
-        aiTemperature: envNumber(process.env.NUXT_AI_TEMPERATURE, 0.7),
-        aiMaxTokens: envNumber(process.env.NUXT_AI_MAX_TOKENS, 2048),
-        // 单次上游请求超时（毫秒）
-        aiTimeout: envNumber(process.env.NUXT_AI_TIMEOUT, 60000),
-        // 单 IP 限流：窗口内允许的请求数 / 窗口毫秒数，0 表示关闭
-        aiRateLimit: envNumber(process.env.NUXT_AI_RATE_LIMIT, 20),
-        aiRateWindow: envNumber(process.env.NUXT_AI_RATE_WINDOW, 60000),
+        // ---- AI 能力已迁到 Django 后端 ----
+        // 上游密钥不再经过前端：每个用户在自己的「AI 设置」里填 key，
+        // 后端加密存库、按用户计费。这里没有任何服务端密钥要配。
         public: {
             apiBase,
             siteUrl,
             cosBucket,
             cosRegion,
-            // 前端据此决定要不要渲染 AI 入口。
-            //
-            // 原来写的是 Boolean(process.env.NUXT_AI_API_KEY) —— 同样是构建时求值，
-            // 构建机上没配密钥就会把 false 固化进产物，之后运行时装了密钥按钮也不出现。
-            // 默认给 true：真没配密钥时点下去会拿到 503，比「按钮凭空消失」好排查；
-            // 确实想藏起来时，部署环境设 NUXT_PUBLIC_AI_ENABLED=false 即可。
+            // 站点级开关，与「有没有配 key」无关：
+            // 关掉时前端不渲染任何 AI 入口（部署环境设 NUXT_PUBLIC_AI_ENABLED=false）。
+            // 是否可用最终由「已登录 + 已配置 key」决定，见 useAiClient()。
             aiEnabled: true,
             versions: {
                 nuxt: {

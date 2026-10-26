@@ -165,18 +165,11 @@ kotae_nuxt/
 │   │   ├── permissions.ts        # v-permission 权限指令
 │   │   └── theme.ts              # 主题 cookie 读写（SSR 直出对应主题）
 │   └── error.vue                 # 全局错误页
-├── server/                       # Nitro 服务端（server/utils 自动导入）
-│   ├── api/ai/
-│   │   ├── chat.post.ts          # POST /api/ai/chat（非流式）
-│   │   ├── chat-stream.post.ts   # POST /api/ai/chat-stream（SSE 流式）
-│   │   ├── models.get.ts         # GET  /api/ai/models
-│   │   └── quota.get.ts          # GET  /api/ai/quota
+├── server/                       # Nitro 服务端
+│   ├── api/                      # 已无 AI 接口：AI 全部在 Django 侧（backend/ai/）
 │   └── utils/
-│       ├── ai.ts                 # 配置读取 / 限流 / 消息归一化 / 上游调用
-│       ├── aiCatalog.ts          # 内置模型清单 + 非对话模型过滤
-│       └── aiUsage.ts            # token 用量记账（.data/ai-usage.json）
 ├── shared/                       # 前后端共用类型（#shared 别名）
-│   └── types/ai.ts               # AiMessage / AiChatOptions / AiUsage ...
+│   └── types/ai.ts               # AiMessage / AiChatOptions / AiUsage / AiCredentialInfo ...
 ├── i18n/
 │   ├── i18n.config.ts            # i18n 配置
 │   └── locales/
@@ -316,13 +309,21 @@ export const useArticle = () => {
 
 ## AI 辅助写作
 
-写作页与评论区的 AI 能力走 **本站 Nitro 代理 → 阿里云百炼（DashScope）**，密钥只存在服务端，前端拿不到。
+写作页与评论区的 AI 能力走 **Django 后端 → 阿里云百炼（DashScope）**。密钥由**每个用户自己提供**，后端加密存库，前端只拿到掩码。
 
 ```
-浏览器 useAI()  →  /api/ai/*（Nitro）  →  dashscope.aliyuncs.com/compatible-mode/v1
+浏览器 useAI()  →  {apiBase}ai/*（Django，需 JWT）  →  dashscope.aliyuncs.com/compatible-mode/v1
 ```
 
-`runtimeConfig.aiApiKey` 仅服务端可读；`runtimeConfig.public.aiEnabled` 是个布尔值，前端据此决定是否渲染 AI 入口（默认 `true`，设 `NUXT_PUBLIC_AI_ENABLED=false` 可隐藏）。
+> 这一层原本在 Nitro（`server/api/ai/*`），已整体迁到 Django。现在前端不再持有任何上游密钥，
+> 也不再有 `NUXT_AI_API_KEY` 这类服务端配置。相关代码：`backend/ai/`。
+
+### 使用前提
+
+1. **已登录** —— AI 接口全部要求 `IsAuthenticated`，未登录返回 401；
+2. **已配置自己的 Key** —— 在 AI 面板右上角的钥匙按钮里填写，或首次打开面板时按提示配置。
+
+两者缺一时，`AiAssistDialog` 会直接给出提示/配置入口，不会白发一次请求。
 
 ### 能力
 
@@ -332,14 +333,23 @@ export const useArticle = () => {
 | 评论、回复生成 | `ArticleComment` 输入框旁的 `AiMenuButton` |
 | 语音输入 | `SpeechInput`（按钮）与 `SpeechLiveBar`（实时转写浮条） |
 
-### 服务端约束（`server/utils/ai.ts`）
+### 接口与约束（`backend/ai/`）
 
-- **限流**：单 IP 内存计数，默认 **20 次 / 60 秒**，超限返回 429 并带 `Retry-After`；`aiRateLimit: 0` 关闭
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/ai/credential/` | GET / PUT / DELETE | 查询（只回掩码）/ 保存 / 清除自己的 Key |
+| `/api/ai/chat/` | POST | 非流式对话，返回 `{ content, model, usage, finishReason }` |
+| `/api/ai/chat-stream/` | POST | 流式对话，SSE 输出 `{ type: 'delta' \| 'done' \| 'error' }` |
+| `/api/ai/models/` | GET | 可选模型（探测上游 `/models`，失败回落内置清单，按用户缓存 10 分钟） |
+| `/api/ai/quota/` | GET | 当前用户自己的 token 用量（按天按模型记账） |
+
+- **限流**：按登录用户计数（DRF throttle，默认 20 次 / 分钟），超限 429
 - **消息归一化**：role 白名单（`system` / `user` / `assistant`）、单条截断 24000 字符、最多保留最近 40 条
-- **超时**：单次上游请求默认 60 秒，客户端断开时同步 abort 上游（避免继续计费）
-- **错误码**：`503` 未配置密钥 / `429` 限流 / `402` 免费额度用尽（`AllocationQuota.FreeTierOnly`）/ `502` 上游错误
-
-限流表是**进程内 `Map`**，用量统计写本地文件（`.data/ai-usage.json`），两者都只适合单实例部署。
+- **错误码**：`400 ai_key_missing` 未配置 Key / `400 ai_key_invalid` Key 无效 / `401` 未登录 /
+  `402 ai_quota_exhausted` 免费额度用尽 / `429` 限流 / `502` 上游错误
+- **流式实现**：Django 4.0 的 `StreamingHttpResponse` 在 ASGI 下会同步迭代、阻塞事件循环，
+  所以流式接口走 `backend/ai/asgi.py` 的原生 ASGI 通道（读上游放线程 + 队列回传），
+  其余接口仍是普通 DRF 视图。
 
 ### 前端安全约束
 
@@ -353,7 +363,8 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 
 ### 模型
 
-`GET /api/ai/models` 优先探测上游 `/models`，连不上就回落到 `server/utils/aiCatalog.ts` 的内置清单（缓存 10 分钟），响应里的 `source` 会标明来源是 `upstream` 还是 `builtin`。内置清单只放**对话模型** —— rerank / embedding / tts / 图像模型走 `chat/completions` 会直接 502。
+`GET /api/ai/models/` 优先探测用户 Key 对应的上游 `/models`，连不上就回落到后端内置清单（缓存 10 分钟，按用户分桶），响应里的 `source` 会标明来源是 `upstream` 还是 `builtin`。内置清单只放**对话模型** —— rerank / embedding / tts / 图像模型走 `chat/completions` 会直接 502。
+
 
 ---
 
@@ -397,17 +408,24 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 | Wish | `/wish/{id}/` | DELETE | 删除心愿 |
 | Search | `/search/` | GET | 搜索 |
 | Search | `/search/` | POST | 记录搜索词 |
+| AI | `/ai/credential/` | GET / PUT / DELETE | 查询（掩码）/ 保存 / 清除自己的 API Key |
+| AI | `/ai/chat/` | POST | 非流式对话（需登录） |
+| AI | `/ai/chat-stream/` | POST | 流式对话，SSE（需登录） |
+| AI | `/ai/models/` | GET | 可选模型（需登录） |
+| AI | `/ai/quota/` | GET | 当前用户 token 用量（需登录） |
 
 ### 本地 Nitro 端点
 
-以下端点在**本站**实现（`server/api/`），不属于上面的后端 API：
+以下端点曾在**本站**实现（Nitro `server/api/ai/`），现已全部迁到 Django 后端（`backend/ai/`），
+前端改为直连 `{apiBase}ai/*` 并携带 JWT。此处仅作历史说明，不再有 Nitro 侧的 AI 端点。
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/ai/chat` | POST | 非流式对话，返回 `{ content, model, usage, finishReason }` |
-| `/api/ai/chat-stream` | POST | 流式对话，SSE 输出 `{ type: 'delta' \| 'done' \| 'error' }` |
-| `/api/ai/models` | GET | 可选模型列表（上游优先，失败回落内置清单） |
-| `/api/ai/quota` | GET | 本站自己的 token 用量统计 |
+| 端点 | 方法 | 现在的位置 |
+|------|------|-----------|
+| `/api/ai/chat/` | POST | Django `ai/views.py::AiChatView` |
+| `/api/ai/chat-stream/` | POST | Django `ai/asgi.py`（原生 ASGI，SSE） |
+| `/api/ai/models/` | GET | Django `ai/views.py::AiModelsView` |
+| `/api/ai/quota/` | GET | Django `ai/views.py::AiQuotaView` |
+| `/api/ai/credential/` | GET/PUT/DELETE | Django `ai/views.py::AiCredentialView`（新增） |
 
 ---
 
@@ -439,22 +457,23 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 | `NUXT_PUBLIC_SITE_URL` | 站点地址（canonical / og:url / sitemap） | `https://kotae.cn` |
 | `NUXT_PUBLIC_COS_BUCKET` | COS 存储桶 | `chen-1302611521` |
 | `NUXT_PUBLIC_COS_REGION` | COS 地域 | `ap-nanjing` |
-| `NUXT_PUBLIC_AI_ENABLED` | 是否渲染 AI 入口（设 `false` 可隐藏） | `true` |
+| `NUXT_PUBLIC_AI_ENABLED` | 站点级 AI 开关（设 `false` 则不渲染任何 AI 入口）；能否真正使用还取决于登录态与用户自己的 Key | `true` |
 
 ### 仅服务端（`runtimeConfig`）
 
+前端已**没有** AI 相关服务端配置：上游密钥不再由站点统一持有，改由每个用户自带并由 Django 加密保存。
+
+AI 的默认上游、超时、限流等都在 **后端** `backend/.env` 里配：
+
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `NUXT_AI_API_KEY` | 百炼 API Key，**不配则 AI 端点全部 503** | - |
-| `NUXT_AI_BASE_URL` | OpenAI 兼容模式地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `NUXT_AI_MODEL` | 默认模型（需与账号可用型号一致，可用 `GET /api/ai/models` 确认） | `qwen3.8-flash` |
-| `NUXT_AI_TEMPERATURE` | 采样温度，0 ~ 2 | `0.7` |
-| `NUXT_AI_MAX_TOKENS` | 单次最大输出 token，1 ~ 8192 | `2048` |
-| `NUXT_AI_TIMEOUT` | 上游超时（毫秒），5000 ~ 300000 | `60000` |
-| `NUXT_AI_RATE_LIMIT` | 单 IP 窗口内请求数，`0` 表示关闭限流 | `20` |
-| `NUXT_AI_RATE_WINDOW` | 限流窗口（毫秒） | `60000` |
-
-`NUXT_` 前缀是 Nitro 的运行时覆盖机制：`NUXT_AI_API_KEY` 会自动映射到 `runtimeConfig.aiApiKey`，不需要在代码里读 `process.env`。
+| `AI_DEFAULT_BASE_URL` | 用户没改接口地址时用的上游 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `AI_DEFAULT_MODEL` | 新用户默认模型 | `qwen3.8-flash` |
+| `AI_TEMPERATURE` | 采样温度，0 ~ 2 | `0.7` |
+| `AI_MAX_TOKENS` | 单次最大输出 token，1 ~ 8192 | `2048` |
+| `AI_CONNECT_TIMEOUT` | 连接上游超时（秒） | `10` |
+| `AI_TIMEOUT` | 读取上游超时（秒），流式指两分片之间的最长间隔 | `120` |
+| `AI_THROTTLE_RATE` | 按用户限流速率（DRF 语法，如 `20/min`） | `20/min` |
 
 ---
 
@@ -492,15 +511,16 @@ pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
-**保持 `fork` + `instances: 1`**：AI 限流是进程内 `Map`，用量统计是对 `.data/ai-usage.json` 的读-改-写，多实例会让两者都失真。`cwd` 决定 `process.cwd()`，也就是 `.data/` 的落点 —— 设错了 `/api/ai/quota` 会一直显示 0。
+**保持 `fork` + `instances: 1`**：Nitro 侧已不承担 AI 逻辑，但 SSR 与 token 刷新仍依赖单进程内的共享状态，多实例请先评估。
 
 ### 注入密钥
 
-`.env` **只在 `nuxt dev` / `nuxt build` 时加载**，`node .output/server/index.mjs` 不会读它。生产环境必须通过进程环境注入：
+前端已不需要任何上游密钥：AI 的 Key 由每个用户在自己账号里填写，存在 Django 的加密表里。
+这里只保留后端相关的环境变量（如 `NUXT_PUBLIC_API_URL`）注入方式，供参考：
 
 ```cmd
 :: 管理员 CMD（/M 为机器级，服务也能读到）
-setx NUXT_AI_API_KEY "sk-xxx" /M
+setx NUXT_PUBLIC_API_URL "https://kotae.cn/api/" /M
 
 :: 必须杀掉 daemon 再起，单纯 pm2 restart 拿不到新值
 pm2 kill
@@ -510,13 +530,13 @@ pm2 save
 
 `setx` 只影响**之后创建**的进程，而 PM2 daemon 会缓存自己的环境，所以 `pm2 kill` 这一步不能省。
 
-也可以改用 env 文件，把密钥放在项目目录外：
+也可以改用 env 文件，把配置放在项目目录外：
 
 ```js
 node_args: '--env-file=D:/kotae/env',
 ```
 
-> 文件必须是 **UTF-8 无 BOM + LF**。带 BOM 会让首个键名变成 `\uFEFFNUXT_AI_API_KEY` 而匹配不上（一直 503）；CRLF 会让值尾部带 `\r`，密钥变成 `sk-xxx\r`（上游 401）。
+> 文件必须是 **UTF-8 无 BOM + LF**。带 BOM 会让首个键名匹配不上；CRLF 会让值尾部带 `\r`。
 
 ### 开机自启
 

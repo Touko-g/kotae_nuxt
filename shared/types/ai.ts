@@ -19,7 +19,7 @@ export interface AiUsage {
 }
 
 export interface AiChatOptions {
-    /** 覆盖服务端默认模型，如 qwen-flash / qwen-max / qwen-long */
+    /** 覆盖服务端默认模型，如 qwen3.8-flash / qwen-max / qwen-long */
     model?: string
     temperature?: number
     topP?: number
@@ -38,7 +38,7 @@ export interface AiChatResult {
     finishReason?: string | null
 }
 
-/** 请求体（/api/ai/chat 与 /api/ai/chat-stream 共用） */
+/** 请求体（/api/ai/chat/ 与 /api/ai/chat-stream/ 共用） */
 export interface AiChatRequest extends AiChatOptions {
     messages: AiMessage[]
 }
@@ -78,7 +78,7 @@ export interface AiModelInfo {
     recommended?: boolean
 }
 
-/** GET /api/ai/models */
+/** GET /api/ai/models/ */
 export interface AiModelList {
     models: AiModelInfo[]
     /**
@@ -101,7 +101,7 @@ export interface AiUsageDay {
     byModel: Record<string, { requests: number; totalTokens: number }>
 }
 
-/** GET /api/ai/quota */
+/** GET /api/ai/quota/ */
 export interface AiQuotaInfo {
     today: AiUsageDay
     /** 最近若干天合计 */
@@ -113,4 +113,29 @@ export interface AiQuotaInfo {
     officialAvailable: boolean
     /** 百炼控制台的免费额度页面，前端直接给个外链 */
     consoleUrl: string
+}
+
+/**
+ * 用户自己的 API Key 配置状态（GET /api/ai/credential/）
+ *
+ * 后端只返回掩码，明文与密文都不会出现在响应里；
+ * `needs_reentry` 表示库里的密文已解不开（通常是 SECRET_KEY 变更），需要重填。
+ */
+export interface AiCredentialInfo {
+    configured: boolean
+    enabled: boolean
+    /** 形如 sk-1******abcd */
+    api_key_masked: string
+    base_url: string
+    default_model: string
+    update_time: string | null
+    needs_reentry?: boolean
+}
+
+/** PUT /api/ai/credential/ 入参；api_key 留空表示沿用已保存的 key */
+export interface AiCredentialInput {
+    api_key?: string
+    base_url?: string
+    default_model?: string
+    enabled?: boolean
 }

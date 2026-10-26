@@ -34,10 +34,24 @@
         selected,
         loading: modelsLoading,
         quota,
+        credential,
+        credentialLoading,
+        configured,
         load: loadModels,
         loadQuota,
+        loadCredential,
         formatTokens,
     } = useAiModels()
+
+    /** Key 配置面板：未配置时由面板内的提示直接拉起 */
+    const credentialOpen = ref(false)
+    const loggedIn = useAiClient().isLogin
+
+    const onCredentialSaved = async () => {
+        await loadCredential()
+        loadModels()
+        loadQuota()
+    }
 
     /** 官方额度没有 API，拿不到 quota 时也给一个控制台入口 */
     const consoleUrl = computed(
@@ -66,6 +80,16 @@
 
     const run = async () => {
         if (!activeAction.value) return
+        // AI 能力必须登录后才能用：未登录时先提示，别去撞 401
+        if (!loggedIn.value) {
+            show(t('ai_need_login'), 'warning')
+            return
+        }
+        // 没配 Key 就别发请求了，直接把配置面板拉起来
+        if (!configured.value) {
+            credentialOpen.value = true
+            return
+        }
         clear()
         await askStream(activeAction.value.prompt, {
             maxTokens: props.maxTokens ?? 1200,
@@ -101,12 +125,16 @@
 
     watch(
         () => props.modelValue,
-        open => {
+        async open => {
             if (!open) {
                 abort()
                 return
             }
             activeKey.value = props.initialKey ?? props.actions[0]?.key ?? ''
+            // 先确认有没有 Key：没有就别发请求，直接引导去配置
+            await loadCredential()
+            if (!configured.value) return
+
             // 面板第一次打开才拉模型列表和用量，平时不占请求
             loadModels()
             loadQuota()
@@ -157,6 +185,13 @@
                 />
                 <v-spacer />
                 <v-btn
+                    icon="mdi-key-variant"
+                    size="small"
+                    variant="text"
+                    :aria-label="t('ai_settings')"
+                    @click="credentialOpen = true"
+                />
+                <v-btn
                     icon="mdi-close"
                     size="small"
                     variant="text"
@@ -167,6 +202,39 @@
             <v-divider />
 
             <v-card-text class="pt-4">
+                <!-- 未登录：AI 按用户自己的 key 计费，必须先登录 -->
+                <v-alert
+                    v-if="!loggedIn"
+                    type="warning"
+                    variant="tonal"
+                    density="comfortable"
+                    class="mb-4"
+                >
+                    {{ t('ai_need_login') }}
+                </v-alert>
+                <!-- 没配 Key 时不发请求，直接引导配置 -->
+                <v-alert
+                    v-else-if="!credentialLoading && !configured"
+                    type="info"
+                    variant="tonal"
+                    density="comfortable"
+                    class="mb-4"
+                >
+                    <div class="d-flex align-center flex-wrap ga-2">
+                        <span class="text-body-2">
+                            {{ t('ai_need_key_desc') }}
+                        </span>
+                        <v-btn
+                            size="small"
+                            color="primary"
+                            variant="flat"
+                            prepend-icon="mdi-key-variant"
+                            @click="credentialOpen = true"
+                        >
+                            {{ t('ai_go_settings') }}
+                        </v-btn>
+                    </div>
+                </v-alert>
                 <div class="d-flex flex-wrap ga-2 mb-4">
                     <v-chip
                         v-for="action in actions"
@@ -287,6 +355,13 @@
                 </v-btn>
             </v-card-actions>
         </v-card>
+
+        <!-- Key 配置面板：保存后重新拉凭据/模型/用量 -->
+        <AiCredentialDialog
+            v-model="credentialOpen"
+            :credential="credential"
+            @saved="onCredentialSaved"
+        />
     </v-dialog>
 </template>
 

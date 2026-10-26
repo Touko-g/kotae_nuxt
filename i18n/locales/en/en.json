@@ -23,7 +23,6 @@
     "pre": "previous",
     "user_for_account": "Enter user information to create an account",
     "account_help": "Please enter required information",
-
     "message": "Message",
     "public_chat": "Public Chat",
     "color_palette": "Color Palette",
@@ -31,7 +30,6 @@
     "about_me": "About Me",
     "logout": "Logout",
     "collect": "Collect",
-
     "wishlist": "Things to Do",
     "wish_add": "Add something",
     "wish_edit": "Edit this one",
@@ -46,7 +44,6 @@
     "wish_empty": "The list is empty — write down the first thing you want to do",
     "wish_empty_pending": "All caught up — everything's done 🎉",
     "wish_empty_completed": "Nothing done yet — go check something off",
-
     "view": "views",
     "like": "likes",
     "tag": "tags",
@@ -68,12 +65,10 @@
     "search": "Search",
     "search_list": "A list of some articles about {0}",
     "like_list": "Liked Articles",
-
     "search_by": "Search By",
     "top_search": "Top Trending Searches",
     "search_list_about": "Some List About",
     "search_article": "Search Article",
-
     "cmd_placeholder": "Type a command…",
     "cmd_nav": "Go to",
     "cmd_actions": "Actions",
@@ -89,7 +84,6 @@
     "copy_code": "Copy",
     "share": "Share",
     "link_copied": "Link copied to clipboard",
-
     "publish": "Publish",
     "edit": "Edit Article",
     "add": "Create Article",
@@ -139,7 +133,6 @@
     "no_results": "No matching results, try another keyword",
     "no_likes": "No favorites yet — like the articles you love",
     "no_photos": "The album is empty — waiting for the first photo",
-
     "login_success": "Login successful",
     "logout_success": "Logout successful",
     "register_success": "Registration successful",
@@ -156,7 +149,6 @@
     "photo_delete_success": "Photo deleted successfully",
     "auth_expired": "Authorization expired, please log in again",
     "login_failed": "Login failed, please check your username or password",
-
     "popular": "Popular Articles",
     "latest": "Latest",
     "featured": "Featured",
@@ -180,7 +172,6 @@
     "author": "Author",
     "user_info": "Profile",
     "site_description": "Kotae - technology and life notes, recording and sharing front-end, back-end and full-stack experience every day to help you grow and find your own answers.",
-
     "min_short": "{0} min",
     "words_count": "{0} words",
     "related_articles": "Related Reading",
@@ -192,7 +183,6 @@
     "error_notfound_text": "The page you're looking for doesn't exist or may have been moved.",
     "error_server_title": "Something went wrong",
     "error_server_text": "Our server hit a snag. Please try again in a moment.",
-
     "speech_input": "Voice input",
     "speech_listening": "Listening, please speak…",
     "speech_stop": "Click to stop dictation",
@@ -200,7 +190,6 @@
     "speech_no_mic": "No microphone detected",
     "speech_network_error": "Speech service unavailable, try again later",
     "speech_error": "Speech recognition glitched — please try again",
-
     "username_required": "Username is required",
     "password_required": "Password is required",
     "new_password_required": "New Password is required",
@@ -214,7 +203,6 @@
     "title_required": "Title is required",
     "tag_required": "Tag is required",
     "unknown_error": "Unknown Error",
-
     "ai_assist": "AI Writing",
     "ai_polish": "Polish",
     "ai_expand": "Expand",
@@ -245,5 +233,25 @@
     "ai_thinking": "Generating…",
     "ai_need_selection": "Select some text in the editor first",
     "ai_need_content": "Write something first",
-    "ai_title_applied": "First suggested title applied"
+    "ai_title_applied": "First suggested title applied",
+    "ai_settings": "AI settings",
+    "ai_key": "API Key",
+    "ai_key_hint": "Your own API key is used to call the model. It is stored encrypted on the server and never sent back to the browser.",
+    "ai_key_placeholder": "Paste your API key",
+    "ai_key_placeholder_saved": "Saved {0} — leave blank to keep it",
+    "ai_key_required": "An API key is required for the first setup",
+    "ai_advanced": "Advanced",
+    "ai_base_url": "Base URL",
+    "ai_base_url_hint": "OpenAI-compatible endpoint; leave blank for the default DashScope Beijing region",
+    "ai_default_model": "Default model",
+    "ai_default_model_hint": "Leave blank to use qwen3.8-flash",
+    "ai_save": "Save",
+    "ai_saved": "Saved",
+    "ai_save_failed": "Failed to save",
+    "ai_remove": "Remove key",
+    "ai_removed": "Removed",
+    "ai_remove_confirm": "Remove the saved API key?",
+    "ai_need_key_desc": "AI runs on your own API key — configure it once to start writing.",
+    "ai_go_settings": "Configure",
+    "ai_need_login": "Sign in to use AI"
 }

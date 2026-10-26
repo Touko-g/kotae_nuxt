@@ -23,7 +23,6 @@
     "user_for_account": "输入用户信息创建账号",
     "reset_for_psw": "请提供邮箱及验证码重置密码",
     "account_help": "请输入必填信息",
-
     "message": "消息",
     "public_chat": "公共聊天室",
     "color_palette": "调色板",
@@ -31,7 +30,6 @@
     "about_me": "关于我",
     "logout": "登出",
     "collect": "收藏",
-
     "wishlist": "想做的事",
     "wish_add": "加一件想做的事",
     "wish_edit": "改一改这件事",
@@ -46,7 +44,6 @@
     "wish_empty": "清单还空空的，写下第一件想做的事吧",
     "wish_empty_pending": "该做的事都完成啦，先歇口气 🎉",
     "wish_empty_completed": "还没有完成的事，先去点亮一件吧",
-
     "view": "查看",
     "like": "喜欢",
     "tag": "标签",
@@ -68,12 +65,10 @@
     "search": "搜索",
     "search_list": "一些文章列表有关于{0}",
     "like_list": "喜欢的文章",
-
     "search_by": "搜索方式",
     "top_search": "热门搜索",
     "search_list_about": "一些列表关于",
     "search_article": "搜索文章",
-
     "cmd_placeholder": "输入命令…",
     "cmd_nav": "前往",
     "cmd_actions": "操作",
@@ -89,7 +84,6 @@
     "copy_code": "复制",
     "share": "分享",
     "link_copied": "链接已复制到剪贴板",
-
     "publish": "发布",
     "edit": "编辑文章",
     "add": "创建文章",
@@ -139,7 +133,6 @@
     "no_results": "没有找到相关内容，换个关键词试试吧",
     "no_likes": "还没有喜欢的文章，遇到心动的就点个赞吧",
     "no_photos": "相册还空着，等待第一张照片入驻",
-
     "login_success": "登录成功",
     "logout_success": "退出登录成功",
     "register_success": "注册成功",
@@ -156,7 +149,6 @@
     "photo_delete_success": "照片删除成功",
     "auth_expired": "授权过期，请重新登录",
     "login_failed": "登录失败，请检查用户名或密码",
-
     "popular": "热门文章",
     "latest": "最新发布",
     "featured": "头条推荐",
@@ -180,7 +172,6 @@
     "author": "作者",
     "user_info": "个人信息",
     "site_description": "Kotae 技术与生活笔记，每天记录和分享前端、后端与全栈经验，助你成长，寻找自己的答案。",
-
     "min_short": "{0} 分钟",
     "words_count": "{0} 字",
     "related_articles": "相关阅读",
@@ -192,7 +183,6 @@
     "error_notfound_text": "你访问的页面不存在，可能已经被移动或删除了。",
     "error_server_title": "出了一点小问题",
     "error_server_text": "服务器暂时开了个小差，请稍后再试。",
-
     "speech_input": "语音输入",
     "speech_listening": "正在聆听，请说话…",
     "speech_stop": "点击停止听写",
@@ -200,7 +190,6 @@
     "speech_no_mic": "没有检测到可用的麦克风",
     "speech_network_error": "语音识别服务暂时不可用",
     "speech_error": "语音识别出了点问题，请再试一次",
-
     "username_required": "请输入用户名",
     "password_required": "请输入密码",
     "new_password_required": "请输入新密码",
@@ -214,7 +203,6 @@
     "title_required": "请输入标题",
     "tag_required": "请选择标签",
     "unknown_error": "未知错误",
-
     "ai_assist": "AI 写作",
     "ai_polish": "润色",
     "ai_expand": "扩写",
@@ -245,5 +233,25 @@
     "ai_thinking": "生成中…",
     "ai_need_selection": "请先在正文中选中要处理的文字",
     "ai_need_content": "请先写点内容",
-    "ai_title_applied": "已填入第一个候选标题"
+    "ai_title_applied": "已填入第一个候选标题",
+    "ai_settings": "AI 设置",
+    "ai_key": "API Key",
+    "ai_key_hint": "使用你自己的 API Key 调用模型。密钥在后端加密保存，任何接口都不会把明文回传给浏览器。",
+    "ai_key_placeholder": "粘贴你的 API Key",
+    "ai_key_placeholder_saved": "已保存 {0}，留空表示不修改",
+    "ai_key_required": "首次配置请填写 API Key",
+    "ai_advanced": "高级选项",
+    "ai_base_url": "接口地址",
+    "ai_base_url_hint": "OpenAI 兼容模式地址，留空使用默认的百炼北京站",
+    "ai_default_model": "默认模型",
+    "ai_default_model_hint": "留空使用 qwen3.8-flash",
+    "ai_save": "保存",
+    "ai_saved": "已保存",
+    "ai_save_failed": "保存失败",
+    "ai_remove": "清除 Key",
+    "ai_removed": "已清除",
+    "ai_remove_confirm": "确定清除已保存的 API Key 吗？",
+    "ai_need_key_desc": "AI 使用你自己的 API Key，先配置一次即可开始写作。",
+    "ai_go_settings": "去配置",
+    "ai_need_login": "登录后才能使用 AI"
 }
