@@ -1,7 +1,17 @@
 <script setup lang="ts">
     import Editor from '@tinymce/tinymce-vue'
-    import type { AiAssistAction } from '#shared/types/ai'
+    import type {
+        AiAssistAction,
+        AiBuiltinAction,
+        AiPromptVarName,
+    } from '#shared/types/ai'
     import { escapeHtml, normalizeAiHtml } from '~/composables/useAiHtml'
+    import {
+        AI_COLOR_RULE_OFF,
+        AI_HTML_RULE_BASE,
+        renderAiPrompt,
+        useAiPrompts,
+    } from '~/composables/useAiPrompts'
     import {
         joinSpeechText,
         useSpeechRecognition,
@@ -276,8 +286,12 @@
     const aiAction = ref('polish')
     const aiSource = ref('')
     const aiActions = ref<AiAssistAction[]>([])
+    /** 打开面板时的选区 HTML：提示词改完后要靠它重建 actions */
+    let aiSelectionHtml = ''
     /** 打开面板时保存的选区书签：面板获得焦点后编辑器选区会丢，应用时靠它复位 */
     let aiBookmark: unknown = null
+
+    const { resolveBuiltin, customActions } = useAiPrompts()
 
     const getEditor = () =>
         (
@@ -295,15 +309,10 @@
     const getBodyText = () => extractText(articleForm.content || '').trim()
 
     /** 富文本动作的公共约束：只回 HTML 片段，别套 Markdown 围栏 */
-    const HTML_RULE_BASE =
-        '只输出 HTML 片段（可用 <p> <h2> <h3> <h4> <ul> <ol> <li> <strong> <em> <blockquote> <pre> <code>），' +
-        '不要用 Markdown 代码块包裹，不要输出 <html>/<body>，不要任何解释。' +
-        '代码一律写成 <pre class="language-xxx"><code>代码</code></pre>，xxx 取 javascript / typescript / html / css / json / python / java / c，' +
-        '其它语言照实写；行内代码用 <code>。不要用 ``` 围栏，也不要把代码丢成纯文本段落。'
+    const HTML_RULE_BASE = AI_HTML_RULE_BASE
 
     /** 默认不许模型自作主张上色，但原文已有的样式要保住 */
-    const COLOR_RULE_OFF =
-        '不要自己新增颜色、背景色或自定义样式；原文里已有的内联样式（如 <span style="color:…">）请原样保留。'
+    const COLOR_RULE_OFF = AI_COLOR_RULE_OFF
 
     /**
      * 「标重点」专用强调色：取站点浅色主题的主色，和正文里的链接/主按钮同一支红，
@@ -383,28 +392,75 @@
         AI_MENU.map(item => ({ ...item, text: t(item.label) }))
     )
 
+    /**
+     * 文章场景能填的占位符。
+     * `{{text}}` 是选区（没选就是正文前段），`{{title}}` 是标题 ——
+     * 这里没有「被回复的评论」，也没有单独的正文摘要，所以只有这两个。
+     */
+    const ARTICLE_VARS: AiPromptVarName[] = ['text', 'title']
+
+    /** 传给提示词配置面板的内置动作清单（面板只认 label，不认 i18n key） */
+    const aiBuiltins = computed<AiBuiltinAction[]>(() =>
+        aiMenu.value.map(item => ({
+            key: item.key,
+            label: item.text,
+            icon: item.icon,
+            format: item.format,
+            // 编辑时预填这一份，用户才看得到原文在提示词里的位置
+            defaultTemplate: defaultPromptTemplate(item.key),
+            vars: ARTICLE_VARS,
+        }))
+    )
+
     const aiPrompt = (key: string, text: string) => {
+        const format = AI_MENU.find(item => item.key === key)?.format ?? 'text'
+        // 用户覆盖过提示词就用他的，否则用下面这套内置默认
+        return resolveBuiltin(
+            'article',
+            key,
+            defaultPrompt(key, text),
+            { text, title: articleForm.title },
+            format
+        )
+    }
+
+    /**
+     * 内置动作的提示词模板。
+     *
+     * 用 `{{text}}` 标出原文落在整段提示词的哪个位置 —— 编辑内置提示词时
+     * 面板会直接预填这一份，用户看到的是完整提示词，而不是对着空框重写，
+     * 也就自然明白占位符是干什么的。
+     */
+    const defaultPromptTemplate = (key: string) => {
         switch (key) {
             case 'polish':
-                return `请润色下面这段富文本：保持原意、原语言和原有的标签结构（段落、标题层级、列表、加粗、链接一律保留，不要新增或删除结构），修正语病、重复和生硬的表达，让行文更自然。${HTML_RULE}\n\n${text}`
+                return `请润色下面这段富文本：保持原意、原语言和原有的标签结构（段落、标题层级、列表、加粗、链接一律保留，不要新增或删除结构），修正语病、重复和生硬的表达，让行文更自然。${HTML_RULE}\n\n{{text}}`
             case 'expand':
-                return `请扩写下面这段富文本：保持原意和语言不变，补充细节、例子或过渡，篇幅约为原文的两倍；可以新增段落或列表项，但不要改变原有的标题层级，不要编造具体数据、版本号或事实。${HTML_RULE}\n\n${text}`
+                return `请扩写下面这段富文本：保持原意和语言不变，补充细节、例子或过渡，篇幅约为原文的两倍；可以新增段落或列表项，但不要改变原有的标题层级，不要编造具体数据、版本号或事实。${HTML_RULE}\n\n{{text}}`
             case 'shorten':
-                return `请精简下面这段富文本：保留关键信息与逻辑，删掉冗余和重复，篇幅压到原文的一半左右；保持原有标签结构。${HTML_RULE}\n\n${text}`
+                return `请精简下面这段富文本：保留关键信息与逻辑，删掉冗余和重复，篇幅压到原文的一半左右；保持原有标签结构。${HTML_RULE}\n\n{{text}}`
             case 'highlight':
-                return `请给下面这段富文本标出重点：通读一遍，挑出 1 到 3 处最关键的语句、结论或数字（宁少勿多，最多 3 处），用 <span style="color:${HIGHLIGHT_COLOR}"> 把它们包起来；其中最重要的一处可以再套 <strong>。除此之外一个字都不要改：不要改写措辞、不要增删句子、不要调整段落顺序与标题层级，只加标记。如果原文某些语句本来就已经有颜色，保持原样不要动。${HTML_RULE_BASE}${COLOR_RULE_ON}\n\n${text}`
+                return `请给下面这段富文本标出重点：通读一遍，挑出 1 到 3 处最关键的语句、结论或数字（宁少勿多，最多 3 处），用 <span style="color:${HIGHLIGHT_COLOR}"> 把它们包起来；其中最重要的一处可以再套 <strong>。除此之外一个字都不要改：不要改写措辞、不要增删句子、不要调整段落顺序与标题层级，只加标记。如果原文某些语句本来就已经有颜色，保持原样不要动。${HTML_RULE_BASE}${COLOR_RULE_ON}\n\n{{text}}`
             case 'continue':
-                return `请顺着下面这段文字继续写 2 到 3 段，语气、人称和行文风格与上文保持一致；用 <p> 分段，必要时用 <h2>/<h3> 小标题或 <ul><li> 列表。只输出新增的内容，不要重复原文，不要编造上文没有出现过的具体数据、版本号或事实。${HTML_RULE}\n\n${text}`
+                return `请顺着下面这段文字继续写 2 到 3 段，语气、人称和行文风格与上文保持一致；用 <p> 分段，必要时用 <h2>/<h3> 小标题或 <ul><li> 列表。只输出新增的内容，不要重复原文，不要编造上文没有出现过的具体数据、版本号或事实。${HTML_RULE}\n\n{{text}}`
             case 'title':
-                return `根据下面的文章内容起 5 个标题，语言与正文一致，具体、有信息量、不夸张。每行一个标题，不要编号、不要引号、不要解释。\n\n${text}`
+                return `根据下面的文章内容起 5 个标题，语言与正文一致，具体、有信息量、不夸张。每行一个标题，不要编号、不要引号、不要解释。\n\n{{text}}`
             case 'translate_en':
-                return `请把下面的富文本翻译成英文，保持原有 HTML 标签结构、段落与标题层级，语气和专业术语照旧。${HTML_RULE}\n\n${text}`
+                return `请把下面的富文本翻译成英文，保持原有 HTML 标签结构、段落与标题层级，语气和专业术语照旧。${HTML_RULE}\n\n{{text}}`
             case 'translate_zh':
-                return `请把下面的富文本翻译成简体中文，保持原有 HTML 标签结构、段落与标题层级，语气和专业术语照旧。${HTML_RULE}\n\n${text}`
+                return `请把下面的富文本翻译成简体中文，保持原有 HTML 标签结构、段落与标题层级，语气和专业术语照旧。${HTML_RULE}\n\n{{text}}`
             default:
-                return text
+                return '{{text}}'
         }
     }
+
+    /** 把模板里的 {{text}} 换成真正的原文（用函数形式，避免 $& 被当成替换模式） */
+    const defaultPrompt = (key: string, text: string) =>
+        renderAiPrompt(
+            defaultPromptTemplate(key),
+            { text, title: articleForm.title },
+            'text'
+        )
 
     /** 有选区时给全套动作，没选区时只给「续写 / 起标题」这类不破坏原文的 */
     const buildAiActions = (
@@ -415,7 +471,7 @@
             ? [...SELECTION_ACTIONS, 'continue', 'title']
             : ['continue', 'title']
 
-        return keys.map(key => {
+        const builtin = keys.map(key => {
             const item = aiMenu.value.find(menu => menu.key === key)
             const usesSelection =
                 selectionHtml && SELECTION_ACTIONS.includes(key)
@@ -433,6 +489,15 @@
                 prompt: aiPrompt(key, text),
             }
         })
+
+        // 自定义动作追加在末尾。素材规则和内置一致：有选区就用选区，否则用正文，
+        // 同样截断 —— 用户写「总结全文」时 1600 字够用，但塞整篇文章会直接超上下文
+        const vars = {
+            text: selectionHtml || body.slice(0, AI_CONTEXT_LIMIT),
+            title: articleForm.title,
+        }
+
+        return [...builtin, ...customActions('article', vars)]
     }
 
     const openAi = (key: string) => {
@@ -450,6 +515,7 @@
         }
 
         aiBookmark = getEditor()?.selection?.getBookmark?.(2, true) ?? null
+        aiSelectionHtml = selectionHtml
         aiAction.value = key
         aiActions.value = buildAiActions(selectionHtml, body)
         // 面板里的原文预览用纯文本，避免满屏标签
@@ -459,6 +525,14 @@
               ? body.slice(-AI_CONTEXT_LIMIT)
               : body.slice(0, AI_CONTEXT_LIMIT)
         aiOpen.value = true
+    }
+
+    /**
+     * 提示词改过了：用缓存的选区重建 actions，让面板里的 prompt 立刻是新值。
+     * 不自动重跑 —— 用户只是改了配置，不该顺手烧掉一次额度。
+     */
+    const onPromptsChanged = () => {
+        aiActions.value = buildAiActions(aiSelectionHtml, getBodyText())
     }
 
     const applyAi = (result: string, key: string) => {
@@ -586,7 +660,11 @@
             :initial-key="aiAction"
             :source-text="aiSource"
             :max-tokens="1800"
+            scope="article"
+            :builtins="aiBuiltins"
+            :custom-vars="ARTICLE_VARS"
             @apply="applyAi"
+            @prompts-changed="onPromptsChanged"
         />
     </v-container>
 </template>

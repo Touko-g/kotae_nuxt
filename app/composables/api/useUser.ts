@@ -1,13 +1,8 @@
-export interface User {
-    id: string | number
-    username: string
-    email: string
-    about: string
-    avatar: string
-    article: number
-    create_time: string
-    update_time: string
-}
+import { useHttp } from '../useHttp'
+import type { User } from '#shared/types/api'
+
+// 类型本体在 shared/types/api.ts（nuxt.config 也要用），这里 re-export 保持老路径
+export type { User }
 
 export type SimpleUser = Pick<User, 'id' | 'username' | 'avatar'>
 

@@ -1,25 +1,16 @@
 // 这些类型/工具在 Nuxt 里是自动导入的（.nuxt/types/imports.d.ts 的 declare global），
 // 但 vue-tsc 对「自动导入的类型」解析不稳定，显式写出来更可靠，也方便跳转
 import { useHttp } from '../useHttp'
-import type { BaseParams, BaseResponse } from './base'
-import type { Tag } from './useTag'
-import type { User } from './useUser'
+import type {
+    Article,
+    ArticleListResponse,
+    BaseParams,
+    Tag,
+} from '#shared/types/api'
 
-// 如果 swagger 里有 Article 的定义，可以写在这里
-export interface Article {
-    // 根据 #/definitions/Article 来补充属性
-    id: number
-    title: string
-    owner: Omit<User, 'update_time' | 'create_time'>
-    tag: Tag[]
-    likes: number
-    content: string
-    views: number
-    comments: number
-    public: boolean
-    create_time: string
-    update_time: string
-}
+// Article / ArticleListResponse 的本体在 shared/types/api.ts —— nuxt.config.ts 预渲染
+// 时要拉文章列表，而它属于 node 项目（没有 Nuxt 自动导入）。这里 re-export，调用方不变。
+export type { Article, ArticleListResponse }
 
 export type SimpleArticle = Pick<Article, 'id' | 'comments' | 'title'> & {
     len: number
@@ -38,9 +29,6 @@ export interface ArticleCreateParams {
     tag: Array<Pick<Tag, 'name'>>
     content: string
 }
-
-// 响应结构
-export type ArticleListResponse = BaseResponse<Article>
 
 export const useArticle = () => {
     const { get, post, put, del } = useHttp()

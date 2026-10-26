@@ -88,6 +88,7 @@ kotae_nuxt/
 │   │   ├── AiAssistDialog.vue    # AI 写作面板（流式输出 / 结果回填）
 │   │   ├── AiMenuButton.vue      # AI 功能菜单按钮（图标态 / 带文案态）
 │   │   ├── AiModelSelect.vue     # AI 模型选择（搜索 + 过滤）
+│   │   ├── AiPromptDialog.vue    # 自定义提示词（覆盖内置 / 新增动作）
 │   │   ├── AppBar.vue            # 顶部导航栏（主题 / 语言 / 音效开关）
 │   │   ├── AppFooter.vue         # 页脚
 │   │   ├── ArticleComment.vue    # 文章评论区
@@ -123,6 +124,7 @@ kotae_nuxt/
 │   │   ├── useAI.ts              # AI 对话（非流式 ask / 流式 askStream）
 │   │   ├── useAiHtml.ts          # AI 富文本净化（白名单 → TinyMCE）
 │   │   ├── useAiModels.ts        # 模型列表与用量查询
+│   │   ├── useAiPrompts.ts       # 自定义提示词（覆盖内置 / 新增动作，localStorage）
 │   │   ├── useArticleHtml.ts     # 正文渲染：Shiki 高亮 + DOMPurify 净化
 │   │   ├── useConfetti.ts        # 撒花粒子动画
 │   │   ├── useCosUpload.ts       # 腾讯云 COS 直传（统一上传入口）
@@ -350,6 +352,28 @@ export const useArticle = () => {
 - **流式实现**：Django 4.0 的 `StreamingHttpResponse` 在 ASGI 下会同步迭代、阻塞事件循环，
   所以流式接口走 `backend/ai/asgi.py` 的原生 ASGI 通道（读上游放线程 + 队列回传），
   其余接口仍是普通 DRF 视图。
+
+### 自定义提示词
+
+AI 面板右上角的编辑图标可以打开提示词配置（`AiPromptDialog`），按场景（文章 / 评论）分开保存，互不影响：
+
+- **覆盖内置动作** —— 换掉「润色」「扩写」等的提示词，菜单项不变；
+- **新增自定义动作** —— 自己起名字、选图标、写提示词，追加在菜单末尾。
+
+模板占位符有四个，每个只对应一种东西，不随动作变化：
+
+| 占位符 | 含义 |
+| --- | --- |
+| `{{text}}` | 你正在处理的文字：选中的内容或输入框里的草稿。生成类动作（帮我写一条 / 帮我回一条）没有草稿，这里就是空 |
+| `{{title}}` | 文章标题 |
+| `{{reply}}` | 回复场景里对方说了什么 |
+| `{{article}}` | 文章正文摘要（约 1200 字），任何动作都能用 |
+
+所以「帮我写一条」用的是 `{{article}}` 而不是 `{{text}}` —— 它要读文章，不是读草稿。配置面板也**只列出当前动作真有值的占位符**：编辑「帮我写一条」时看不到 `{{text}}` 和 `{{reply}}`，因为它们在这个动作里永远是空的，摆出来只会被误插进模板。万一手写了这类占位符，下方会出现一行提示，告诉你它会被替换成空字符串。
+
+漏写 `{{text}}` 且确实有草稿时，草稿会自动接在末尾，避免「模型没拿到素材还白跑一次」；草稿为空则什么都不追加。选了富文本格式会自动补上 HTML 约束。
+
+配置存在 `localStorage` 的 `ai_prompts` 键下，不参与计费、也不跨端同步。改完提示词**不会**自动重新生成，需要手动点「重新生成」。
 
 ### 前端安全约束
 

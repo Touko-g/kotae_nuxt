@@ -1,14 +1,25 @@
 <script setup lang="ts">
     import EmojiPicker from 'vue3-emoji-picker'
     import 'vue3-emoji-picker/css'
-    import type { AiAssistAction } from '#shared/types/ai'
+    import type {
+        AiAssistAction,
+        AiBuiltinAction,
+        AiPromptVarName,
+        AiPromptVars,
+    } from '#shared/types/ai'
+    import { renderAiPrompt, useAiPrompts } from '~/composables/useAiPrompts'
     import { joinSpeechText } from '~/composables/useSpeechRecognition'
     interface Props {
         article: number
         /** 文章标题：AI 生成评论时作为上下文 */
         title?: string
+        /**
+         * 文章正文摘要（纯文本，已截断）。
+         * 「帮我写一条」靠它才知道文章讲了什么 —— 只给标题的话模型只能瞎猜。
+         */
+        excerpt?: string
     }
-    const { article, title } = defineProps<Props>()
+    const { article, title, excerpt } = defineProps<Props>()
     const { getCommentList, postComment } = useComment()
     const { formatNow } = useDayjs()
     const { t } = useLocale()
@@ -79,46 +90,98 @@
     const aiActions = ref<AiAssistAction[]>([])
     /** 结果写回哪个输入框 */
     const aiTarget = ref<'comment' | 'reply'>('comment')
+    /** 打开面板时的草稿文本：提示词改完后要靠它重建 actions */
+    let aiLastText = ''
 
+    const { resolveBuiltin, customActions } = useAiPrompts()
+
+    /**
+     * 每个动作运行时**真的有值**的占位符，配置面板据此只列能用的 chip。
+     *
+     * 改写类：草稿 + 标题 + 正文摘要（想让它参考全文时可以引用）
+     * 生成类：没有草稿，只有标题 + 正文
+     * 回复：在生成类基础上多一个「对方说了什么」
+     */
+    const REWRITE_VARS: AiPromptVarName[] = ['text', 'title', 'article']
+    const GENERATE_VARS: AiPromptVarName[] = ['title', 'article']
+    const REPLY_VARS: AiPromptVarName[] = ['title', 'article', 'reply']
+    /**
+     * 自定义动作的占位符全集：自定义动作不知道用户想干嘛，只能给场景级的全集。
+     * `{{reply}}` 只在回复框里真有值，但用户写自定义动作时确实可能想要它。
+     */
+    const CUSTOM_VARS: AiPromptVarName[] = ['text', 'title', 'article', 'reply']
+
+    /**
+     * 内置动作。
+     *
+     * 「帮我写一条」和「帮我回一条」是**两个动作**，不是一个动作两套文案 ——
+     * 它们的提示词本来就不一样（一个是对文章发表看法，一个要接住对方的话）。
+     * 早先共用一个 `generate` key，配置面板里只能显示其中一个，在回复框点过 AI
+     * 之后列表里就只剩「帮我回一条」，「帮我写一条」像是消失了。
+     */
     const AI_MENU = [
-        { key: 'polish', label: 'ai_polish', icon: 'mdi-auto-fix' },
+        {
+            key: 'polish',
+            label: 'ai_polish',
+            icon: 'mdi-auto-fix',
+            target: 'both',
+            vars: REWRITE_VARS,
+        },
         {
             key: 'shorten',
             label: 'ai_shorten',
             icon: 'mdi-arrow-collapse-horizontal',
+            target: 'both',
+            vars: REWRITE_VARS,
         },
         {
             key: 'friendly',
             label: 'ai_friendly',
             icon: 'mdi-emoticon-happy-outline',
+            target: 'both',
+            vars: REWRITE_VARS,
         },
         {
             key: 'translate_en',
             label: 'ai_translate_en',
             icon: 'mdi-translate',
+            target: 'both',
+            vars: REWRITE_VARS,
         },
         {
             key: 'translate_zh',
             label: 'ai_translate_zh',
             icon: 'mdi-translate',
+            target: 'both',
+            vars: REWRITE_VARS,
         },
         {
-            key: 'generate',
+            key: 'generate_comment',
             label: 'ai_generate_comment',
             icon: 'mdi-comment-plus-outline',
+            target: 'comment',
+            vars: GENERATE_VARS,
+        },
+        {
+            key: 'generate_reply',
+            label: 'ai_generate_reply',
+            icon: 'mdi-comment-quote-outline',
+            target: 'reply',
+            vars: REPLY_VARS,
         },
     ] as const
 
-    const aiMenuFor = (target: 'comment' | 'reply') =>
-        AI_MENU.map(item => ({
-            ...item,
-            // 回复框里「帮我写一条」说不通，换成「帮我回一条」
-            text: t(
-                item.key === 'generate' && target === 'reply'
-                    ? 'ai_generate_reply'
-                    : item.label
-            ),
-        }))
+    type AiTarget = 'comment' | 'reply'
+
+    /** 当前场景该出现哪些动作：改写类两边都要，生成类各归各的 */
+    const aiMenuFor = (target: AiTarget) =>
+        AI_MENU.filter(
+            item => item.target === 'both' || item.target === target
+        ).map(item => ({ ...item, text: t(item.label) }))
+
+    /** 某个场景对应的「帮我写一条 / 帮我回一条」 */
+    const generateKey = (target: AiTarget) =>
+        target === 'reply' ? 'generate_reply' : 'generate_comment'
 
     const aiMenu = computed(() => aiMenuFor('comment'))
     const aiMenuReply = computed(() => aiMenuFor('reply'))
@@ -140,33 +203,70 @@
         '可以用 1 到 2 个 emoji，但别堆。' +
         '不要总结文章、不要四字词堆砌、不要「总的来说」这种书面腔、不要空泛客套。'
 
-    const aiPrompt = (
-        key: string,
-        text: string,
-        target: 'comment' | 'reply'
-    ) => {
-        const isReply = target === 'reply'
-        const noun = isReply ? '回复' : '评论'
+    /** 生成类动作：它们是「另写一条」，不是改写现有文字 */
+    const isGenerate = (key: string) => key.startsWith('generate')
+
+    /**
+     * 内置动作的提示词模板。
+     *
+     * 改写类统一说「这段文字」而不是「这条评论 / 这条回复」：配置面板里每个动作
+     * 只有一份配置，两个场景共用，文案必须中立。
+     * 「帮我回一条」用 `{{reply}}` 占位 —— 对方说了什么要到运行时才知道，
+     * 写死在模板里会让每条回复都带着同一条旧评论。
+     */
+    const promptTemplate = (key: string) => {
         switch (key) {
             case 'polish':
-                return `请润色下面这条${noun}：保持原意和语言不变，改掉语病、重复和啰嗦的地方，读起来更自然口语化。只输出${noun}正文，不要解释。\n\n${text}`
+                return `请润色下面这段文字：保持原意和语言不变，改掉语病、重复和啰嗦的地方，读起来更自然口语化。只输出正文，不要解释。\n\n{{text}}`
             case 'shorten':
-                return `请把下面这条${noun}精简到 30 字以内，保留核心意思和原本语气。只输出${noun}正文，不要解释。\n\n${text}`
+                return `请把下面这段文字精简到 30 字以内，保留核心意思和原本语气。只输出正文，不要解释。\n\n{{text}}`
             case 'friendly':
-                return `请把下面这条${noun}改写得更热情友善一些，保持原意，不要夸张也不要谄媚，可以加一个 emoji（也可以不加）。只输出${noun}正文，不要解释。\n\n${text}`
+                return `请把下面这段文字改写得更热情友善一些，保持原意，不要夸张也不要谄媚，可以加一个 emoji（也可以不加）。只输出正文，不要解释。\n\n{{text}}`
             case 'translate_en':
-                return `请把下面这条${noun}翻译成英文，保持口语化的语气。只输出译文，不要解释。\n\n${text}`
+                return `请把下面这段文字翻译成英文，保持口语化的语气。只输出译文，不要解释。\n\n{{text}}`
             case 'translate_zh':
-                return `请把下面这条${noun}翻译成简体中文，保持口语化的语气。只输出译文，不要解释。\n\n${text}`
-            case 'generate':
-                // 回复评论和评论文章是两件事：前者要接住对方的话，后者才是就文章发表看法
-                return isReply
-                    ? `请针对文章《${title ?? ''}》下的一条评论写一条回复。${replyContext()}要求：20 到 40 字，接住对方说的具体内容（同意、补充、解释、反驳或反问都行）。${HUMAN_RULE}不要重复对方的原话。只输出回复正文。`
-                    : `请针对文章《${title ?? ''}》写一条 20 到 40 字的中文评论。${HUMAN_RULE}可以提到文章里的某个点。只输出评论正文。`
+                return `请把下面这段文字翻译成简体中文，保持口语化的语气。只输出译文，不要解释。\n\n{{text}}`
+            case 'generate_comment':
+                return `请针对下面这篇文章写一条 20 到 40 字的中文评论。${HUMAN_RULE}可以提到文章里的某个点。只输出评论正文。\n\n《{{title}}》\n{{article}}`
+            case 'generate_reply':
+                return `请针对下面这篇文章下的一条评论写一条回复。{{reply}}要求：20 到 40 字，接住对方说的具体内容（同意、补充、解释、反驳或反问都行）。${HUMAN_RULE}不要重复对方的原话。只输出回复正文。\n\n《{{title}}》\n{{article}}`
             default:
-                return text
+                return '{{text}}'
         }
     }
+
+    /**
+     * 变量取值。每个占位符只对应一种东西，不随动作变：
+     *
+     * - `{{text}}`    输入框里的草稿（生成类动作没有输入，就是空）
+     * - `{{article}}` 文章正文摘要
+     *
+     * 曾经让生成类的 `{{text}}` 退化成正文，结果和 `{{article}}` 撞在同一个值上 ——
+     * 两个名字指向一样的东西，用户没法判断该用哪个。
+     */
+    const promptVars = (key: string, draft: string): AiPromptVars => ({
+        text: isGenerate(key) ? '' : draft,
+        title: title ?? '',
+        reply: key === 'generate_reply' ? replyContext() : '',
+        article: excerpt ?? '',
+    })
+
+    /** 渲染内置默认提示词 */
+    const defaultPrompt = (key: string, text: string) =>
+        renderAiPrompt(promptTemplate(key), promptVars(key, text), 'text')
+
+    /**
+     * 最终提示词：用户覆盖过就用覆盖的模板，否则用内置默认。
+     * 评论场景一律按纯文本渲染 —— 输入框不接 HTML，给富文本约束反而是干扰。
+     */
+    const aiPrompt = (key: string, text: string) =>
+        resolveBuiltin(
+            'comment',
+            key,
+            defaultPrompt(key, text),
+            promptVars(key, text),
+            'text'
+        )
 
     const buildAiActions = (
         text: string,
@@ -179,19 +279,52 @@
                   'friendly',
                   'translate_en',
                   'translate_zh',
-                  'generate',
+                  generateKey(target),
               ]
-            : ['generate']
+            : [generateKey(target)]
 
-        return keys.map(key => {
+        const builtin = keys.map(key => {
             const item = aiMenuFor(target).find(menu => menu.key === key)
             return {
                 key,
                 label: item?.text ?? key,
                 icon: item?.icon ?? 'mdi-auto-fix',
-                prompt: aiPrompt(key, text, target),
+                prompt: aiPrompt(key, text),
             }
         })
+
+        return [
+            ...builtin,
+            ...customActions('comment', {
+                text,
+                title: title ?? '',
+                reply: target === 'reply' ? replyContext() : '',
+                article: excerpt ?? '',
+            }),
+        ]
+    }
+
+    /** 传给提示词配置面板的内置动作清单（面板只认 label，不认 i18n key） */
+    const aiBuiltins = computed<AiBuiltinAction[]>(() =>
+        // 刻意不按当前场景过滤：配置面板要能看到全部动作。
+        // 早先跟着 aiTarget 走，在回复框点过 AI 之后，「帮我写一条」就从列表里消失了
+        AI_MENU.map(item => ({
+            key: item.key,
+            label: t(item.label),
+            icon: item.icon,
+            format: 'text' as const,
+            defaultTemplate: promptTemplate(item.key),
+            // 面板据此只显示这个动作真的能填上的占位符
+            vars: [...item.vars],
+        }))
+    )
+
+    /**
+     * 提示词改过了：用缓存的草稿重建 actions，让面板里的 prompt 立刻是新值。
+     * 不自动重跑 —— 用户只是改了配置，不该顺手烧掉一次额度。
+     */
+    const onPromptsChanged = () => {
+        aiActions.value = buildAiActions(aiLastText, aiTarget.value)
     }
 
     const openAi = (target: 'comment' | 'reply', key: string) => {
@@ -199,21 +332,21 @@
             target === 'reply' ? data.reply_info.content : comment.value
         ).trim()
 
-        if (key !== 'generate' && !text) {
+        if (!isGenerate(key) && !text) {
             show(t('ai_need_content'), 'warning')
             return
         }
 
         aiTarget.value = target
+        aiLastText = text
         aiAction.value = key
         aiActions.value = buildAiActions(text, target)
-        // generate 没有原文可看：回复时展示被回复的那条评论，评论文章时展示标题
-        aiSource.value =
-            key === 'generate'
-                ? target === 'reply'
-                    ? data.reply_info.reply_content
-                    : (title ?? '')
-                : text
+        // 生成类动作没有原文可看：回复时展示被回复的那条评论，评论文章时展示标题
+        aiSource.value = isGenerate(key)
+            ? target === 'reply'
+                ? data.reply_info.reply_content
+                : (title ?? '')
+            : text
         aiOpen.value = true
     }
 
@@ -258,6 +391,23 @@
                 commentLoading.value = false
             }
         }
+    }
+
+    /** 空内容不发：按钮直接灰掉，比点了没反应清楚 */
+    const canPost = computed(() => !!comment.value.trim())
+
+    /**
+     * 评论框回车提交。
+     *
+     * 两条必须让路：
+     * - Shift + Enter 是换行（多行评论总得能换行）
+     * - 输入法组词中的回车是在选字，不能当提交 —— 否则打「nihao」按回车选词，
+     *   半截话就发出去了。Chrome 组词时 keyCode 是 229，Safari 只给 isComposing。
+     */
+    const onCommentEnter = (e: KeyboardEvent) => {
+        if (e.shiftKey || e.isComposing || e.keyCode === 229) return
+        e.preventDefault()
+        handlePostComment()
     }
 
     const byTime = () => {
@@ -365,46 +515,50 @@
 </script>
 
 <template>
-    <div class="d-flex">
-        <v-text-field
+    <div class="comment-composer">
+        <v-textarea
             v-model.trim="comment"
+            variant="plain"
             density="compact"
             color="primary"
-            variant="underlined"
-            @keyup.enter="handlePostComment"
-        >
-            <template #prepend-inner>
-                <v-btn
-                    icon="mdi-emoticon-sick-outline"
-                    size="small"
-                    color="primary"
-                    variant="text"
-                    @click="emojiDialog = true"
-                ></v-btn>
-            </template>
-            <template #append-inner>
-                <AiMenuButton
-                    v-if="aiAvailable"
-                    :items="aiMenu"
-                    location="top end"
-                    @select="key => openAi('comment', key)"
-                />
-                <SpeechInput @result="onSpeechResult" />
-            </template>
-            <template #append>
-                <v-btn
-                    v-permission
-                    variant="flat"
-                    color="primary"
-                    class="ml-4"
-                    :loading="commentLoading"
-                    data-cuelume-press
-                    data-cuelume-release
-                    @click="handlePostComment"
-                    >{{ t('post_comment') }}</v-btn
-                >
-            </template>
-        </v-text-field>
+            rows="2"
+            max-rows="8"
+            auto-grow
+            hide-details
+            :placeholder="t('comment_placeholder')"
+            class="comment-composer__input"
+            @keydown.enter="onCommentEnter"
+        />
+        <div class="comment-composer__bar">
+            <v-btn
+                icon="mdi-emoticon-sick-outline"
+                size="small"
+                color="primary"
+                variant="text"
+                :aria-label="t('emoji')"
+                @click="emojiDialog = true"
+            />
+            <AiMenuButton
+                v-if="aiAvailable"
+                :items="aiMenu"
+                location="top end"
+                @select="key => openAi('comment', key)"
+            />
+            <SpeechInput @result="onSpeechResult" />
+            <v-spacer />
+            <v-btn
+                v-permission
+                variant="flat"
+                color="primary"
+                :loading="commentLoading"
+                :disabled="!canPost"
+                data-cuelume-press
+                data-cuelume-release
+                @click="handlePostComment"
+            >
+                {{ t('post_comment') }}
+            </v-btn>
+        </div>
     </div>
     <div
         class="text-capitalize text-2xl d-flex justify-space-between align-center"
@@ -687,8 +841,58 @@
         :initial-key="aiAction"
         :source-text="aiSource"
         :max-tokens="400"
+        scope="comment"
+        :builtins="aiBuiltins"
+        :custom-vars="CUSTOM_VARS"
         @apply="applyAi"
+        @prompts-changed="onPromptsChanged"
     />
 </template>
 
-<style scoped></style>
+<style scoped>
+    /*
+     * 评论输入区：把输入框和工具栏合成一张「写留言」的卡面。
+     *
+     * 早先是单行 underlined 输入框，表情/魔法棒/麦克风塞在 affix 里 —— 一行高的
+     * 槽位放三个图标，上下怎么都对不齐；「发表评论」又挂在 append 槽外，带着贴纸
+     * 硬阴影飘在右边，整行看起来是三个互不相干的控件。改成卡面之后：
+     * 输入区可以多行自适应，图标和按钮在底部同一基线上，聚焦时描边转主题色，
+     * 用全站一致的「描边 + 硬阴影」语言说明「你正在这里写字」。
+     */
+    .comment-composer {
+        /* 下面紧接「评论:」标题，留够呼吸；也容得下 focus 时浮出的 4px 硬阴影 */
+        margin-bottom: 24px;
+        padding: 2px 8px 8px 12px;
+        border: 2px solid var(--k-ink);
+        border-radius: 14px;
+        background: rgb(var(--v-theme-surface));
+        transition:
+            border-color var(--k-speed-base) var(--k-ease-out),
+            box-shadow var(--k-speed-base) var(--k-ease-out);
+    }
+
+    .comment-composer:focus-within {
+        border-color: rgb(var(--v-theme-primary));
+        box-shadow: 4px 4px 0 rgb(var(--v-theme-primary));
+    }
+
+    /* plain 变体本来就没有边框和底色，这里只需要把内部留白收一下，
+       否则 auto-grow 的两行会被 Vuetify 的默认内边距撑得很空 */
+    .comment-composer__input :deep(.v-field) {
+        background: transparent;
+    }
+
+    .comment-composer__input :deep(.v-field__input) {
+        min-height: 48px;
+        padding-top: 10px;
+        padding-bottom: 0;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    .comment-composer__bar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+</style>

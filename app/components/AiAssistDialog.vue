@@ -1,5 +1,10 @@
 <script setup lang="ts">
-    import type { AiAssistAction } from '#shared/types/ai'
+    import type {
+        AiAssistAction,
+        AiBuiltinAction,
+        AiPromptScope,
+        AiPromptVarName,
+    } from '#shared/types/ai'
     import { normalizeAiHtml } from '~/composables/useAiHtml'
 
     interface Props {
@@ -11,12 +16,23 @@
         /** 只读展示的原文 */
         sourceText?: string
         maxTokens?: number
+        /** 当前场景：决定自定义提示词读写哪一份配置 */
+        scope?: AiPromptScope
+        /** 该场景的内置动作清单，传给提示词配置面板 */
+        builtins?: AiBuiltinAction[]
+        /** 自定义动作能用的占位符（场景级全集），不传由面板按 text/title 兜底 */
+        customVars?: AiPromptVarName[]
     }
 
     const props = defineProps<Props>()
     const emit = defineEmits<{
         'update:modelValue': [value: boolean]
         apply: [result: string, key: string]
+        /**
+         * 提示词被改过：调用方需要重建 actions。
+         * 面板不自己重跑请求 —— 用户只是改了个提示词，不该立刻花掉一次额度。
+         */
+        'prompts-changed': []
     }>()
 
     const { t } = useLocale()
@@ -46,6 +62,21 @@
     /** Key 配置面板：未配置时由面板内的提示直接拉起 */
     const credentialOpen = ref(false)
     const loggedIn = useAiClient().isLogin
+
+    /** 提示词配置面板：调用方传了 scope + builtins 才开放 */
+    const promptOpen = ref(false)
+    const canCustomize = computed(
+        () => !!props.scope && !!props.builtins?.length
+    )
+
+    /**
+     * 配置面板开关。关掉时通知调用方重建 actions —— 提示词换了，面板里的
+     * prompt 得跟着换。但绝不自动重跑：改配置不该顺手烧掉一次额度。
+     */
+    const onPromptToggle = (value: boolean) => {
+        promptOpen.value = value
+        if (!value) emit('prompts-changed')
+    }
 
     const onCredentialSaved = async () => {
         await loadCredential()
@@ -185,6 +216,14 @@
                 />
                 <v-spacer />
                 <v-btn
+                    v-if="canCustomize"
+                    icon="mdi-text-box-edit-outline"
+                    size="small"
+                    variant="text"
+                    :aria-label="t('ai_prompt_settings')"
+                    @click="promptOpen = true"
+                />
+                <v-btn
                     icon="mdi-key-variant"
                     size="small"
                     variant="text"
@@ -274,14 +313,25 @@
                     </a>
                 </div>
 
-                <v-expansion-panels
-                    v-if="sourceText"
-                    variant="accordion"
-                    class="mb-4"
-                >
-                    <v-expansion-panel :title="t('ai_source')">
+                <v-expansion-panels variant="accordion" class="mb-4">
+                    <v-expansion-panel
+                        v-if="sourceText"
+                        :title="t('ai_source')"
+                    >
                         <v-expansion-panel-text>
                             <div class="ai-source">{{ sourceText }}</div>
+                        </v-expansion-panel-text>
+                    </v-expansion-panel>
+                    <!--
+                        实际发出去的提示词。占位符有没有被替换、当前动作到底用了
+                        哪一版模板，看这里一眼就知道 —— 排查「改了提示词没生效」
+                        时不用再去猜是哪一环。
+                    -->
+                    <v-expansion-panel :title="t('ai_prompt_actual')">
+                        <v-expansion-panel-text>
+                            <div class="ai-source">
+                                {{ activeAction?.prompt }}
+                            </div>
                         </v-expansion-panel-text>
                     </v-expansion-panel>
                 </v-expansion-panels>
@@ -361,6 +411,17 @@
             v-model="credentialOpen"
             :credential="credential"
             @saved="onCredentialSaved"
+        />
+
+        <!-- 提示词配置：保存即通知调用方重建 actions，不等关闭面板 -->
+        <AiPromptDialog
+            v-if="scope && builtins"
+            :model-value="promptOpen"
+            :scope="scope"
+            :builtins="builtins"
+            :custom-vars="customVars"
+            @update:model-value="onPromptToggle"
+            @changed="emit('prompts-changed')"
         />
     </v-dialog>
 </template>

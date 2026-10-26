@@ -68,6 +68,89 @@ export interface AiAssistAction {
     format?: 'text' | 'html'
 }
 
+/**
+ * 自定义提示词的作用场景。
+ * 两处上下文不一样（文章是富文本 + 有标题，评论是纯文本草稿），
+ * 所以配置分开存，互不干扰。
+ */
+export type AiPromptScope = 'article' | 'comment'
+
+/** 提示词模板里可用的占位符名（对应 `AiPromptVars` 的四个键） */
+export type AiPromptVarName = 'text' | 'title' | 'reply' | 'article'
+
+/** 提示词模板里可用的变量 */
+export interface AiPromptVars {
+    /** 选中的原文 / 输入框里的草稿 */
+    text?: string
+    /** 文章标题 */
+    title?: string
+    /**
+     * 回复场景的上下文：对方是谁、说了什么。
+     * 只有「帮我回一条」用得上 —— 它必须在运行时才知道回的是哪条评论，
+     * 不能固化进模板，否则每条回复都会带着同一条旧评论。
+     */
+    reply?: string
+    /**
+     * 文章正文摘要（纯文本，已截断）。
+     * 评论场景里「帮我写一条」拿它当素材；用户自定义动作想引用正文也用它。
+     */
+    article?: string
+}
+
+/** 结果格式：html 会进富文本管线，text 按纯文本处理 */
+export type AiActionFormat = 'text' | 'html'
+
+/**
+ * 内置动作的最小描述。
+ * 提示词配置面板只认这几个字段，所以由调用方把 i18n key 解成 label 再传进来 ——
+ * 面板本身不掺业务知识。
+ */
+export interface AiBuiltinAction {
+    key: string
+    label: string
+    icon: string
+    format: AiActionFormat
+    /**
+     * 编辑面板的预填模板，`{{text}}` 标出原文的位置。
+     * 运行时才知道的内容用变量占位（如 `{{reply}}` 代表「对方说了什么」），
+     * 不能把某一次的具体内容固化进模板。
+     */
+    defaultTemplate?: string
+    /**
+     * 这个动作运行时**真的有值**的占位符，配置面板据此只显示能用的 chip。
+     *
+     * 不声明就按 `['text', 'title']` 处理。之所以由调用方给：只有它知道
+     * 自己往 `AiPromptVars` 里填了什么 —— 比如「帮我写一条」不读草稿、
+     * 只读正文，那 `{{text}}` 摆在那里就是个陷阱（写进去永远是空串）。
+     */
+    vars?: AiPromptVarName[]
+}
+
+/** 用户自己新增的一个动作 */
+export interface AiCustomPrompt {
+    id: string
+    /** 菜单里显示的名字，用户自己起 */
+    name: string
+    /** mdi 图标名 */
+    icon: string
+    /** 提示词模板，支持 {{text}} / {{title}} */
+    prompt: string
+    /** 结果格式：html 会进富文本管线，text 按纯文本处理 */
+    format: AiActionFormat
+    enabled: boolean
+}
+
+/** 单个场景的提示词配置 */
+export interface AiPromptConfig {
+    /** 覆盖内置动作：内置 key -> 模板；缺省或空串表示继续用内置默认提示词 */
+    overrides: Record<string, string>
+    /** 用户新增的动作，追加在内置动作之后 */
+    customs: AiCustomPrompt[]
+}
+
+/** 完整配置（按场景分组），整体存在 localStorage 里 */
+export type AiPromptStore = Record<AiPromptScope, AiPromptConfig>
+
 /** 可选模型（列表项） */
 export interface AiModelInfo {
     id: string

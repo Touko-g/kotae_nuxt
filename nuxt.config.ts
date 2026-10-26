@@ -1,8 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import type {
-    Article,
-    ArticleListResponse,
-} from './app/composables/api/useArticle'
+import type { Article, ArticleListResponse } from './shared/types/api'
 import pkg from './package.json'
 
 // 站点地址与 API 地址统一从这里取：本地 / 预览环境可用环境变量覆盖，

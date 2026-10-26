@@ -52,6 +52,15 @@
     )
     const readMinutes = computed(() => readingMinutes(wordCount.value))
 
+    /**
+     * 传给评论区的正文摘要。
+     * AI「帮我写一条」要基于文章内容写，只有标题它只能瞎猜；
+     * 截断到 1200 字，别把上下文撑爆。
+     */
+    const articleExcerpt = computed(() =>
+        article.value ? extractText(article.value.content).slice(0, 1200) : ''
+    )
+
     // --- 相关阅读：取本文首个标签的同标签文章，排除自身最多 5 篇 ---
     const { data: relatedArticles } = await useAsyncData(
         'relatedArticles',
@@ -653,6 +662,7 @@
                         <ArticleComment
                             :article="article.id"
                             :title="article.title"
+                            :excerpt="articleExcerpt"
                         />
                     </v-card-text>
                     <ConfirmDialog ref="confirmRef" />
