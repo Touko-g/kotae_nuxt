@@ -1,0 +1,69 @@
+name: Broadcast
+
+# 新文章 → Telegram / Discord / X
+#
+# 为什么跑在 Actions 而不是本机：
+#   1. runner 在境外，访问 Discord / Telegram 不需要代理；
+#   2. 不依赖自己的电脑开机；
+#   3. 仓库本来就在 GitHub，零额外成本。
+#
+# 去重靠 RSS 的 <guid>，状态存在 Actions cache 里（见下面的 restore/save）。
+# 第一次跑不会刷屏：脚本只会发送 BROADCAST_MAX_AGE_HOURS 小时内发布的文章。
+
+on:
+    schedule:
+        # 每小时整点。GitHub 的定时任务在高峰期可能延迟十几分钟，属正常。
+        - cron: '0 * * * *'
+    # 允许在 Actions 页面手动点一次，方便验证配置
+    workflow_dispatch:
+
+# 上一轮还没跑完就别再起一轮，避免同一条被并发发两次
+concurrency:
+    group: broadcast
+    cancel-in-progress: false
+
+jobs:
+    broadcast:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            # 脚本零依赖，不需要 npm install
+            # 先建目录：cache save 在 path 不存在时会直接报错
+            - name: Ensure state dir
+              run: mkdir -p .data
+
+            - name: Restore state
+              uses: actions/cache/restore@v4
+              with:
+                  path: .data
+                  # key 必须每次唯一，否则 save 会因为「已存在」而失败；
+                  # restore-keys 用前缀匹配，总能捞到最近一次的状态
+                  key: broadcast-state-${{ github.run_id }}
+                  restore-keys: |
+                      broadcast-state-
+
+            - name: Run broadcast
+              run: node scripts/broadcast.mjs
+              env:
+                  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+                  TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+                  TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+                  X_API_KEY: ${{ secrets.X_API_KEY }}
+                  X_API_SECRET: ${{ secrets.X_API_SECRET }}
+                  X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+                  X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+                  # Actions 上没有代理，也不需要；这个值只控制「多久算新文章」。
+                  # 别调大，否则首次运行会把历史文章一次性推出去。
+                  BROADCAST_MAX_AGE_HOURS: 72
+
+            - name: Save state
+              if: always()
+              uses: actions/cache/save@v4
+              with:
+                  path: .data
+                  key: broadcast-state-${{ github.run_id }}

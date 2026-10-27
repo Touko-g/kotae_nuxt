@@ -11,7 +11,9 @@
     "typecheck": "nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.json",
     "lint": "eslint . --ext .js,.ts,.vue",
     "lint:fix": "eslint . --ext .js,.ts,.vue --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "broadcast": "node scripts/broadcast.mjs",
+    "broadcast:dry": "node scripts/broadcast.mjs --dry-run"
   },
   "dependencies": {
     "@chinese-fonts/maple-mono-cn": "^2.0.0",

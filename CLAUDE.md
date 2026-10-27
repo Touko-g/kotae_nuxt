@@ -101,6 +101,9 @@ server/                  # Nitro server routes (auto-routed)
 └── routes/
     └── rss.xml.ts       # GET /rss.xml — RSS 2.0 订阅源（数据取自后端文章列表接口）
 
+scripts/                 # 一次性/定时运行的运维脚本（不参与构建）
+└── broadcast.mjs        # 新文章 → Telegram / Discord / X 广播，轮询 RSS + guid 去重
+
 shared/types/ai.ts       # AI types shared by app + server (`#shared/types/ai`)
 shared/types/api.ts      # pure backend interfaces (Article / Tag / User / paging) — also read by nuxt.config.ts
 ```
@@ -301,5 +304,6 @@ Never hardcode `https://kotae.cn` in pages — read `useRuntimeConfig().public.s
 - Sitemap generated dynamically from API data — the entry field is `loc`, **not** `url`; a `url` key is silently dropped by `@nuxtjs/sitemap`
 - **RSS** lives at `server/routes/rss.xml.ts` (`/rss.xml`). It reads the public article list straight from `apiBase`, so it needs no backend change; site name / description are constants at the top of that file. Two non-obvious bits: the feed carries the **full body** in `content:encoded` (relative `src`/`href` are rewritten to absolute, otherwise readers 404 on images and internal links), and an upstream failure returns an **empty but valid** channel rather than 5xx — readers back off or unsubscribe on repeated 5xx. `?limit=N` (1–50, default 20) is there for debugging. Discovery comes from the `rel="alternate"` link in `nuxt.config.ts` `app.head.link` plus the footer button, so adding a feed doesn't require touching any page
 - `x-robots-tag: noindex, nofollow` on every route during `nuxt dev` is **expected** — `@nuxtjs/robots` blocks indexing in development. Append `?mockProductionEnv` to any URL to see the production rule (`index, follow, max-image-preview:large, …`). Don't "fix" it in config
+- **New-article broadcast** lives in `scripts/broadcast.mjs` (zero deps, Node built-ins only; run via `npm run broadcast`). It polls the RSS feed and uses `<guid>` as the idempotency key, recording **per platform** so a failed channel is retried alone next run. Two behaviours worth remembering: (1) items older than `BROADCAST_MAX_AGE_HOURS` (default 72) are recorded but **not** sent, which is what keeps the first run from dumping the whole archive — use `--all` to force it; (2) `--dry-run` prints the exact payload per platform and writes no state, so always eyeball it before wiring up cron. X posting is raw OAuth 1.0a over `POST /2/tweets` (JSON body is *not* signed, only `oauth_*` params are), and the 280 limit is computed with X's weighted rules — CJK counts 2, every URL counts 23, and `…` (U+2026) also counts 2, so truncation loops on the *final* string rather than reserving a fixed budget. **Weibo is deliberately unsupported**: `statuses/update` has been restricted since 2017 and the only open endpoint (`statuses/share`) posts a bare link with a 30-day token
 - Site deployed at `https://kotae.cn`
 - `vue3-emoji-picker` calls `initialize()` at module scope and opens IndexedDB; on the server this logs `ReferenceError: indexedDB is not defined` as an unhandled rejection. It is harmless but noisy — render the picker client-side if it needs cleaning up

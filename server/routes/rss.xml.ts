@@ -73,6 +73,20 @@ const toPlainText = (html: string): string => {
     }
 }
 
+/**
+ * 截断成摘要。
+ * 两处细节：行首行尾空白要归一化（html-to-text 会留下 ` \n ` 这种），
+ * 否则阅读器和 Discord 里会显示成一堆碎行；截断后补省略号，
+ * 不然读者看到的是 `* priva` 这种断在词中间的句子。
+ */
+const summarize = (html: string, max = 300): string => {
+    const text = toPlainText(html)
+        .replace(/[ \t\u00A0]+/g, ' ')
+        .replace(/\s*\n\s*/g, '\n')
+        .trim()
+    return text.length > max ? text.slice(0, max).trimEnd() + '…' : text
+}
+
 export default defineEventHandler(async event => {
     const config = useRuntimeConfig(event)
     const configuredSiteUrl = String(config.public.siteUrl || '').replace(
@@ -107,7 +121,7 @@ export default defineEventHandler(async event => {
     const items = articles
         .map(article => {
             const url = `${siteUrl}/article/${article.id}`
-            const summary = toPlainText(article.content).slice(0, 300)
+            const summary = summarize(article.content)
             const categories = (article.tag ?? [])
                 .map(tag => `      <category>${escapeXml(tag.name)}</category>`)
                 .join('\n')
