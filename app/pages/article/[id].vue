@@ -23,19 +23,26 @@
 
     const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 
-    // 安全获取 id
-    const id = String(route.params.id ?? '')
+    /**
+     * 路由参数必须跟着 URL 走。
+     * /article/1 → /article/2 时 Nuxt 会用插值后的路径做 page key，组件确实会重建，
+     * 但 useAsyncData 发现同名 key 已有一份 status='success' 的缓存时**不会重新请求**
+     * （重新挂载也不请求）。所以 key 必须带上 id，否则从「相关阅读」点进去，
+     * 页面拿到的还是上一篇的数据 —— 看起来就是「点了没反应」。
+     */
+    const id = computed(() => String(route.params.id ?? ''))
 
     // 服务器端渲染加载
+    // key 带上 id：每篇文章一份独立缓存，参数变化时 key 变化 → 必然重新取数
     const { data: article } = await useAsyncData(
-        'article',
-        () => getArticle(id),
+        () => `article-${id.value}`,
+        () => getArticle(id.value),
         { watch: [refreshCount] }
     )
 
     const { data: like } = await useAsyncData(
-        'like',
-        () => getLikeList({ article: id, pagesize: 10000 }),
+        () => `like-${id.value}`,
+        () => getLikeList({ article: id.value, pagesize: 10000 }),
         { watch: [refreshCount] }
     )
 
@@ -62,63 +69,80 @@
     )
 
     // --- 相关阅读：取本文首个标签的同标签文章，排除自身最多 5 篇 ---
+    // key 同样要带 id：固定 key 会命中上一次挂载留下的成功缓存，直接跳过请求，
+    // 换文章后推荐列表还是上一篇那一组
     const { data: relatedArticles } = await useAsyncData(
-        'relatedArticles',
+        () => `related-${id.value}`,
         async () => {
-            const firstTag = article.value?.tag?.[0]?.name
+            const current = article.value
+            // 极端情况下 article 还没换成当前这篇，先返回空，等下面的 watch 再跑
+            if (!current || String(current.id) !== id.value) {
+                return [] as Article[]
+            }
+            const firstTag = current.tag?.[0]?.name
             if (!firstTag) return [] as Article[]
             const { results } = await getArticleList({
                 page: 1,
                 pagesize: 7,
                 tag: firstTag,
             })
-            return (results || []).filter(a => a.id !== Number(id)).slice(0, 5)
+            return (results || []).filter(a => a.id !== current.id).slice(0, 5)
         },
-        { watch: [refreshCount] }
+        { watch: [() => article.value?.id, refreshCount] }
     )
 
-    if (article.value) {
-        const title = article.value.title
-        const description = extractText(article.value.content).slice(0, 160)
-        const url = `${siteUrl}/article/${article.value.id}`
+    // --- SEO ---
+    // 站内跳转不重跑 setup，所以 meta 必须写成 getter：写死成一次性赋值的话，
+    // 从相关阅读点进下一篇，标签页标题和 og:* 还是上一篇的
+    const seoDescription = computed(() =>
+        article.value ? extractText(article.value.content).slice(0, 160) : ''
+    )
+    const seoUrl = computed(
+        () => `${siteUrl}/article/${article.value?.id ?? ''}`
+    )
 
-        useSeoMeta({
-            title,
-            ogTitle: title,
-            description,
-            ogDescription: description,
-            ogType: 'article',
-            ogUrl: url,
-        })
+    useSeoMeta({
+        title: () => article.value?.title || 'Kotae',
+        ogTitle: () => article.value?.title || 'Kotae - 记录 · 创作 · 分享',
+        description: () =>
+            seoDescription.value || 'Kotae 记录 创作 分享，寻找你的答案',
+        ogDescription: () =>
+            seoDescription.value || 'Kotae 记录 创作 分享，寻找你的答案',
+        ogType: 'article',
+        ogUrl: () => seoUrl.value,
+    })
 
-        useHead({
-            script: [
-                {
-                    type: 'application/ld+json',
-                    innerHTML: JSON.stringify({
-                        '@context': 'https://schema.org',
-                        '@type': 'BlogPosting',
-                        headline: title,
-                        description,
-                        author: {
-                            '@type': 'Person',
-                            name: article.value.owner.username,
-                        },
-                        datePublished: article.value.create_time,
-                        dateModified: article.value.update_time,
-                        mainEntityOfPage: {
-                            '@type': 'WebPage',
-                            '@id': url,
-                        },
-                    }),
-                },
-            ],
-        })
-    }
+    useHead({
+        script: computed(() =>
+            article.value
+                ? [
+                      {
+                          type: 'application/ld+json',
+                          innerHTML: JSON.stringify({
+                              '@context': 'https://schema.org',
+                              '@type': 'BlogPosting',
+                              headline: article.value.title,
+                              description: seoDescription.value,
+                              author: {
+                                  '@type': 'Person',
+                                  name: article.value.owner.username,
+                              },
+                              datePublished: article.value.create_time,
+                              dateModified: article.value.update_time,
+                              mainEntityOfPage: {
+                                  '@type': 'WebPage',
+                                  '@id': seoUrl.value,
+                              },
+                          }),
+                      },
+                  ]
+                : []
+        ),
+    })
 
     const handleEdit = () => {
         if (!isLogin.value) return
-        navigateTo(`/article/edit/${id}`)
+        navigateTo(`/article/edit/${id.value}`)
     }
 
     const handleOpenDel = async () => {
@@ -246,7 +270,7 @@
                 // 兜底：若创建响应未带回记录 id，仅刷新 like 列表回填
                 // （refreshNuxtData 定向刷新，不牵动 article / comment）
                 if (myLikeId.value === undefined) {
-                    await refreshNuxtData('like')
+                    await refreshNuxtData(`like-${id.value}`)
                 }
                 likePop.value = false
                 await nextTick()
@@ -415,6 +439,8 @@
     }
 
     // 正文重新渲染（水合完成 / 切换主题 / 换文章）后，重建目录与代码复制按钮
+    // 注意：这里不要再调 onScroll()。它在 nextTick 里跑，此时新正文还没完成布局，
+    // 标题的 offsetTop 全是 0，会把 activeId 误判成靠后的某一节
     const rebuildContentEnhancements = () => {
         nextTick(() => {
             buildToc()

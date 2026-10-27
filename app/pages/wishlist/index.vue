@@ -18,7 +18,9 @@
 
     const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 
-    const { data } = await useAsyncData('wish', () =>
+    // key 用 wishlist 而不是 wish：user/[id].vue 的「想做的事」预览也用 wish，
+    // 两个页面 handler 不同却撞在同一个 key 上，会互相串数据（dev 下还会报 NUXT_E3004）
+    const { data } = await useAsyncData('wishlist', () =>
         getWishList({ pagesize: 1000, order: '-create_time' })
     )
 

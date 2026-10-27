@@ -12,7 +12,13 @@
 
     const route = useRoute()
 
-    const id = String(route.params.id ?? '')
+    /**
+     * 路由参数必须跟着 URL 走。
+     * 和文章详情页同一个坑：useAsyncData 用固定 key 时，页面重建后发现同名 key
+     * 已有一份 status='success' 的缓存就直接跳过请求，于是从 A 的主页点进 B 的
+     * 主页，看到的还是 A 的资料、A 的文章列表。
+     */
+    const id = computed(() => String(route.params.id ?? ''))
 
     const { getUser } = useUser()
     const { getArticleList } = useArticle()
@@ -27,10 +33,13 @@
     const refreshCount = useState('refreshCount')
     const loginUser = useCookie<User | null>('user')
 
+    // 注意：分页总数不要放进 articleQuery。
+    // 它是 fetch 回来才算出来的派生值，放进去会同时造成两个问题：
+    // 1) 被当成查询参数发给后端（后端并不认 count）；
+    // 2) 它在 watch 的观察范围内，赋值那一刻又会触发一次一模一样的请求。
     const articleQuery = reactive({
         page: 1,
         pagesize: 7,
-        count: 0,
         author: '',
         order: '-create_time',
     })
@@ -50,9 +59,14 @@
         uploadLoading: false,
     })
 
-    const { data: user } = await useAsyncData('user', () => getUser(id), {
-        watch: [refreshCount],
-    })
+    // key 带上 id：每个用户一份独立缓存，参数变化时必然重新取数
+    const { data: user } = await useAsyncData(
+        () => `user-${id.value}`,
+        () => getUser(id.value),
+        {
+            watch: [refreshCount],
+        }
+    )
 
     if (user.value) {
         articleQuery.author = user.value.username
@@ -60,22 +74,22 @@
     }
 
     const { data: articles } = await useAsyncData(
-        'articles',
+        () => `articles-${id.value}`,
         () => getArticleList({ ...articleQuery }),
         {
             watch: [refreshCount, articleQuery],
         }
     )
 
-    // 计算分页
-    if (articles.value?.results.length) {
-        articleQuery.count = Math.ceil(
-            articles.value.count / articleQuery.pagesize
-        )
-    }
+    // 分页总数用 computed 派生：既不会反向写回请求参数，翻页/切换排序后也会跟着更新
+    const articleCount = computed(() =>
+        articles.value?.results.length
+            ? Math.ceil(articles.value.count / articleQuery.pagesize)
+            : 0
+    )
 
     const { data: photos } = await useAsyncData(
-        'photo',
+        () => `photo-${id.value}`,
         () => getPhotoList({ ...photoPage }),
         { watch: [refreshCount] }
     )
@@ -87,14 +101,17 @@
     )
 
     const isSelf = computed(() => {
-        return loginUser.value?.id === Number(id)
+        return loginUser.value?.id === Number(id.value)
     })
 
     // 「想做的事」接口只返回当前登录用户的数据，故仅在本人主页拉取展示
-    const { data: wishData } = await useAsyncData('wish', () =>
-        isSelf.value
-            ? getWishList({ pagesize: 1000, order: '-create_time' })
-            : Promise.resolve(undefined)
+    // key 带 id：既跟着用户走，也避免和 /wishlist 页面的同名缓存串味
+    const { data: wishData } = await useAsyncData(
+        () => `wish-${id.value}`,
+        () =>
+            isSelf.value
+                ? getWishList({ pagesize: 1000, order: '-create_time' })
+                : Promise.resolve(undefined)
     )
     const wishPreview = computed(
         () => wishData.value?.results.slice(0, 5) ?? []
@@ -358,9 +375,9 @@
                                     :title="t('no_articles')"
                                 />
                                 <v-pagination
-                                    v-if="articleQuery.count"
+                                    v-if="articleCount"
                                     v-model="articleQuery.page"
-                                    :length="articleQuery.count"
+                                    :length="articleCount"
                                     rounded="circle"
                                     density="compact"
                                     @update:model-value="changePage"
