@@ -10,7 +10,7 @@
     const { getArticleList } = useArticle()
     const { format, create } = useDayjs()
 
-    const { data } = await useAsyncData('archive', () =>
+    const { data } = await useApiData('archive', () =>
         getArticleList({ pagesize: 10000, order: '-create_time' })
     )
 

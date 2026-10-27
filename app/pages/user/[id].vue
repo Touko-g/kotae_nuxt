@@ -30,7 +30,6 @@
     const { fromNow } = useDayjs()
     const { width } = useDisplay()
 
-    const refreshCount = useState('refreshCount')
     const loginUser = useCookie<User | null>('user')
 
     // 注意：分页总数不要放进 articleQuery。
@@ -59,25 +58,34 @@
         uploadLoading: false,
     })
 
-    // key 带上 id：每个用户一份独立缓存，参数变化时必然重新取数
-    const { data: user } = await useAsyncData(
-        () => `user-${id.value}`,
-        () => getUser(id.value),
-        {
-            watch: [refreshCount],
-        }
-    )
+    // id 交给 useApiData 做参数：既进 key，也进 fetcher
+    const { data: user } = await useApiData('user', p => getUser(p.id), {
+        params: () => ({ id: id.value }),
+    })
 
     if (user.value) {
         articleQuery.author = user.value.username
         photoPage.user = user.value.username
     }
 
-    const { data: articles } = await useAsyncData(
-        () => `articles-${id.value}`,
-        () => getArticleList({ ...articleQuery }),
+    const { data: articles } = await useApiData(
+        'articles',
+        p =>
+            getArticleList({
+                page: p.page,
+                pagesize: p.pagesize,
+                author: p.author,
+                order: p.order,
+            }),
         {
-            watch: [refreshCount, articleQuery],
+            // 查询条件全部进 key：翻页、切排序都会自动重取，不用再手写 watch
+            params: () => ({
+                id: id.value,
+                page: articleQuery.page,
+                pagesize: articleQuery.pagesize,
+                author: articleQuery.author,
+                order: articleQuery.order,
+            }),
         }
     )
 
@@ -88,10 +96,22 @@
             : 0
     )
 
-    const { data: photos } = await useAsyncData(
-        () => `photo-${id.value}`,
-        () => getPhotoList({ ...photoPage }),
-        { watch: [refreshCount] }
+    const { data: photos } = await useApiData(
+        'photo',
+        p =>
+            getPhotoList({
+                page: p.page,
+                pagesize: p.pagesize,
+                user: p.user,
+            }),
+        {
+            params: () => ({
+                id: id.value,
+                page: photoPage.page,
+                pagesize: photoPage.pagesize,
+                user: photoPage.user,
+            }),
+        }
     )
 
     watch(toggle, v =>
@@ -104,14 +124,15 @@
         return loginUser.value?.id === Number(id.value)
     })
 
-    // 「想做的事」接口只返回当前登录用户的数据，故仅在本人主页拉取展示
-    // key 带 id：既跟着用户走，也避免和 /wishlist 页面的同名缓存串味
-    const { data: wishData } = await useAsyncData(
-        () => `wish-${id.value}`,
-        () =>
-            isSelf.value
-                ? getWishList({ pagesize: 1000, order: '-create_time' })
-                : Promise.resolve(undefined)
+    // 「想做的事」接口只返回当前登录用户的数据，故仅在本人主页拉取展示。
+    // self 也进 key：登录态从无到有时要重新判定，否则永远停在「不是本人」
+    const { data: wishData } = await useApiData(
+        'wish',
+        async p =>
+            p.self
+                ? await getWishList({ pagesize: 1000, order: '-create_time' })
+                : undefined,
+        { params: () => ({ id: id.value, self: isSelf.value }) }
     )
     const wishPreview = computed(
         () => wishData.value?.results.slice(0, 5) ?? []

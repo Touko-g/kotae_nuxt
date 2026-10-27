@@ -20,16 +20,43 @@
     const isOwner = (photo: Photo) =>
         String(photo.user_info.id) === String(currentUser.value?.id)
 
-    const photos = ref<Photo[]>([])
-    const loading = ref(false)
-    const observer = ref<IntersectionObserver | null>(null)
-    const scrollRef = useTemplateRef('scrollRef')
+    const route = useRoute()
+    const username = computed(() => String(route.params.username ?? ''))
+    const PAGESIZE = 8
+
     const confirmRef = ref<InstanceType<typeof ConfirmDialog>>()
 
-    const page = reactive({
-        page: 1,
-        pagesize: 8,
-        count: 0,
+    /**
+     * 相册按路由里的用户名取数据。
+     * 原来这里 key 固定为 'photos'、请求里也没带 user，于是：
+     * 1) /user/A/photo 与 /user/B/photo 命中同一个缓存；
+     * 2) 请求本身不筛用户，谁进来看到的都是全站照片流。
+     */
+    const { data } = await useApiData(
+        'photos',
+        p =>
+            getPhotoList({
+                page: 1,
+                pagesize: p.pagesize,
+                user: p.user,
+            }),
+        { params: () => ({ user: username.value, pagesize: PAGESIZE }) }
+    )
+
+    const {
+        items: photos,
+        loading,
+        hasMore,
+        scrollRef,
+    } = useInfiniteList<Photo>({
+        pagesize: PAGESIZE,
+        initial: () => data.value,
+        fetchPage: page =>
+            getPhotoList({
+                page,
+                pagesize: PAGESIZE,
+                user: username.value,
+            }),
     })
 
     // 图片预览：复用通用 ImageLightbox 组件（缩放/旋转/拖拽/键盘/轮播均在组件内实现）
@@ -58,16 +85,6 @@
     const LAZY_SRC =
         'https://chen-1302611521.cos.ap-nanjing.myqcloud.com/blog/photo/Touko/thumbbig-287318.webp'
 
-    // 初始化加载
-    const { data } = await useAsyncData('photos', () =>
-        getPhotoList({ ...page })
-    )
-
-    if (data.value?.results) {
-        photos.value = data.value.results
-        page.count = Math.ceil(data.value.count / page.pagesize)
-    }
-
     const handleDel = async (id: number | string, index: number) => {
         if (!confirmRef.value) return
 
@@ -79,40 +96,6 @@
             show(t('photo_delete_success'), 'success')
         } catch (err) {}
     }
-
-    // 加载更多
-    const loadPhotos = async () => {
-        if (loading.value || page.page >= page.count) return
-        loading.value = true
-        page.page++
-        const { results } = await getPhotoList({ ...page })
-        if (results?.length) {
-            photos.value.push(...results)
-        }
-        loading.value = false
-    }
-
-    // 监听加载更多
-    onMounted(async () => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) await loadPhotos()
-            },
-            { rootMargin: '100px' }
-        )
-        await nextTick()
-        if (scrollRef.value) observer.value.observe(scrollRef.value)
-    })
-
-    watch(photos, async () => {
-        await nextTick()
-        if (scrollRef.value && observer.value)
-            observer.value.observe(scrollRef.value)
-    })
-
-    onUnmounted(() => {
-        observer.value?.disconnect()
-    })
 </script>
 
 <template>
@@ -200,7 +183,7 @@
         <div v-if="photos?.length" ref="scrollRef"></div>
 
         <div
-            v-if="photos.length && !loading && page.page >= page.count"
+            v-if="photos.length && !loading && !hasMore"
             class="py-4 text-center text-grey"
         >
             {{ t('end_of_list') }}

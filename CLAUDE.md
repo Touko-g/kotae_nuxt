@@ -98,10 +98,8 @@ i18n/
     └── en/              # English translations
 
 server/                  # Nitro server routes (auto-routed)
-├── api/ai/
-│   ├── chat.post.ts     # POST /api/ai/chat        (non-streaming)
-│   └── chat-stream.post.ts # POST /api/ai/chat-stream (SSE)
-└── utils/ai.ts          # Qwen config / upstream call / SSE normalize / rate limit
+└── routes/
+    └── rss.xml.ts       # GET /rss.xml — RSS 2.0 订阅源（数据取自后端文章列表接口）
 
 shared/types/ai.ts       # AI types shared by app + server (`#shared/types/ai`)
 shared/types/api.ts      # pure backend interfaces (Article / Tag / User / paging) — also read by nuxt.config.ts
@@ -301,5 +299,7 @@ Never hardcode `https://kotae.cn` in pages — read `useRuntimeConfig().public.s
 - **vue-tsc gotcha**: a *static* attribute whose value contains `https://` (e.g. `lazy-src="https://…"`) makes Volar lose the enclosing slot scope, so every slot prop becomes "Cannot find name" (TS2304). It reproduced on `photo.vue`'s `<v-hover v-slot="{ isHovering, props }">`. Fix: hoist the URL into a `const` and bind it (`:lazy-src="LAZY_SRC"`). The slot syntax itself (`v-slot` on the element vs `<template #default>`) is irrelevant — don't "fix" it there
 - **`withDefaults` narrowing does not reach the template.** `const props = withDefaults(defineProps<P>(), { x: () => [] })` makes `props.x` non-optional *in script*, but a bare `x` inside `<template>` still resolves against the declared `P` and stays `T | undefined` → `TS2345: Argument of type T[] | undefined is not assignable to parameter of type T[]`. `vue-tsc` on the CLI did **not** flag it (it only shows up in the editor's Volar). Fix: drop `withDefaults` for that field and coalesce explicitly with a `computed` (`const list = computed<T[]>(() => props.x ?? DEFAULT)`), then bind `list` in the template
 - Sitemap generated dynamically from API data — the entry field is `loc`, **not** `url`; a `url` key is silently dropped by `@nuxtjs/sitemap`
+- **RSS** lives at `server/routes/rss.xml.ts` (`/rss.xml`). It reads the public article list straight from `apiBase`, so it needs no backend change; site name / description are constants at the top of that file. Two non-obvious bits: the feed carries the **full body** in `content:encoded` (relative `src`/`href` are rewritten to absolute, otherwise readers 404 on images and internal links), and an upstream failure returns an **empty but valid** channel rather than 5xx — readers back off or unsubscribe on repeated 5xx. `?limit=N` (1–50, default 20) is there for debugging. Discovery comes from the `rel="alternate"` link in `nuxt.config.ts` `app.head.link` plus the footer button, so adding a feed doesn't require touching any page
+- `x-robots-tag: noindex, nofollow` on every route during `nuxt dev` is **expected** — `@nuxtjs/robots` blocks indexing in development. Append `?mockProductionEnv` to any URL to see the production rule (`index, follow, max-image-preview:large, …`). Don't "fix" it in config
 - Site deployed at `https://kotae.cn`
 - `vue3-emoji-picker` calls `initialize()` at module scope and opens IndexedDB; on the server this logs `ReferenceError: indexedDB is not defined` as an unhandled rejection. It is harmless but noisy — render the picker client-side if it needs cleaning up

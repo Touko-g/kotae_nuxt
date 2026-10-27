@@ -9,7 +9,7 @@
 
     const { getTagList } = useTag()
 
-    const { data } = await useAsyncData('tag-cloud', () =>
+    const { data } = await useApiData('tag-cloud', () =>
         getTagList({ name: '', pagesize: 1000, order: '-hot' })
     )
 

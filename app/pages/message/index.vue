@@ -11,7 +11,7 @@
     const { getNoticeList, readNotice } = useNotice()
     const { format } = useDayjs()
 
-    const { data } = await useAsyncData('notice', () =>
+    const { data } = await useApiData('notice', () =>
         getNoticeList({ pagesize: 10000, order: '-create_time' })
     )
 

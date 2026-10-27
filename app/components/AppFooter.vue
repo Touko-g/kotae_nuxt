@@ -41,15 +41,27 @@
             <p class="text-overline text-primary font-weight-bold">
                 ✦ {{ t('hero_tagline') }} ✦
             </p>
-            <v-btn
-                color="primary"
-                variant="flat"
-                size="small"
-                append-icon="mdi-arrow-up"
-                @click="backToTop"
-            >
-                {{ t('back_to_top') }}
-            </v-btn>
+            <div class="d-flex align-center ga-2">
+                <v-btn
+                    icon="mdi-rss"
+                    size="small"
+                    variant="text"
+                    href="/rss.xml"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="RSS"
+                    title="RSS"
+                />
+                <v-btn
+                    color="primary"
+                    variant="flat"
+                    size="small"
+                    append-icon="mdi-arrow-up"
+                    @click="backToTop"
+                >
+                    {{ t('back_to_top') }}
+                </v-btn>
+            </div>
         </div>
     </footer>
 </template>

@@ -5,28 +5,15 @@
     const { fromNow } = useDayjs()
     const { t } = useLocale()
     const { isLogin } = useAuth()
-    const refreshCount = useState('refreshCount')
 
     const config = useRuntimeConfig()
     const versions = config.public.versions
     const siteUrl = config.public.siteUrl
 
-    // --- 状态 ---
-    const articles = ref<Article[]>([])
-    const loading = ref(false)
     const skeletonLoading = ref(true)
-    const page = reactive({
-        page: 1,
-        count: 0,
-    })
-
-    // --- 滚动触发元素 ---
-    const scrollRef = useTemplateRef('scrollRef')
-    // --- IntersectionObserver ---
-    const observer = ref<IntersectionObserver | null>(null)
 
     // --- 首屏数据 ---
-    const { data } = await useAsyncData(
+    const { data } = await useApiData(
         'initData',
         async () => {
             const [recent, hot] = await Promise.all([
@@ -39,10 +26,20 @@
             ])
             return { recent, hot }
         },
-        {
-            watch: [isLogin, refreshCount],
-        }
+        // 登录态会影响列表里「是否已赞」之类的展示，变了就重取
+        { watch: [isLogin] }
     )
+
+    // --- 最新文章：首屏来自 recent，往下滚动由 useInfiniteList 续页 ---
+    const {
+        items: articles,
+        loading,
+        scrollRef,
+    } = useInfiniteList<Article>({
+        pagesize: 10,
+        initial: () => data.value?.recent,
+        fetchPage: page => getArticleList({ page, order: '-create_time' }),
+    })
 
     useSeoMeta({
         title: 'Kotae',
@@ -73,22 +70,6 @@
         ],
     })
 
-    watch(
-        () => data.value,
-        val => {
-            if (val?.recent.results) {
-                articles.value = val.recent.results
-                page.count = Math.ceil(val.recent.count / 10)
-            }
-        }
-    )
-
-    // --- 初始化文章列表 ---
-    if (data.value?.recent.results) {
-        articles.value = data.value.recent.results
-        page.count = Math.ceil(data.value.recent.count / 10)
-    }
-
     skeletonLoading.value = false
 
     // --- 头条推荐：取最热榜第一，用 id 取模确定封面渐变（SSR 一致） ---
@@ -116,46 +97,6 @@
             }
         }
         return out.slice(0, 14)
-    })
-
-    // --- 加载更多文章 ---
-    const loadArticles = async () => {
-        if (loading.value) return
-        if (page.page >= page.count) return
-
-        loading.value = true
-        page.page += 1
-
-        const { results } = await getArticleList({
-            page: page.page,
-            order: '-create_time',
-        })
-
-        if (results?.length) {
-            articles.value.push(...results)
-        }
-
-        loading.value = false
-    }
-
-    // --- 监听滚动触发 ---
-    onMounted(() => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) {
-                    await loadArticles()
-                }
-            },
-            { rootMargin: '100px' }
-        )
-
-        if (scrollRef.value && observer.value) {
-            observer.value.observe(scrollRef.value)
-        }
-    })
-
-    onUnmounted(() => {
-        observer.value?.disconnect()
     })
 </script>
 

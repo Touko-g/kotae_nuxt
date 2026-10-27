@@ -17,7 +17,6 @@
     const { fire: fireConfetti } = useConfetti()
 
     const highlighter = await useShiki()
-    const refreshCount = useState('refreshCount')
     const isLogin = useState('isLogin')
     const user = useCookie<User>('user')
 
@@ -33,17 +32,17 @@
     const id = computed(() => String(route.params.id ?? ''))
 
     // 服务器端渲染加载
-    // key 带上 id：每篇文章一份独立缓存，参数变化时 key 变化 → 必然重新取数
-    const { data: article } = await useAsyncData(
-        () => `article-${id.value}`,
-        () => getArticle(id.value),
-        { watch: [refreshCount] }
+    // id 交给 useApiData 做参数：它既进 key，也进 fetcher —— 换文章必然重新取数
+    const { data: article } = await useApiData(
+        'article',
+        p => getArticle(p.id),
+        { params: () => ({ id: id.value }) }
     )
 
-    const { data: like } = await useAsyncData(
-        () => `like-${id.value}`,
-        () => getLikeList({ article: id.value, pagesize: 10000 }),
-        { watch: [refreshCount] }
+    const { data: like, refresh: refreshLike } = await useApiData(
+        'like',
+        p => getLikeList({ article: p.id, pagesize: 10000 }),
+        { params: () => ({ id: id.value }) }
     )
 
     // 正文渲染：高亮 + 净化都在派生层完成，SSR 与客户端同一套结果
@@ -69,26 +68,33 @@
     )
 
     // --- 相关阅读：取本文首个标签的同标签文章，排除自身最多 5 篇 ---
-    // key 同样要带 id：固定 key 会命中上一次挂载留下的成功缓存，直接跳过请求，
-    // 换文章后推荐列表还是上一篇那一组
-    const { data: relatedArticles } = await useAsyncData(
-        () => `related-${id.value}`,
-        async () => {
-            const current = article.value
-            // 极端情况下 article 还没换成当前这篇，先返回空，等下面的 watch 再跑
-            if (!current || String(current.id) !== id.value) {
-                return [] as Article[]
-            }
-            const firstTag = current.tag?.[0]?.name
-            if (!firstTag) return [] as Article[]
+    // 参数放的是「标签」，不是「文章 id」：推荐列表的入参本来就是标签。
+    // 标签还没取到（正文未回来 / 本文无标签）时 fetcher 直接返回空、不发请求；
+    // 等 article 到手，key 里的 tag 变了，自动补一次。
+    const { data: relatedArticles } = await useApiData(
+        'related',
+        async p => {
+            if (!p.tag) return [] as Article[]
             const { results } = await getArticleList({
                 page: 1,
                 pagesize: 7,
-                tag: firstTag,
+                tag: p.tag,
             })
-            return (results || []).filter(a => a.id !== current.id).slice(0, 5)
+            return (results || [])
+                .filter(a => a.id !== Number(p.id))
+                .slice(0, 5)
         },
-        { watch: [() => article.value?.id, refreshCount] }
+        {
+            params: () => {
+                // 换文章的瞬间 article 还是上一篇，取它的标签会推荐出上一组
+                const current = article.value
+                const matched =
+                    current && String(current.id) === id.value
+                        ? current
+                        : undefined
+                return { id: id.value, tag: matched?.tag?.[0]?.name }
+            },
+        }
     )
 
     // --- SEO ---
@@ -162,20 +168,6 @@
     const countPop = ref(false)
 
     // --- 分享：优先调用系统原生分享，不支持/失败则复制链接到剪贴板 ---
-    const copyToClipboard = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text)
-        } catch (err) {
-            // 非安全上下文降级方案
-            const ta = document.createElement('textarea')
-            ta.value = text
-            document.body.appendChild(ta)
-            ta.select()
-            document.execCommand('copy')
-            ta.remove()
-        }
-    }
-
     const handleShare = async () => {
         const url = window.location.href
         const title = article.value?.title ?? ''
@@ -268,9 +260,9 @@
                 isLike.value = true
                 myLikeId.value = rec?.id
                 // 兜底：若创建响应未带回记录 id，仅刷新 like 列表回填
-                // （refreshNuxtData 定向刷新，不牵动 article / comment）
+                // （只重取本页这条数据，不牵动 article / comment）
                 if (myLikeId.value === undefined) {
-                    await refreshNuxtData(`like-${id.value}`)
+                    await refreshLike()
                 }
                 likePop.value = false
                 await nextTick()
@@ -285,184 +277,21 @@
         }
     }
 
-    // --- TOC 目录导航 ---
-    interface TocItem {
-        id: string
-        text: string
-        level: number
-    }
-    const toc = ref<TocItem[]>([])
-    const activeId = ref('')
-    const progress = ref(0)
-    const indicator = reactive({ top: 0, height: 0 })
-    const markdownRef = useTemplateRef<HTMLElement>('markdownRef')
-    const tocNavRef = useTemplateRef<HTMLElement>('tocNavRef')
-    let headingEls: HTMLElement[] = []
-
-    const buildToc = () => {
-        const container = markdownRef.value
-        if (!container) return
-        const headings = container.querySelectorAll('h1, h2, h3, h4')
-        const items: TocItem[] = []
-        headings.forEach((el, i) => {
-            const id = `heading-${i}`
-            el.id = id
-            items.push({
-                id,
-                text: el.textContent?.trim() || '',
-                level: Number(el.tagName[1]),
-            })
-        })
-        toc.value = items.filter(item => item.text)
-        headingEls = Array.from(headings) as HTMLElement[]
-    }
-
-    // 指示条跟随 + 目录自动滚动
-    watch(activeId, id => {
-        const nav = tocNavRef.value
-        if (!nav) return
-        const el = nav.querySelector<HTMLElement>(`[data-toc-id="${id}"]`)
-        if (!el) return
-        indicator.top = el.offsetTop
-        indicator.height = el.offsetHeight
-        // 保持活动项在目录可视区域内
-        const navRect = nav.getBoundingClientRect()
-        const elRect = el.getBoundingClientRect()
-        if (elRect.top < navRect.top || elRect.bottom > navRect.bottom) {
-            nav.scrollTo({
-                top: el.offsetTop - nav.clientHeight / 2,
-                behavior: 'smooth',
-            })
-        }
-    })
-
-    // 滚动：进度 + 标题高亮
-    const HEADING_OFFSET = 120
-    const onScroll = () => {
-        const doc = document.documentElement
-        const scrollTop = doc.scrollTop
-        const total = doc.scrollHeight - doc.clientHeight
-        progress.value = total > 0 ? (scrollTop / total) * 100 : 0
-
-        // 找到最后一个 top <= scrollTop + offset 的标题
-        let current = ''
-        for (const el of headingEls) {
-            if (el.offsetTop <= scrollTop + HEADING_OFFSET) {
-                current = el.id
-            } else {
-                break
-            }
-        }
-        if (current && current !== activeId.value) {
-            activeId.value = current
-        }
-    }
-
-    const scrollToHeading = (id: string) => {
-        activeId.value = id
-        const el = document.getElementById(id)
-        if (!el) return
-        const APPBAR_HEIGHT = 80
-        const top =
-            el.getBoundingClientRect().top + window.scrollY - APPBAR_HEIGHT
-        window.scrollTo({ top, behavior: 'smooth' })
-    }
-
-    // --- 代码块一键复制 ---
-    const COPY_ICON = '<i class="mdi mdi-content-copy"></i>'
-    const COPIED_ICON = '<i class="mdi mdi-check"></i>'
-
-    // 为正文中每个 <pre> 注入复制按钮（幂等，可重复调用）
-    const enhanceCodeBlocks = () => {
-        const container = markdownRef.value
-        if (!container) return
-        container.querySelectorAll('pre').forEach(pre => {
-            if (pre.querySelector(':scope > .code-copy-btn')) return
-            const btn = document.createElement('button')
-            btn.type = 'button'
-            btn.className = 'code-copy-btn'
-            btn.setAttribute('title', t('copy_code'))
-            btn.innerHTML = COPY_ICON
-            pre.appendChild(btn)
-        })
-    }
-
-    // 事件委托处理复制，避免逐个按钮绑监听
-    const onCodeCopy = async (e: Event) => {
-        const node = e.target as Element
-        const btn = node?.closest?.('.code-copy-btn')
-        if (!btn) return
-        const code =
-            btn.closest('pre')?.querySelector('code')?.textContent ?? ''
-        try {
-            await navigator.clipboard.writeText(code)
-        } catch (err) {
-            // 兼容非安全上下文的降级方案
-            const ta = document.createElement('textarea')
-            ta.value = code
-            document.body.appendChild(ta)
-            ta.select()
-            document.execCommand('copy')
-            ta.remove()
-        }
-        btn.classList.add('code-copied')
-        btn.innerHTML = COPIED_ICON
-        soundTick()
-        window.setTimeout(() => {
-            btn.classList.remove('code-copied')
-            btn.innerHTML = COPY_ICON
-        }, 1500)
-    }
-
-    // --- 正文图片 Lightbox ---
-    const lightboxVisible = ref(false)
-    const lightboxImages = ref<{ src: string; caption?: string }[]>([])
-    const lightboxIndex = ref(0)
-
-    // 事件委托：点正文 <img> 收集全部图片并打开预览
-    const onImageClick = (e: Event) => {
-        const node = e.target as Element
-        const img = node?.closest?.(
-            '.markdown-body img'
-        ) as HTMLImageElement | null
-        if (!img) return
-        const container = markdownRef.value
-        if (!container) return
-        const imgs = Array.from(container.querySelectorAll('img'))
-        const idx = imgs.indexOf(img)
-        lightboxImages.value = imgs.map(el => ({
-            src: el.getAttribute('src') || el.currentSrc || '',
-            caption: el.getAttribute('alt') || '',
-        }))
-        lightboxIndex.value = idx >= 0 ? idx : 0
-        if (lightboxImages.value.length) lightboxVisible.value = true
-    }
-
-    // 正文重新渲染（水合完成 / 切换主题 / 换文章）后，重建目录与代码复制按钮
-    // 注意：这里不要再调 onScroll()。它在 nextTick 里跑，此时新正文还没完成布局，
-    // 标题的 offsetTop 全是 0，会把 activeId 误判成靠后的某一节
-    const rebuildContentEnhancements = () => {
-        nextTick(() => {
-            buildToc()
-            enhanceCodeBlocks()
-        })
-    }
-
-    watch(renderedHtml, rebuildContentEnhancements)
-
-    onMounted(() => {
-        rebuildContentEnhancements()
-        markdownRef.value?.addEventListener('click', onCodeCopy)
-        markdownRef.value?.addEventListener('click', onImageClick)
-        window.addEventListener('scroll', onScroll, { passive: true })
-        onScroll()
-    })
-
-    onUnmounted(() => {
-        markdownRef.value?.removeEventListener('click', onCodeCopy)
-        markdownRef.value?.removeEventListener('click', onImageClick)
-        window.removeEventListener('scroll', onScroll)
-    })
+    // --- 正文增强：目录 / 代码复制 / 图片灯箱 / 阅读进度 ---
+    // 全是对渲染后 HTML 的 DOM 后处理，逻辑在 useArticleEnhance 里，
+    // 页面这边只接模板 ref 和状态
+    const {
+        markdownRef,
+        tocNavRef,
+        toc,
+        activeId,
+        progress,
+        indicator,
+        scrollToHeading,
+        lightboxVisible,
+        lightboxImages,
+        lightboxIndex,
+    } = useArticleEnhance({ html: () => renderedHtml.value })
 </script>
 
 <template>

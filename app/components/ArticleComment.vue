@@ -27,7 +27,6 @@
     const { show } = useToast()
     const runtimeConfig = useRuntimeConfig()
     const isLogin = useState('isLogin')
-    const refreshCount = useState<number>('refreshCount')
 
     const comment = ref('')
     const comments = ref<CommentListResponse | null>(null)
@@ -491,12 +490,13 @@
         return ip.match(/(.+)(?=省)/)?.[0] ?? ip
     }
 
-    const { data: commentsData } = useAsyncData(
-        `comments-${article}`,
+    // 评论首屏。article 进 key：同一个组件实例换了文章也不会串数据。
+    // 注意不要把手写的分页状态（search.page / search.order）放进 params ——
+    // 翻页是 load() 手动追加的，进了 key 会在这里再取一次并覆盖已累积的列表
+    const { data: commentsData } = useApiData(
+        'comments',
         () => getComments(search),
-        {
-            watch: [refreshCount, () => article],
-        }
+        { params: () => ({ article }) }
     )
 
     // 切换语言会带前缀跳转导致本组件重新挂载，此时 useAsyncData 命中

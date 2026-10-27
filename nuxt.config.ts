@@ -42,6 +42,15 @@ export default defineNuxtConfig({
                 // <noscript>JavaScript is required</noscript>
                 { textContent: 'JavaScript is required' },
             ],
+            // 让浏览器 / 阅读器自动发现订阅源（/rss.xml 由 server/routes/rss.xml.ts 提供）
+            link: [
+                {
+                    rel: 'alternate',
+                    type: 'application/rss+xml',
+                    title: 'Kotae',
+                    href: `${siteUrl}/rss.xml`,
+                },
+            ],
         },
     },
     css: [

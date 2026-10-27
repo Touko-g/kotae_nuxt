@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import { ref } from 'vue'
-
     definePageMeta({
         middleware: 'auth',
     })
@@ -15,70 +13,29 @@
     const { getLikeList, delLike } = useLike()
     const { show } = useToast()
 
-    const likes = ref<Like[]>([])
-    const loading = ref(false)
-    const page = reactive({
-        page: 1,
-        count: 0,
-    })
+    const PAGESIZE = 10
 
-    const scrollRef = useTemplateRef('scrollRef')
-    const observer = ref<IntersectionObserver | null>(null)
-
-    const { data } = await useAsyncData('likes', () =>
-        getLikeList({
-            ...page,
-        })
+    const { data } = await useApiData(
+        'likes',
+        p => getLikeList({ page: 1, pagesize: p.pagesize }),
+        { params: () => ({ pagesize: PAGESIZE }) }
     )
 
-    if (data.value?.results) {
-        likes.value = data.value.results
-        page.count = Math.ceil(data.value.count / 10)
-    }
-
-    const loadLikes = async () => {
-        if (loading.value) return
-        if (page.page >= page.count) return
-
-        loading.value = true
-        page.page += 1
-
-        const { results } = await getLikeList({
-            page: page.page,
-        })
-
-        if (results?.length) {
-            likes.value.push(...results)
-        }
-
-        loading.value = false
-    }
+    const {
+        items: likes,
+        loading,
+        scrollRef,
+    } = useInfiniteList<Like>({
+        pagesize: PAGESIZE,
+        initial: () => data.value,
+        fetchPage: page => getLikeList({ page, pagesize: PAGESIZE }),
+    })
 
     const handleDel = async (id: string | number) => {
         await delLike(id)
         likes.value = likes.value.filter(like => like.id !== id)
         show(t('unlike'), 'success')
     }
-
-    onMounted(async () => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) {
-                    await loadLikes()
-                }
-            },
-            { rootMargin: '100px' }
-        )
-
-        await nextTick()
-        if (scrollRef.value) {
-            observer.value.observe(scrollRef.value)
-        }
-    })
-
-    onUnmounted(() => {
-        observer.value?.disconnect()
-    })
 </script>
 
 <template>

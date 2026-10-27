@@ -5,82 +5,48 @@
     const { extractText } = useExtractText()
     const { fromNow } = useDayjs()
 
+    const PAGESIZE = 10
+
+    // 搜索条件全部来自 URL：进 key 之后，换关键词 / 换搜索类型会自动重新取数，
+    // 不用再手写 watch(route.query) 那一套
+    const condition = computed(() => ({
+        type: String(route.query.type ?? ''),
+        query: String(route.query.query ?? ''),
+    }))
+
     useSeoMeta({
-        title: `${t('search')} : ${route.query.type}-${route.query.query}`,
-        ogTitle: `${t('search')} : ${route.query.type}-${route.query.query}`,
+        // 写成 getter：站内跳转不重跑 setup，写死的话标题会停在上一次搜索
+        title: () =>
+            `${t('search')} : ${condition.value.type}-${condition.value.query}`,
+        ogTitle: () =>
+            `${t('search')} : ${condition.value.type}-${condition.value.query}`,
     })
 
-    const articles = ref<Article[]>([])
-    const loading = ref(false)
-    const page = reactive({
-        page: 1,
-        count: 0,
-    })
-
-    const scrollRef = useTemplateRef('scrollRef')
-    const observer = ref<IntersectionObserver | null>(null)
-
-    const fetchArticles = async () => {
-        loading.value = true
-        const { results, count } = await getArticleList({
-            page: 1,
-            [route.query.type as string]: route.query.query,
-        })
-        articles.value = results || []
-        page.page = 1
-        page.count = Math.ceil((count || 0) / 10)
-        loading.value = false
-    }
-
-    // 初始化加载
-    await fetchArticles()
-
-    // --- 监听 query 变化重新请求 ---
-    watch(
-        () => ({ ...route.query }),
-        async (newVal, oldVal) => {
-            if (
-                newVal.query !== oldVal?.query ||
-                newVal.type !== oldVal?.type
-            ) {
-                await fetchArticles()
-            }
-        }
+    const { data } = await useApiData(
+        'search',
+        p =>
+            getArticleList({
+                page: 1,
+                pagesize: PAGESIZE,
+                [p.type]: p.query,
+            }),
+        { params: () => condition.value }
     )
 
-    // --- 加载更多 ---
-    const loadArticles = async () => {
-        if (loading.value) return
-        if (page.page >= page.count) return
-
-        loading.value = true
-        page.page += 1
-
-        const { results } = await getArticleList({
-            page: page.page,
-            [route.query.type as string]: route.query.query,
-        })
-        if (results?.length) {
-            articles.value.push(...results)
-        }
-        loading.value = false
-    }
-
-    onMounted(async () => {
-        observer.value = new IntersectionObserver(
-            async entries => {
-                if (entries[0]?.isIntersecting) {
-                    await loadArticles()
-                }
-            },
-            { rootMargin: '100px' }
-        )
-
-        await nextTick()
-        if (scrollRef.value) observer.value.observe(scrollRef.value)
+    const {
+        items: articles,
+        loading,
+        scrollRef,
+    } = useInfiniteList<Article>({
+        pagesize: PAGESIZE,
+        initial: () => data.value,
+        fetchPage: page =>
+            getArticleList({
+                page,
+                pagesize: PAGESIZE,
+                [condition.value.type]: condition.value.query,
+            }),
     })
-
-    onUnmounted(() => observer.value?.disconnect())
 </script>
 
 <template>
