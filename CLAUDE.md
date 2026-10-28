@@ -282,6 +282,28 @@ Each block is then split at sentence boundaries into ≤`MAX_CHUNK` (100) charac
 
 Every start / stop / jump bumps a `run` token: `cancel()` fires `onend` and `onerror('interrupted')` on the previous utterance, and without the token one cancel walks the queue forward. `.k-tts-active` lives in `main.css`, not the component, because it targets article DOM that the component doesn't own.
 
+### PWA (installable + offline reading)
+
+`@vite-pwa/nuxt` (Workbox `generateSW`). Installable from the browser's own install entry — `client.installPrompt` is `false` on purpose, no custom install button.
+
+**Updates are `registerType: 'prompt'`, and that choice has a hard requirement**: a new SW installs, precaches, then sits in `waiting` — it does not take over. Without UI calling `updateServiceWorker(true)`, every visitor stays on the old build forever. `PwaUpdatePrompt.vue` (mounted in `layouts/default.vue`) is that UI. `autoUpdate` was rejected because it reloads the page out from under whoever is writing a draft in the editor. "稍后" only clears the flag for this page load; the waiting SW is still there and re-prompts next visit.
+
+**No `navigateFallback`.** The site is SSR (Nitro runs), so there is no prerendered `index.html` in the precache for Workbox to fall back to. Offline navigation instead comes from the `pages` runtime cache (NetworkFirst, 3s timeout) — i.e. pages you have already visited open offline; anything else shows the browser's offline page.
+
+**Fonts must stay out of the precache.** `@chinese-fonts/maple-mono-cn` ships ~3710 woff2 shards (~148 MB). `globIgnores` blocks `woff2/woff/ttf/eot`, and the `fonts` runtime rule caches shards on demand. Dropping that ignore turns first install into a 148 MB download. Current precache is ~410 entries / no fonts — re-check after adding assets.
+
+**`urlPattern` regexes are matched against `url.href`, not the pathname.** `RegExpRoute` allows a partial match only for *same-origin* requests, and `href` starts with the origin, so `/^\/…/ ` never matches `https://kotae.cn/article/5` — the route silently never fires and pages are never cached. Every path pattern here carries the origin (`^https?:\/\/[^/]+\/…`, origin wildcarded so preview / alternate-domain builds still work).
+
+**Route order matters**: Workbox takes the first match. `cos-images` and `fonts` are registered before `pages`, because the pages rule is deliberately loose (any origin, any extensionless path) and would otherwise swallow COS images.
+
+The pages rule excludes `_nuxt/` and `api/` by prefix, and every other static file by "no dot-extension in the last segment" (`{2,11}` covers `.webmanifest`, `.avif`). Enumerating `.js|.css|.png|…` was the first attempt and it always trails the real asset list.
+
+**`$pwa` is client-only and optional**, so `PwaUpdatePrompt` grabs it in `onMounted` and bridges into a local ref. Reading it in a `computed` at setup caches the `undefined` from SSR forever, and `v-if="$pwa?.needRefresh"` renders `false` on the server but `true` on the client — a hydration mismatch.
+
+Icons: `pwa-192/512` and `apple-touch-icon` were generated from `public/favicon.ico` (which is actually a 628×629 RGBA PNG, not an ICO). `pwa-maskable-512x512` is the same art at 78% on a brand-red field — Android crops maskable icons to a circle/teardrop and anything outside the middle ~80% gets cut. iOS ignores `manifest.icons` entirely, hence the separate `apple-touch-icon` link plus the `apple-mobile-web-app-*` metas in `app.head`.
+
+Service worker is **off in `nuxt dev`** (default). Verify PWA behaviour against `npm run build && node .output/server/index.mjs`, not the dev server.
+
 ### Theming
 
 Four Vuetify themes: `light` → `dark` → `rainy` → `glass`, cycled by `useThemeCycle`. All decorative styles in `main.css` (highlighter, stickers, blobs) are derived from `primary` / `secondary` tokens — new themes need no CSS changes.

@@ -304,5 +304,11 @@
     "tts_speed": "语速",
     "sel_explain": "解释一下",
     "sel_translate": "翻译",
-    "sel_expand": "展开讲讲"
+    "sel_expand": "展开讲讲",
+    "pwa_update_title": "发现新版本",
+    "pwa_update_desc": "重新加载后即可用上新版",
+    "pwa_update_now": "立即更新",
+    "pwa_update_doing": "更新中…",
+    "pwa_update_later": "稍后",
+    "pwa_offline_ready": "已缓存，断网也能继续读"
 }

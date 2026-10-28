@@ -28,6 +28,15 @@ export default defineNuxtConfig({
                     content: 'Kotae 记录 创作 分享，寻找你的答案',
                 },
                 { name: 'robots', content: 'index, follow' },
+                // PWA：Chrome 会读 manifest 里的 theme_color，iOS 只认这个 meta
+                { name: 'theme-color', content: '#e41b23' },
+                { name: 'mobile-web-app-capable', content: 'yes' },
+                { name: 'apple-mobile-web-app-capable', content: 'yes' },
+                { name: 'apple-mobile-web-app-title', content: 'Kotae' },
+                {
+                    name: 'apple-mobile-web-app-status-bar-style',
+                    content: 'default',
+                },
 
                 // Open Graph
                 { property: 'og:title', content: 'Kotae - 记录 · 创作 · 分享' },
@@ -50,6 +59,12 @@ export default defineNuxtConfig({
                     title: 'Kotae',
                     href: `${siteUrl}/rss.xml`,
                 },
+                // iOS 不认 manifest 里的 icons，也不吃 SVG，必须单独给一张 PNG
+                {
+                    rel: 'apple-touch-icon',
+                    sizes: '180x180',
+                    href: '/apple-touch-icon.png',
+                },
             ],
         },
     },
@@ -64,7 +79,134 @@ export default defineNuxtConfig({
         '@nuxtjs/tailwindcss',
         '@nuxtjs/sitemap',
         '@nuxtjs/robots',
+        '@vite-pwa/nuxt',
     ],
+    /**
+     * PWA：可安装 + 离线读文章。
+     *
+     * 站点是 SSR（Nitro 常驻），没有预渲染的 index.html，所以不能用 Workbox 的
+     * navigateFallback（它指望缓存里有一份 `/`）—— 离线导航交给 runtimeCaching
+     * 里的 NetworkFirst 处理，访问过的页面自然进缓存。
+     *
+     * 另外 3710 个字体分片（约 148MB）必须挡在 precache 之外，否则首次安装
+     * 要把整套中文字体拉一遍；字体改走运行时 CacheFirst，用到哪个存哪个。
+     */
+    pwa: {
+        registerType: 'prompt',
+        manifest: {
+            name: 'Kotae',
+            short_name: 'Kotae',
+            description: '记录 · 创作 · 分享，寻找你的答案',
+            lang: 'zh-CN',
+            start_url: '/',
+            scope: '/',
+            display: 'standalone',
+            background_color: '#F9FAFB',
+            theme_color: '#e41b23',
+            categories: ['blog', 'news'],
+            icons: [
+                {
+                    src: '/pwa-192x192.png',
+                    sizes: '192x192',
+                    type: 'image/png',
+                },
+                {
+                    src: '/pwa-512x512.png',
+                    sizes: '512x512',
+                    type: 'image/png',
+                },
+                {
+                    // 红底 + 中心 78% 的图标：Android 会把图标裁成圆形 / 水滴，
+                    // 内容必须落在中间的安全区里
+                    src: '/pwa-maskable-512x512.png',
+                    sizes: '512x512',
+                    type: 'image/png',
+                    purpose: 'maskable',
+                },
+            ],
+            shortcuts: [
+                {
+                    name: '写文章',
+                    short_name: '写文章',
+                    url: '/article/create',
+                },
+                { name: '标签云', short_name: '标签', url: '/tags' },
+                { name: '归档', short_name: '归档', url: '/archive' },
+            ],
+        },
+        workbox: {
+            navigateFallback: null,
+            cleanupOutdatedCaches: true,
+            globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+            globIgnores: ['**/*.woff2', '**/*.woff', '**/*.ttf', '**/*.eot'],
+            runtimeCaching: [
+                {
+                    /**
+                     * 文章配图在 COS 上，基本不会变，长缓存。
+                     *
+                     * 顺序有讲究：Workbox 按数组顺序匹配，先命中先返回。这条必须排在
+                     * 页面规则前面 —— 页面规则是「任意 origin + 无扩展名路径」的宽松
+                     * 正则，放前面会把 COS 图片也吃掉。
+                     */
+                    urlPattern:
+                        /^https:\/\/[\w-]+\.cos\.[\w-]+\.myqcloud\.com\/.*/i,
+                    handler: 'CacheFirst',
+                    options: {
+                        cacheName: 'cos-images',
+                        expiration: {
+                            maxEntries: 80,
+                            maxAgeSeconds: 60 * 60 * 24 * 30,
+                        },
+                        cacheableResponse: { statuses: [0, 200] },
+                    },
+                },
+                {
+                    // 字体分片没进 precache（见 globIgnores），用到哪个存哪个
+                    urlPattern: /\.(?:woff2?|ttf|eot)(?:[?#]|$)/i,
+                    handler: 'CacheFirst',
+                    options: {
+                        cacheName: 'fonts',
+                        expiration: {
+                            maxEntries: 40,
+                            maxAgeSeconds: 60 * 60 * 24 * 365,
+                        },
+                        cacheableResponse: { statuses: [0, 200] },
+                    },
+                },
+                {
+                    /**
+                     * 页面导航：先走网络，3 秒没回来就吃缓存 —— 离线时读过的文章照常打开。
+                     *
+                     * generateSW 模式下 urlPattern 不能写成函数（要序列化进 sw.js），
+                     * 只能给正则；而 RegExpRoute 对同源请求只要求「部分匹配」，
+                     * 所以这里得把 origin 也写进去，否则 `^\/` 永远匹配不到
+                     * `https://kotae.cn/article/5`。origin 写成通配是为了让 preview /
+                     * 换域名的构建也能命中。
+                     *
+                     * 排除法：`_nuxt/` 和 `api/` 按前缀挡，其余静态资源靠「路径里
+                     * 没有扩展名」挡 —— 逐个枚举 .js/.css/.png 不如这条稳。
+                     * 扩展名上限放到 11 位是为了盖住 .webmanifest / .avif。
+                     */
+                    urlPattern:
+                        /^https?:\/\/[^/]+\/(?!_nuxt\/|api\/)(?![^?#]*\.[a-z0-9]{2,11}(?:[?#]|$))/i,
+                    handler: 'NetworkFirst',
+                    options: {
+                        cacheName: 'pages',
+                        networkTimeoutSeconds: 3,
+                        expiration: {
+                            maxEntries: 50,
+                            maxAgeSeconds: 60 * 60 * 24 * 7,
+                        },
+                        cacheableResponse: { statuses: [0, 200] },
+                    },
+                },
+            ],
+        },
+        client: {
+            // 不用自定义安装按钮：浏览器自带的安装入口已经够用
+            installPrompt: false,
+        },
+    },
     i18n: {
         defaultLocale: 'en',
         locales: [

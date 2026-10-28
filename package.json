@@ -41,6 +41,7 @@
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@types/html-to-text": "^9.0.4",
     "@types/node": "^24.5.2",
+    "@vite-pwa/nuxt": "^1.1.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

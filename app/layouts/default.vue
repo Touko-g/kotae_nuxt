@@ -217,6 +217,13 @@
             </v-main>
             <AppFooter />
             <Toaster />
+            <!--
+                manifest 链接必须由这个组件渲染：@vite-pwa/nuxt 只把组件注册成全局的，
+                不会自己往 app.head 里塞 <link rel="manifest">，不渲染就没有。
+            -->
+            <VitePwaManifest />
+            <!-- PWA 更新提示：注册类型是 prompt，不给它一个入口就永远停在旧版本 -->
+            <PwaUpdatePrompt />
             <!--        </v-layout>-->
         </v-app>
     </div>

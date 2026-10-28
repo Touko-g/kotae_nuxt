@@ -304,5 +304,11 @@
     "tts_speed": "Speed",
     "sel_explain": "Explain",
     "sel_translate": "Translate",
-    "sel_expand": "Expand"
+    "sel_expand": "Expand",
+    "pwa_update_title": "New version available",
+    "pwa_update_desc": "Reload to get the latest build",
+    "pwa_update_now": "Update now",
+    "pwa_update_doing": "Updating…",
+    "pwa_update_later": "Later",
+    "pwa_offline_ready": "Cached — you can read offline now"
 }

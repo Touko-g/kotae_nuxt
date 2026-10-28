@@ -422,6 +422,18 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 
 ---
 
+## PWA（可安装 + 离线阅读）
+
+`@vite-pwa/nuxt` + Workbox。桌面 Chrome / Edge 地址栏、Android Chrome 菜单、iOS Safari「添加到主屏幕」都能装成独立应用，装完断网也能打开读过的文章。
+
+- **更新提示是手写的**（`PwaUpdatePrompt.vue`）：注册类型用 `prompt`，新版本装好后停在等待态不接管页面 —— 用户可能正在编辑器里写草稿，自动刷新会把内容冲掉。底部冒一张小卡片，点「立即更新」才跳过等待并重载。
+- **离线范围 = 访问过的页面**。站点是 SSR，没有预渲染的 `index.html` 可以当兜底页，所以关掉了 `navigateFallback`，改由页面级 NetworkFirst 缓存（3 秒超时）兜住。
+- **中文字体不进预缓存**。`@chinese-fonts/maple-mono-cn` 有 3700 多个 woff2 分片（约 148MB），首次安装拉全套是不可接受的；字体走运行时 CacheFirst，用到哪个存哪个。当前预缓存约 410 项、0 个字体文件。
+- 图标由 `public/favicon.ico` 生成：`pwa-192`、`pwa-512`、`apple-touch-icon`，外加一张红底安全区的 `pwa-maskable-512`（Android 会把图标裁成圆形 / 水滴）。
+- Service Worker 在 `nuxt dev` 下默认不启用，验证请用 `npm run build && node .output/server/index.mjs`。
+
+---
+
 ## API 接口一览
 
 | 模块 | 接口 | 方法 | 说明 |
