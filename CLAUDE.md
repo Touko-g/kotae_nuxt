@@ -51,10 +51,14 @@ app/
 │   ├── CommandPalette.vue  # Ctrl/⌘ + K command palette
 │   ├── *Dialog.vue      # Modal dialogs (Login, Register, Reset, Search)
 │   ├── ImageLightbox.vue   # Image lightbox
+│   ├── ReadAloudBar.vue    # Read-aloud button + playback bar
+│   ├── SelectionAskBar.vue # Selection popover (explain / translate / expand)
 │   ├── SpeechInput.vue     # Web Speech API voice input
 │   └── Article*.vue     # Article-related components
 ├── composables/         # Auto-imported composables
 │   ├── useHttp.ts       # HTTP client wrapper with auth & error handling
+│   ├── useSpeechSynthesis.ts # Read-aloud: per-block playback + highlight
+│   ├── useTextSelection.ts   # Article selection detection + popover anchoring
 │   ├── useArticleHtml.ts # Article body pipeline: Shiki highlight + DOMPurify
 │   ├── useCosUpload.ts  # Tencent COS direct upload (single entry point)
 │   ├── useToast.ts      # Sticker-style toast notifications
@@ -261,6 +265,22 @@ Rules that matter when adding new AI actions:
 - **The panel only lists placeholders that action can actually fill.** Each `AiBuiltinAction` declares `vars` (default `['text','title']`), and `customVars` covers user-defined actions. `{{reply}}` on 「帮我写一条」 and `{{text}}` on any generation action are not merely empty — they are structurally empty, so offering a chip for them is a trap: the user inserts it, the prompt grows two blank slots, and it reads as "占位符又失效了". Earlier the chips were gated on `scope === 'comment'` instead, which leaked exactly these two.
 - If a template still *contains* an unavailable placeholder (a saved override, or the user typed it), a warning line names it (`emptyVarsIn`) — silent empty-string substitution is the failure mode users keep reporting. The check normalizes full-width braces first, otherwise `｛｛text｝｝` slips through unnoticed.
 - Never write `{{ '{{text}}' }}` in a template. Vue's interpolation scan hits the inner `}}` and the expression is truncated into `'{{text`, which fails to compile. Build the token in script (`tokenOf(name)` → `` `{{${name}}}` ``) and loop over a chip list instead.
+
+### Reading Enhancements (selection ask / read-aloud)
+
+Two client-only reading-layer features. Neither touches the SSR payload, and neither needs a backend change.
+
+**Selection ask** — `useTextSelection` + `SelectionAskBar`, wired up in `pages/article/[id].vue`. `selectionchange` is debounced 120ms: dragging a selection fires it continuously, and popping the bar mid-drag is noise. The selection must sit **inside** the article container (`container.contains(range.commonAncestorContainer)`), otherwise highlighting a comment or the title pops it too. The bar is `Teleport`ed to `body` and positioned with viewport coordinates, which means it must carry the current `v-theme--*` class itself — Vuetify's tokens live on `.v-application`, outside the teleport target. Every node in the bar needs `@mousedown.prevent`: the default mousedown collapses the selection, `selectionchange` fires, and the bar unmounts before the click lands. The result panel reuses `AiAssistDialog` with `applyLabel` — "应用" is meaningless here, the action is copy. Actions are built in the page (it owns the selection), never in the dialog.
+
+**Read-aloud** — `useSpeechSynthesis` + `ReadAloudBar`. Speaks **block by block**, not the whole body at once: long utterances silently stop mid-way in Chrome, and only per-block playback knows which block is current (that's what drives `.k-tts-active`).
+
+Block collection walks **text nodes** (`TreeWalker` + `NodeFilter.SHOW_TEXT`) and groups each one under its nearest block ancestor. Do **not** go back to `querySelectorAll('p, li, …')` + "keep the innermost": that whitelist looked fine on ordinary articles but silently dropped `<pre><code>` blocks, table cells and bare `<div>` text — on one real article it collected **0 of 969 characters**. Any structure the editor produces (or a paste from ChatGPT, which wraps code in nested divs) has to stay readable. Walking text nodes also fixes `li > ul > li`, where the outer `li`'s own text belongs to the outer block and the inner one to the inner block; both survive.
+
+Each block is then split at sentence boundaries into ≤`MAX_CHUNK` (100) character utterances — one long utterance is precisely what triggers the Chrome cutoff — with a second safety net (`KEEP_ALIVE_MS`, pause+resume every 12s) poking the engine if a chunk still runs long. Chunking is an engine-level detail: `index` / `total` stay at **block** granularity, so the UI never reads "sentence 37 of 120".
+
+`setRate` re-speaks from the **current sentence**, never the current block: a 1000-character block is a dozen sentences, so restarting the block is a half-minute rewind. It also returns early on an unchanged value (one stray click would otherwise rewind) and does nothing while paused — the new rate applies from the next sentence after resume. `resetEngine()` exists because `cancel()` clears the queue but **not** the paused flag: cancel-then-speak on a paused engine produces silence, which reads as "changing the speed broke the sound".
+
+Every start / stop / jump bumps a `run` token: `cancel()` fires `onend` and `onerror('interrupted')` on the previous utterance, and without the token one cancel walks the queue forward. `.k-tts-active` lives in `main.css`, not the component, because it targets article DOM that the component doesn't own.
 
 ### Theming
 

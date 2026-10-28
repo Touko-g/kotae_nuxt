@@ -292,5 +292,17 @@
     "ai_prompt_delete_confirm": "确定删除这个动作吗？",
     "ai_prompt_reset_all": "全部恢复默认",
     "ai_prompt_reset_confirm": "确定清空这个场景下的所有自定义提示词吗？",
-    "ai_prompt_enabled": "启用"
+    "ai_prompt_enabled": "启用",
+    "read_aloud": "朗读正文",
+    "tts_unsupported": "当前浏览器不支持语音朗读",
+    "tts_empty": "这篇正文里没有可以朗读的内容",
+    "tts_play": "继续朗读",
+    "tts_pause": "暂停朗读",
+    "tts_prev": "上一段",
+    "tts_next": "下一段",
+    "tts_stop": "结束朗读",
+    "tts_speed": "语速",
+    "sel_explain": "解释一下",
+    "sel_translate": "翻译",
+    "sel_expand": "展开讲讲"
 }

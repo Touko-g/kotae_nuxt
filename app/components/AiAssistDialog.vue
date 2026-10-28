@@ -22,6 +22,11 @@
         builtins?: AiBuiltinAction[]
         /** 自定义动作能用的占位符（场景级全集），不传由面板按 text/title 兜底 */
         customVars?: AiPromptVarName[]
+        /**
+         * 主按钮文案。默认是「应用」，因为多数场景要把结果写回编辑器；
+         * 划词解释这类只读场景没有「应用」可言，传「复制」更贴切。
+         */
+        applyLabel?: string
     }
 
     const props = defineProps<Props>()
@@ -401,7 +406,7 @@
                     :disabled="!content || busy"
                     @click="apply"
                 >
-                    {{ t('ai_apply') }}
+                    {{ applyLabel || t('ai_apply') }}
                 </v-btn>
             </v-card-actions>
         </v-card>

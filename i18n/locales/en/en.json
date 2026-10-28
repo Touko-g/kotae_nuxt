@@ -292,5 +292,17 @@
     "ai_prompt_delete_confirm": "Delete this action?",
     "ai_prompt_reset_all": "Reset all",
     "ai_prompt_reset_confirm": "Clear every custom prompt in this context?",
-    "ai_prompt_enabled": "Enabled"
+    "ai_prompt_enabled": "Enabled",
+    "read_aloud": "Read aloud",
+    "tts_unsupported": "This browser does not support speech synthesis",
+    "tts_empty": "Nothing to read in this article",
+    "tts_play": "Resume",
+    "tts_pause": "Pause",
+    "tts_prev": "Previous",
+    "tts_next": "Next",
+    "tts_stop": "Stop",
+    "tts_speed": "Speed",
+    "sel_explain": "Explain",
+    "sel_translate": "Translate",
+    "sel_expand": "Expand"
 }

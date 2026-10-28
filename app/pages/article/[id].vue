@@ -1,5 +1,6 @@
 <script setup lang="ts">
     import type { ConfirmDialog } from '#components'
+    import type { AiAssistAction } from '#shared/types/ai'
     const route = useRoute()
     const siteUrl = useRuntimeConfig().public.siteUrl
 
@@ -7,7 +8,7 @@
     const { getLikeList, addLike, delLike } = useLike()
 
     const { fromNow } = useDayjs()
-    const { t } = useLocale()
+    const { t, current } = useLocale()
     const { mobile } = useDisplay()
     const { name } = useTheme()
     const { show } = useToast()
@@ -313,6 +314,107 @@
         lightboxImages,
         lightboxIndex,
     } = useArticleEnhance({ html: () => renderedHtml.value })
+
+    /** 朗读组件自己去正文里收集段落，这里只把容器递出去 */
+    const getContentEl = () => markdownRef.value
+
+    // --- 划词问 AI ---
+    // 选区探测交给 useTextSelection，这里只决定「点了哪个动作、发什么提示词」。
+    // 浮条只在登录且站点开着 AI 时出现：未登录点了也只会撞 401。
+    const aiClient = useAiClient()
+
+    const {
+        visible: askVisible,
+        text: askText,
+        anchor: askAnchor,
+        hide: hideAsk,
+    } = useTextSelection({
+        container: () => markdownRef.value,
+        enabled: () => aiClient.available.value,
+    })
+
+    /** 回答语言跟着界面走：中文界面用中文解释，英文界面用英文 */
+    const answerLang = computed(() =>
+        current.value === 'zh' ? '中文' : '英文'
+    )
+    /** 翻译的目标语言永远是「另一种」 */
+    const translateTarget = computed(() =>
+        current.value === 'zh' ? '英文' : '中文'
+    )
+
+    /**
+     * 三个内置动作。
+     *
+     * 提示词在这里拼而不是在面板里：面板拿到的就是最终要发出去的那段话，
+     * 它不需要知道选中了什么、也不需要知道界面语言。
+     */
+    const ASK_ACTIONS = [
+        {
+            key: 'explain',
+            icon: 'mdi-comment-quote-outline',
+            labelKey: 'sel_explain',
+            rule: () =>
+                `解释下面这段文字在说什么：说清它的意思和关键概念，不要复述原文，控制在 200 字以内。用${answerLang.value}回答。`,
+        },
+        {
+            key: 'translate',
+            icon: 'mdi-translate',
+            labelKey: 'sel_translate',
+            rule: () =>
+                `把下面这段文字翻译成${translateTarget.value}，只输出译文，不要任何解释。`,
+        },
+        {
+            key: 'expand',
+            icon: 'mdi-arrow-expand-horizontal',
+            labelKey: 'sel_expand',
+            rule: () =>
+                `围绕下面这段文字展开讲讲：补充背景、原因或者一个具体例子，300 字以内。用${answerLang.value}回答。`,
+        },
+    ]
+
+    const askChips = computed(() =>
+        ASK_ACTIONS.map(action => ({
+            key: action.key,
+            label: t(action.labelKey),
+            icon: action.icon,
+        }))
+    )
+
+    const askOpen = ref(false)
+    const askKey = ref('explain')
+    /**
+     * 打开面板时把选中文字冻结下来。
+     * 不能直接读 askText：浮条一收起选区就没了，而面板在整个生成过程中都要
+     * 拿它当原文（重新生成、换动作都还要用）。
+     */
+    const askSource = ref('')
+
+    const askActions = computed<AiAssistAction[]>(() => {
+        const text = askSource.value
+        if (!text) return []
+        return ASK_ACTIONS.map(action => ({
+            key: action.key,
+            label: t(action.labelKey),
+            icon: action.icon,
+            format: 'text' as const,
+            prompt: `${action.rule()}\n\n${text}`,
+        }))
+    })
+
+    const openAsk = (key: string) => {
+        if (!askText.value) return
+        askSource.value = askText.value
+        askKey.value = key
+        hideAsk()
+        askOpen.value = true
+    }
+
+    /** 划词场景没有「写回正文」这回事，主按钮就是复制结果 */
+    const handleAskApply = async (result: string) => {
+        await copyToClipboard(result)
+        soundTick()
+        show(t('ai_copied'), 'success')
+    }
 </script>
 
 <template>
@@ -422,6 +524,10 @@
                                         :aria-label="t('share')"
                                         :title="t('share')"
                                         @click="handleShare"
+                                    />
+                                    <ReadAloudBar
+                                        class="ml-1"
+                                        :container="getContentEl"
                                     />
                                 </div>
                                 <div class="d-flex align-center">
@@ -612,6 +718,25 @@
             v-model="lightboxVisible"
             :images="lightboxImages"
             :start="lightboxIndex"
+        />
+
+        <!-- 划词浮条：选中正文任意一段，贴着选区冒出解释 / 翻译 / 展开 -->
+        <SelectionAskBar
+            :model-value="askVisible"
+            :text="askText"
+            :anchor="askAnchor"
+            :actions="askChips"
+            @select="openAsk"
+        />
+
+        <!-- 划词结果面板：只读，主按钮是复制而不是「应用」 -->
+        <AiAssistDialog
+            v-model="askOpen"
+            :actions="askActions"
+            :initial-key="askKey"
+            :source-text="askSource"
+            :apply-label="t('ai_copy')"
+            @apply="handleAskApply"
         />
     </v-container>
 </template>

@@ -102,9 +102,11 @@ kotae_nuxt/
 │   │   ├── LoginDialog.vue       # 登录对话框
 │   │   ├── NoticeList.vue        # 通知列表
 │   │   ├── NoticePanel.vue       # 通知面板
+│   │   ├── ReadAloudBar.vue      # 正文朗读（按钮 + 播放控制浮条）
 │   │   ├── RegisterDialog.vue    # 注册对话框
 │   │   ├── ResetDialog.vue       # 重置密码对话框
 │   │   ├── SearchDialog.vue      # 搜索对话框
+│   │   ├── SelectionAskBar.vue   # 划词浮条（解释 / 翻译 / 展开）
 │   │   ├── SpeechInput.vue       # 语音输入（含实时转写浮条）
 │   │   ├── SpeechLiveBar.vue     # 实时转写浮条（Teleport 到 body）
 │   │   └── VToast.vue            # 贴纸风 Toast 外观
@@ -137,6 +139,8 @@ kotae_nuxt/
 │   │   ├── useShiki.ts           # 代码高亮器单例
 │   │   ├── useSound.ts           # 交互音效（cuelume 封装 + 开关持久化）
 │   │   ├── useSpeechRecognition.ts # Web Speech API 语音转文字
+│   │   ├── useSpeechSynthesis.ts # 正文朗读（分段播放 + 当前段高亮）
+│   │   ├── useTextSelection.ts   # 正文划词探测与浮条定位
 │   │   ├── useThemeCycle.ts      # 4 套主题轮换
 │   │   └── useToast.ts           # Toast 通知（集成音效反馈）
 │   ├── layouts/
@@ -389,6 +393,32 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 
 `GET /api/ai/models/` 优先探测用户 Key 对应的上游 `/models`，连不上就回落到后端内置清单（缓存 10 分钟，按用户分桶），响应里的 `source` 会标明来源是 `upstream` 还是 `builtin`。内置清单只放**对话模型** —— rerank / embedding / tts / 图像模型走 `chat/completions` 会直接 502。
 
+
+---
+
+## 阅读增强
+
+两个纯前端能力，都不改后端、不进 SSR 数据。
+
+### 划词问 AI
+
+在正文里选中任意一段，贴着选区冒出「解释 / 翻译 / 展开」浮条，点开后走 `AiAssistDialog` 流式输出。
+
+- 只有登录且站点开着 AI 时才出现（`useAiClient().available`）；
+- 选区必须落在正文容器内 —— 在标题或评论区划词不会弹；
+- 回答语言跟随界面语言，翻译的目标语言固定是「另一种」；
+- 结果面板的主按钮是**复制**而不是「应用」：这里没有可以写回的地方。
+
+### 正文朗读
+
+文章操作栏里的喇叭按钮，按段落逐段朗读，当前段落高亮并自动滚到视野中间。底部浮条可以暂停 / 跳段 / 调语速（0.75× ~ 1.5×），语速存 `localStorage`。
+
+依赖浏览器 `speechSynthesis`，Chrome / Edge / Safari 支持，音色取决于系统装了哪些语音。
+
+两个细节都是为了「不漏字」：
+
+- **按文本节点收集段落**，而不是按标签白名单。代码块、表格单元格、裸 `<div>` 里的文字都会被读到（早期用 `querySelectorAll('p, li, …')` 会整段跳过，有一篇 969 字的文章收集到 0 字）。
+- **长段落按句号切句**再交给引擎，并每 12 秒做一次 pause/resume 保活。整篇或整段一次性丢进去，Chrome 会在长句中途静默停止，后面全不出声。
 
 ---
 
