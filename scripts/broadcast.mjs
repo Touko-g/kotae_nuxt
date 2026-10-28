@@ -293,6 +293,9 @@ const fetchFeed = async () => {
         headers: {
             // 有些 CDN 会对无 UA 的请求返回 403
             'user-agent': 'kotae-broadcast/1.0 (+https://kotae.cn)',
+            // 这个 accept 有两重作用：一是告诉 CDN 要的是 feed，
+            // 二是 /rss.xml 会按 Accept 做内容协商 —— 带上 text/html 会拿到网页版，
+            // parseFeed 直接解析失败。改之前先看 server/routes/rss.xml.ts。
             accept: 'application/rss+xml, application/xml, text/xml',
         },
     })

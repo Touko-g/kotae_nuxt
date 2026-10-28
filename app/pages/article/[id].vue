@@ -107,6 +107,22 @@
         () => `${siteUrl}/article/${article.value?.id ?? ''}`
     )
 
+    /**
+     * 正文首图，给 og:image / twitter:image 用。
+     *
+     * 没有这个标签时，社交平台和 RSS 阅读器抓原文页拿不到配图，分享出去就是一张
+     * 空白卡片。正文里的图可能是相对路径，必须补成绝对地址 —— 抓取方没有 base。
+     */
+    const coverImage = computed(() => {
+        const html = article.value?.content || ''
+        const src = html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || ''
+        if (!src) return ''
+        if (/^https?:\/\//i.test(src)) return src
+        // 协议相对地址（//cdn.xxx）补协议；其余按站点根路径拼
+        if (src.startsWith('//')) return `https:${src}`
+        return `${siteUrl}${src.startsWith('/') ? '' : '/'}${src}`
+    })
+
     useSeoMeta({
         title: () => article.value?.title || 'Kotae',
         ogTitle: () => article.value?.title || 'Kotae - 记录 · 创作 · 分享',
@@ -116,6 +132,11 @@
             seoDescription.value || 'Kotae 记录 创作 分享，寻找你的答案',
         ogType: 'article',
         ogUrl: () => seoUrl.value,
+        ogImage: () => coverImage.value || undefined,
+        // 大图卡片只在真有图时启用，否则会渲染成一块空白
+        twitterCard: () =>
+            coverImage.value ? 'summary_large_image' : 'summary',
+        twitterImage: () => coverImage.value || undefined,
     })
 
     useHead({
