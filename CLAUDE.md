@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档、标签云等功能。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 4 套主题（light / dark / rainy / glass）。
+Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档、标签云等功能。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 3 套主题（light / dark / terminal）。
 
 ## Common Commands
 
@@ -51,13 +51,16 @@ app/
 │   ├── CommandPalette.vue  # Ctrl/⌘ + K command palette
 │   ├── *Dialog.vue      # Modal dialogs (Login, Register, Reset, Search)
 │   ├── ImageLightbox.vue   # Image lightbox
+│   ├── InkTrail.vue        # Decorative cursor ink trail (full-viewport canvas)
+│   ├── PwaUpdatePrompt.vue # "New version ready" prompt (prompt-mode SW)
 │   ├── ReadAloudBar.vue    # Read-aloud button + playback bar
-│   ├── SelectionAskBar.vue # Selection popover (explain / translate / expand)
+│   ├── SelectionAskBar.vue # Selection popover (explain / translate / expand / quiz)
 │   ├── SpeechInput.vue     # Web Speech API voice input
 │   └── Article*.vue     # Article-related components
 ├── composables/         # Auto-imported composables
 │   ├── useHttp.ts       # HTTP client wrapper with auth & error handling
 │   ├── useSpeechSynthesis.ts # Read-aloud: per-block playback + highlight
+│   ├── useInkTrail.ts        # Ink trail sampling / drawing / teardown
 │   ├── useTextSelection.ts   # Article selection detection + popover anchoring
 │   ├── useArticleHtml.ts # Article body pipeline: Shiki highlight + DOMPurify
 │   ├── useCosUpload.ts  # Tencent COS direct upload (single entry point)
@@ -272,15 +275,31 @@ Two client-only reading-layer features. Neither touches the SSR payload, and nei
 
 **Selection ask** — `useTextSelection` + `SelectionAskBar`, wired up in `pages/article/[id].vue`. `selectionchange` is debounced 120ms: dragging a selection fires it continuously, and popping the bar mid-drag is noise. The selection must sit **inside** the article container (`container.contains(range.commonAncestorContainer)`), otherwise highlighting a comment or the title pops it too. The bar is `Teleport`ed to `body` and positioned with viewport coordinates, which means it must carry the current `v-theme--*` class itself — Vuetify's tokens live on `.v-application`, outside the teleport target. Every node in the bar needs `@mousedown.prevent`: the default mousedown collapses the selection, `selectionchange` fires, and the bar unmounts before the click lands. The result panel reuses `AiAssistDialog` with `applyLabel` — "应用" is meaningless here, the action is copy. Actions are built in the page (it owns the selection), never in the dialog.
 
+**Socratic ("反问我")** — the fourth action sets `kind: 'socratic'`, which switches `AiAssistDialog` into a three-step flow: the model turns the question back on the reader ("what would you like to know about this passage?"), the user states their doubt, the model answers it. It is explicitly **not** a quiz — the prompt has to say so in as many words, otherwise the model falls back to a comprehension question and the whole thing collapses into a roundabout "explain". Round two also asks the model to flag it if the user's own framing carries a misunderstanding. Two **separate** `useAI` instances on purpose: sharing one `content` ref means the question disappears the instant you submit (the answer overwrites it), and the two streams' `abort` / `pending` step on each other. The second prompt comes from the caller via `evaluatePrompt(question, answer)` — the dialog doesn't know the source text or the UI language. Round two re-sends source + question + doubt instead of leaning on `keepHistory`, so 「重新解答」 and mid-stream aborts can't inherit a stale context. Submit stays disabled while round one streams (answering a half-finished question is meaningless), and there is no 「应用」 button here: the output is something to read, not text to write back.
+
+**Bar width** — `.k-ask-bar` must be `width: max-content`. A `position: fixed` element with only `left` set is shrink-to-fit against the space between `left` and the containing block's right edge, and `translateX(-50%)` does **not** participate in that calculation — so without it, selecting text on the right half squeezes the bar and the buttons wrap for no reason. The edge clamp measures the real width after render (`nextTick`, which runs before paint, so the correction never shows as a jump) rather than hard-coding half of it: labels change with locale, and an underestimate lets the bar hang ~25px past the right edge at tablet widths. Any `@media` override of `.k-ask-btn` needs the `.k-ask-bar` prefix — the base rule sits later in the file and wins at equal specificity (media queries add none).
+
 **Read-aloud** — `useSpeechSynthesis` + `ReadAloudBar`. Speaks **block by block**, not the whole body at once: long utterances silently stop mid-way in Chrome, and only per-block playback knows which block is current (that's what drives `.k-tts-active`).
 
 Block collection walks **text nodes** (`TreeWalker` + `NodeFilter.SHOW_TEXT`) and groups each one under its nearest block ancestor. Do **not** go back to `querySelectorAll('p, li, …')` + "keep the innermost": that whitelist looked fine on ordinary articles but silently dropped `<pre><code>` blocks, table cells and bare `<div>` text — on one real article it collected **0 of 969 characters**. Any structure the editor produces (or a paste from ChatGPT, which wraps code in nested divs) has to stay readable. Walking text nodes also fixes `li > ul > li`, where the outer `li`'s own text belongs to the outer block and the inner one to the inner block; both survive.
 
+The block list has to include `div` / `section` / `summary` / `figure`, not just semantic tags. AI-generated HTML and pasted content routinely put a whole paragraph of text straight into a `div`, and `<details><summary>` headings live in `summary`. Omitting them does not lose text — it *falls back to the article root*, and then `.k-tts-active` paints the **entire article** and `scrollIntoView` jumps to the top of the page. Text that sits directly in the root has no block to point at, so those segments carry `el: null` and simply skip highlight and follow-scroll rather than highlighting everything.
+
+**Segments go stale when the article DOM is replaced.** Switching theme recomputes `renderedHtml` (Shiki recolours code blocks), `v-html` rebuilds the whole subtree, and every stored element detaches — playback keeps going but the highlight and follow-scroll silently stop, which reads as "highlights disappeared". `speakAt` checks `isConnected` and calls `rebind()`, which re-collects and re-maps by index **only when the block count is unchanged**; if the count differs the content really changed, and a wrong highlight is worse than none.
+
 Each block is then split at sentence boundaries into ≤`MAX_CHUNK` (100) character utterances — one long utterance is precisely what triggers the Chrome cutoff — with a second safety net (`KEEP_ALIVE_MS`, pause+resume every 12s) poking the engine if a chunk still runs long. Chunking is an engine-level detail: `index` / `total` stay at **block** granularity, so the UI never reads "sentence 37 of 120".
 
-`setRate` re-speaks from the **current sentence**, never the current block: a 1000-character block is a dozen sentences, so restarting the block is a half-minute rewind. It also returns early on an unchanged value (one stray click would otherwise rewind) and does nothing while paused — the new rate applies from the next sentence after resume. `resetEngine()` exists because `cancel()` clears the queue but **not** the paused flag: cancel-then-speak on a paused engine produces silence, which reads as "changing the speed broke the sound".
+**`cancel()` and `speak()` must not share a tick.** Cancelling fires `onend`/`onerror` on the removed utterance *asynchronously*, and a new utterance queued in the same task can end up never receiving its `onend`. `onend` is the only thing that advances the chain, so playback dies right there — reported as "改完倍速，当前这段念完就没声了". Every cancel-then-speak path (`start` / `jump` / `setRate`) therefore goes through `restartAt()`, which cancels and then speaks `CANCEL_SETTLE_MS` (60ms) later. Imperceptible, and it gives the cancelled utterance's events time to land.
+
+**The watchdog is what makes the chain survive a lost `onend`.** A 1s poll checks "we think we're playing, but the engine is neither speaking nor pending" — that can only mean the event was dropped, so it advances from `activePiece + 1` (bumping `run` first, which neutralises a late `onend`). It stands down while paused or while `restartTimer` is pending, since both make the engine look idle. `stalls` counts consecutive rescues and resets on any natural `onend`; past `MAX_STALLS` (2) it calls `stop()` — a broken engine should end the session, not race through the article skipping sentences.
+
+Both failure modes were reproduced before the fix, in a Node harness that loads this exact file (type-stripping, `import.meta.client` replaced) against a fake engine with a controllable clock: with the watchdog disabled, the run ends at `index=0, speaking=true` — stuck mid-article with the bar still showing. Re-enable it and the same scenario reads to the end.
+
+`setRate` re-speaks from the **current sentence**, never the current block: a 1000-character block is a dozen sentences, so restarting the block is a half-minute rewind. It also returns early on an unchanged value (one stray click would otherwise rewind) and does nothing while paused — the new rate applies from the next sentence after resume. `resetEngine()` exists because `cancel()` clears the queue but **not** the paused flag: cancel-then-speak on a paused engine produces silence, which reads as "changing the speed broke the sound". Resuming mid-block is also why `speakAt` only scrolls when `from === 0` — otherwise every speed change yanks the page back to the current block.
 
 Every start / stop / jump bumps a `run` token: `cancel()` fires `onend` and `onerror('interrupted')` on the previous utterance, and without the token one cancel walks the queue forward. `.k-tts-active` lives in `main.css`, not the component, because it targets article DOM that the component doesn't own.
+
+Known behaviour, not bugs: the voice language follows the **UI** language (`lang: () => current === 'zh' ? 'zh-CN' : 'en-US'`), not the article's language — an English-UI reader on a Chinese article gets an English voice. Jumping to another block while paused resumes playback (jump is treated as "play this one"). Reaching the end calls `stop()`, so the bar disappears with no "finished" state.
 
 ### PWA (installable + offline reading)
 
@@ -304,11 +323,60 @@ Icons: `pwa-192/512` and `apple-touch-icon` were generated from `public/favicon.
 
 Service worker is **off in `nuxt dev`** (default). Verify PWA behaviour against `npm run build && node .output/server/index.mjs`, not the dev server.
 
+### Ink Trail (decorative cursor effect)
+
+`useInkTrail` + `InkTrail.vue`, mounted in `layouts/default.vue`: dragging the mouse leaves a fading ink trail that dries out ~900ms after you stop. Purely decorative — no state, no storage, no interaction.
+
+**Mouse only.** `pointermove` fires for touch too, and a finger swipe down the page would smear ink across the whole viewport mid-scroll. `pointerType !== 'mouse'` is dropped. Touch and pen get nothing, deliberately.
+
+**No particle system.** The trail is the last ≤48 sampled points (`MIN_DIST` 3px apart), drawn as short pieces whose alpha and width decay with age — `(1 - age) ** 1.2` rather than linear, so it lingers then dries quickly instead of fading uniformly. That's the whole "ink" effect; storing particles would add per-frame iteration and sorting for nothing.
+
+**Pieces are cut at segment midpoints and drawn with `lineCap: 'butt'` — this is the fix for the "dots" (串珠).** Two separate `stroke()` calls that overlap geometrically composite alpha twice: measured in Chrome, `globalAlpha = 0.5` drawn twice gives **0.75**, not 0.5. Drawing each segment with round caps from vertex to vertex means every sample point is covered by two caps, so every point becomes a slightly darker disc — on a real page it reads as a string of beads. Pulling the caps back until they merely touch fixes the beads but leaves a pinch (tangent circles have zero width at the touch point), so the trail turns into a string of sausages. The only cut that is neither overlapping nor gapped is at the **midpoint of a segment**: both sides there have the same direction and flat faces, so butt cap meets butt cap exactly. Each piece is centred on a vertex and runs midpoint → vertex → midpoint, and consecutive pieces tile the polyline with zero overlap and zero gap. `lineCap` must stay `butt`; a single `round` anywhere re-creates the bead.
+
+**One `stroke()` may self-overlap freely** — verified: a path that doubles back on itself measures 0.498 alpha, identical to a straight one. Canvas builds the stroke outline and fills it once, so self-intersection does not accumulate. The doubling only happens *between* calls.
+
+The tip is finished with a **forward half-disc** (`arc` swept over π, filled), not a full circle: a full circle would sit on top of the last piece's flat end and composite it a second time, putting the darkest bead exactly at the cursor. The half-disc shares only the diameter line with the piece, so the two join into a capsule with no overlap.
+
+**Two passes over the same points, not two strokes per piece.** Halo first (2.2× width, 0.28× alpha), then the main line. Drawing both inside one loop lets the *next* piece's halo paint over the *previous* piece's main line, and the trail reads as a string of bright heads and dull tails.
+
+**The rAF loop stops when the ink is dry.** `frame()` clears the canvas, returns without rescheduling once `points` is empty, and `pointermove` kicks it again. The effect is off most of the time — a resident 60fps loop would burn battery for an idle screen.
+
+**Colour is read from `current.value.colors.primary` every frame** instead of watching the theme, so a theme switch mid-stroke recolours immediately with no listener to maintain.
+
+**`prefers-reduced-motion: reduce` opts out entirely** — checked once in `onMounted`, no listeners attached. Of everything on the site, a mouse-following decoration is the first thing that should yield.
+
+`devicePixelRatio` is capped at 2: a 3× screen makes the backing store 4× larger for a few faint pixels. Canvas is `position: fixed; inset: 0; pointer-events: none; z-index: 5` — above the article (which sets no `z-index`), below the drawer / app bar / dialogs, so ink never smears over chrome.
+
+Editor routes (`/article/create`, `/article/edit/:id`) disable it via the `enabled` option; `watch(options.enabled)` clears the canvas on the way out so stray drops don't hang there.
+
+The numbers (alpha `0.5`, fade exponent `1.2`, width `0.9 + 3.2 * (1 - age)`, halo `2.2×` / `0.28×`) were tuned against offline Pillow snapshots of the same maths, not by eye in the browser — and the first round of that tuning was wrong for an instructive reason. The snapshot harness composited every frame onto the previous one instead of starting from the background each frame, so 72 frames of 0.2 alpha piled up into a solid band; the trail looked like a flat marker stroke and the alpha got pushed *down*. Rendering one frame honestly (clear, then draw) showed the opposite problem: at `0.24` with exponent `1.7`, only the last ~100ms was visible and the tail vanished the instant you stopped moving. **Any preview of this effect has to mirror `clearRect`** — a canvas effect is per-frame, not accumulative. Pillow is also the wrong tool to judge seams: `ImageDraw.line` has no round caps, so it renders the opposite artifact (notches instead of beads). Seam behaviour has to be measured in a real canvas.
+
+`FADE_EXP` is what sets the "drying" feel: at `1.7` the tail is essentially gone within 300ms, at `1.2` the front two-thirds still carries a visible gradient a third of a second after the mouse stops.
+
+Measured on a real page (Playwright, mouse moved across the viewport, alpha profile sampled along the stroke): before the fix, **108 of 372 columns carried a local bump above 0.05 and the peak alpha was 0.763** (the 0.75 bead, exactly as predicted); after, **0 of 348 and peak 0.544** — i.e. nothing exceeds single coverage any more.
+
 ### Theming
 
-Four Vuetify themes: `light` → `dark` → `rainy` → `glass`, cycled by `useThemeCycle`. All decorative styles in `main.css` (highlighter, stickers, blobs) are derived from `primary` / `secondary` tokens — new themes need no CSS changes.
+Three Vuetify themes: `light` → `dark` → `terminal`, cycled by `useThemeCycle`. Decorative styles in `main.css` (highlighter, stickers, blobs) are derived from `primary` / `secondary` / `--k-ink`, so a **colour-only** theme is just a `themes` entry in `nuxt.config.ts` plus an entry in `THEME_ORDER` and a label. `terminal` still needs CSS because it carries decoration the tokens can't express (scanlines, sweep band, block cursor); the other two are pure colour.
 
-The active theme is persisted in the `theme` cookie by `app/plugins/theme.ts` (restored during SSR so refresh keeps the theme without a flash). That plugin must run after the Vuetify plugin — it declares `dependsOn: ['vuetify:nuxt:client:plugin', 'vuetify:nuxt:server:plugin']`; the `order` option alone does not control execution order.
+The active theme is persisted in the `theme` cookie by `app/plugins/theme.ts` (restored during SSR so refresh keeps the theme without a flash). That plugin must run after the Vuetify plugin — it declares `dependsOn: ['vuetify:nuxt:client:plugin', 'vuetify:nuxt:server:plugin']`; the `order` option alone does not control execution order. A cookie naming a theme that no longer exists falls back to the default and is **cleared on the client only** — clearing it during SSR would emit a pointless `Set-Cookie` on every request.
+
+**Adding a theme touches more than the theme table.** Four places branch on the theme name, and each fails silently (wrong editor skin, wrong code colours) rather than throwing:
+
+| Where | What it decides |
+|---|---|
+| `ArticleForm.vue` | TinyMCE skin — `['dark','terminal']` are dark |
+| `useArticleHtml.ts` `SHIKI_THEMES` | Shiki palette per theme; **missing key falls back to light**, so a dark theme gets github-light code blocks |
+| `pages/tags/index.vue` | Tag-cloud outline colour on dark themes |
+| `CommandPalette.vue` | Search keywords for the "toggle theme" command |
+
+`terminal` (phosphor green on near-black) is the reference implementation of a decorated theme:
+
+- **`--k-ink` is the phosphor green itself**, not a white. The sticker system draws every card outline and hard offset shadow from it, so the whole page turns into glowing green frames without touching a single card rule. `--k-ink-soft` stays near-white because it is used as *text* colour (`--k-ink` is outline/shadow only) and pure green body copy is unreadable at length.
+- **`--k-highlight-soft` is overridden darker.** The default is `primary` mixed 55% with white, so on a green theme the highlighter stroke and the green headline came out the same colour and the bottom third of every letter sank into the bar. Mixing toward a near-black green keeps the bright glyph on a dim stroke.
+- **Scanlines are static, the sweep band is a single `transform`.** A full-viewport `background-position` animation is the expensive kind — only worth it when the effect *is* the movement. Scanline alpha was tuned down from 0.055 to 0.035 at 25% duty after measuring on an article page — at 0.055 the banding is visible enough to fatigue reading.
+- **The block cursor is a real element (`.k-caret` in `AppBar.vue`), not a `::after`.** The title's slot sits inside `.v-toolbar-title__placeholder`, which is `display: block`, so an `::after` on `.k-gradient-text` lands on the next line. And `.k-gradient-text` appears three times on the home page (app bar, hero headline, footer) — a pseudo-element would have put three blinking cursors on one screen. `.k-caret` is `display: none` everywhere except `terminal`.
+- **`prefers-reduced-motion` needs a carve-out for the cursor.** The global reduce block forces `animation-duration: 0.01ms` and one iteration, which freezes an animation at its **final** keyframe — for a blink whose final keyframe is `opacity: 0`, that erases the cursor entirely. It gets an explicit `opacity: 1` override.
 
 ### i18n Usage
 

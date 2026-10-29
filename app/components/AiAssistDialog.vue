@@ -48,6 +48,37 @@
             keepHistory: false,
         })
 
+    /**
+     * 「反问我」的第二轮：用户说出疑问后请模型解答。
+     *
+     * 单独一个实例而不是复用上面那个：第一轮的 content 是 AI 的提问、第二轮的
+     * content 是解答，共用一个 ref 的话，提交的瞬间提问就从屏幕上消失了；两段
+     * 流式的 abort/pending 也会互相踩。拆开之后两轮的显示与中断互不干扰。
+     *
+     * keepHistory 仍然是 false —— 第二轮的提示词里已经把原文、提问、疑问
+     * 全带上了，不依赖对话历史。这样「重新解答」「中断重来」都不会因为上下文
+     * 错位而串味。
+     */
+    const {
+        content: verdict,
+        error: verdictError,
+        pending: verdictPending,
+        streaming: verdictStreaming,
+        askStream: askVerdict,
+        abort: abortVerdict,
+        clear: clearVerdict,
+    } = useAI({ keepHistory: false })
+
+    /** 用户的疑问。上限比正文选区的 maxLength 小得多：这是自己的话，不是抄原文 */
+    const MAX_ANSWER = 600
+    const answer = ref('')
+
+    const resetSocratic = () => {
+        abortVerdict()
+        clearVerdict()
+        answer.value = ''
+    }
+
     // 模型列表 / 用量 / 当前选中的模型（cookie 持久化）
     const {
         models,
@@ -104,6 +135,14 @@
             props.actions[0]
     )
 
+    /** 当前动作是不是「反问我」这种两段式交互 */
+    const isSocratic = computed(() => activeAction.value?.kind === 'socratic')
+
+    /** 解答已经出现过（含流式中）：按钮文案据此在「提交」和「重新解答」之间切 */
+    const hasVerdict = computed(
+        () => !!verdict.value || verdictStreaming.value || !!verdictError.value
+    )
+
     const busy = computed(() => pending.value || streaming.value)
 
     /** 当前动作产出富文本时，预览按 HTML 渲染（文章排版），否则按纯文本显示 */
@@ -126,6 +165,8 @@
             credentialOpen.value = true
             return
         }
+        // 重新提问（或换动作）意味着上一轮的疑问作废，解答也一起清掉
+        resetSocratic()
         clear()
         await askStream(activeAction.value.prompt, {
             maxTokens: props.maxTokens ?? 1200,
@@ -133,6 +174,34 @@
             model: selected.value || undefined,
         })
         // 每次生成后刷新用量（官方额度查不到，但我们自己的账要准）
+        loadQuota()
+    }
+
+    /**
+     * 提交疑问，请模型解答。
+     *
+     * 第一轮还在流式时不给提交：这时 content 只是半句提问，拿它当「AI 的提问」
+     * 拼进第二轮，模型会对着一个残句作答。
+     */
+    const submitAnswer = async () => {
+        const action = activeAction.value
+        const text = answer.value.trim()
+        if (!action || !content.value || busy.value) return
+        if (!text) {
+            show(t('ai_answer_empty'), 'warning')
+            return
+        }
+        // 没有 evaluatePrompt 的动作不该走到这里；兜底用面板自己的模板，
+        // 免得点了「提交」什么都不发生
+        const prompt = action.evaluatePrompt
+            ? action.evaluatePrompt(content.value, text)
+            : `下面是一段原文、一个关于它的提问，以及我的疑问。请解答我的疑问，如果我的问法里有理解偏差就顺手指出来，200 字以内。\n\n【原文】\n${props.sourceText ?? ''}\n\n【你的提问】\n${content.value}\n\n【我的疑问】\n${text}`
+
+        clearVerdict()
+        await askVerdict(prompt, {
+            maxTokens: props.maxTokens ?? 1200,
+            model: selected.value || undefined,
+        })
         loadQuota()
     }
 
@@ -164,9 +233,12 @@
         async open => {
             if (!open) {
                 abort()
+                abortVerdict()
                 return
             }
             activeKey.value = props.initialKey ?? props.actions[0]?.key ?? ''
+            // 重新打开等于新的一题，上一轮的作答和评价都不该留着
+            resetSocratic()
             // 先确认有没有 Key：没有就别发请求，直接引导去配置
             await loadCredential()
             if (!configured.value) return
@@ -186,17 +258,32 @@
         close()
     }
 
+    /**
+     * 复制的内容随场景变：普通动作只复制结果；
+     * 「反问我」复制的是完整的一问一答（提问 + 我的疑问 + 解答），
+     * 只留解答的话，粘出去的人看不懂在回答什么。
+     */
+    const copyPayload = computed(() => {
+        if (!isSocratic.value) return content.value
+        return [content.value, answer.value.trim(), verdict.value]
+            .filter(Boolean)
+            .join('\n\n')
+    })
+
     const copy = async () => {
-        if (!content.value) return
+        if (!copyPayload.value) return
         try {
-            await navigator.clipboard.writeText(content.value)
+            await navigator.clipboard.writeText(copyPayload.value)
             show(t('ai_copied'), 'success')
         } catch {
             show(t('ai_copy_failed'), 'error')
         }
     }
 
-    onBeforeUnmount(() => abort())
+    onBeforeUnmount(() => {
+        abort()
+        abortVerdict()
+    })
 </script>
 
 <template>
@@ -341,7 +428,101 @@
                     </v-expansion-panel>
                 </v-expansion-panels>
 
-                <div class="ai-output">
+                <!--
+                    「反问我」是三段式：AI 提问 → 我的疑问 → 解答。
+                    三段各自独立成块，因为用户在任何一段都可能停下来 ——
+                    看了提问还没写疑问，也是这个动作的合法中间态。
+                -->
+                <div v-if="isSocratic" class="ai-socratic">
+                    <div class="ai-step-block">
+                        <span class="ai-step-label">
+                            {{ t('ai_question_label') }}
+                        </span>
+                        <div class="ai-output">
+                            <template v-if="error">
+                                <span class="text-error">{{ error }}</span>
+                            </template>
+                            <template v-else-if="content">
+                                <span class="ai-output__text">{{
+                                    content
+                                }}</span>
+                                <span v-if="streaming" class="ai-caret" />
+                            </template>
+                            <template v-else-if="busy">
+                                <span class="text-medium-emphasis">
+                                    {{ t('ai_thinking') }}
+                                </span>
+                                <span class="ai-caret" />
+                            </template>
+                            <span v-else class="text-medium-emphasis">
+                                {{ t('ai_result_empty') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="ai-step-block">
+                        <span class="ai-step-label">
+                            {{ t('ai_answer_label') }}
+                        </span>
+                        <textarea
+                            v-model="answer"
+                            class="ai-answer"
+                            rows="4"
+                            :maxlength="MAX_ANSWER"
+                            :placeholder="t('ai_answer_placeholder')"
+                            :disabled="busy || verdictStreaming"
+                        />
+                        <div class="ai-answer__bar">
+                            <span class="text-caption text-medium-emphasis">
+                                {{ answer.length }} / {{ MAX_ANSWER }}
+                            </span>
+                            <v-spacer />
+                            <v-btn
+                                size="small"
+                                color="primary"
+                                variant="flat"
+                                :disabled="
+                                    !content ||
+                                    busy ||
+                                    verdictStreaming ||
+                                    !answer.trim()
+                                "
+                                :loading="verdictPending || verdictStreaming"
+                                @click="submitAnswer"
+                            >
+                                {{
+                                    hasVerdict
+                                        ? t('ai_re_evaluate')
+                                        : t('ai_answer_submit')
+                                }}
+                            </v-btn>
+                        </div>
+                    </div>
+
+                    <div v-if="hasVerdict" class="ai-step-block">
+                        <span class="ai-step-label">
+                            {{ t('ai_verdict_label') }}
+                        </span>
+                        <div class="ai-output">
+                            <template v-if="verdictError">
+                                <span class="text-error">{{
+                                    verdictError
+                                }}</span>
+                            </template>
+                            <template v-else>
+                                <span class="ai-output__text">{{
+                                    verdict
+                                }}</span>
+                                <span
+                                    v-if="verdictStreaming"
+                                    class="ai-caret"
+                                />
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="ai-output">
                     <template v-if="error">
                         <span class="text-error">{{ error }}</span>
                     </template>
@@ -373,10 +554,10 @@
             <v-divider />
             <v-card-actions class="px-4 py-3">
                 <v-btn
-                    v-if="streaming"
+                    v-if="streaming || verdictStreaming"
                     variant="text"
                     prepend-icon="mdi-stop"
-                    @click="abort()"
+                    @click="streaming ? abort() : abortVerdict()"
                 >
                     {{ t('ai_stop') }}
                 </v-btn>
@@ -388,7 +569,13 @@
                     :disabled="!activeAction"
                     @click="run"
                 >
-                    {{ content ? t('ai_regenerate') : t('ai_generate') }}
+                    <!-- 反问我里「重新生成」的含义是换一个切入点再问，不是重新解答 -->
+                    <template v-if="isSocratic">
+                        {{ t('ai_ask_another') }}
+                    </template>
+                    <template v-else>
+                        {{ content ? t('ai_regenerate') : t('ai_generate') }}
+                    </template>
                 </v-btn>
                 <v-btn
                     v-if="content"
@@ -400,7 +587,12 @@
                 </v-btn>
                 <v-spacer />
                 <v-btn variant="text" @click="close">{{ t('cancel') }}</v-btn>
+                <!--
+                    反问我没有「应用」这回事：结果是解答，不是要写回正文的内容。
+                    留一个不可用的主按钮只会让人反复去点。
+                -->
                 <v-btn
+                    v-if="!isSocratic"
                     color="primary"
                     variant="flat"
                     :disabled="!content || busy"
@@ -476,6 +668,71 @@
 
     .ai-output__text {
         white-space: pre-wrap;
+    }
+
+    /* ---------- 反问我：问题 / 我的回答 / 评价 ---------- */
+    .ai-socratic {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .ai-step-block {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ai-step-label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        opacity: 0.55;
+    }
+
+    /* 三段各自 46vh 的话面板会高得离谱，这里按内容伸缩；
+       问题与评价都可能长，超了各自滚 */
+    .ai-socratic .ai-output {
+        min-height: 0;
+        max-height: 26vh;
+    }
+
+    .ai-answer {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid rgba(var(--v-theme-primary), 0.3);
+        border-radius: 12px;
+        background: rgba(var(--v-theme-primary), 0.04);
+        color: rgb(var(--v-theme-on-surface));
+        font-family: inherit;
+        font-size: 15px;
+        line-height: 1.8;
+        resize: vertical;
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .ai-answer::placeholder {
+        color: rgb(var(--v-theme-on-surface));
+        opacity: 0.38;
+    }
+
+    .ai-answer:focus {
+        outline: none;
+        border-color: rgb(var(--v-theme-primary));
+        box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.12);
+    }
+
+    .ai-answer:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .ai-answer__bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     /* 富文本预览：排版与文章正文保持一致的层级感 */

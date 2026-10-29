@@ -2,7 +2,7 @@
 
 > 记录 · 创作 · 分享，寻找你的答案
 
-Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档与标签云。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 4 套主题。
+Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档与标签云。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 5 套主题。
 
 **线上地址**: https://kotae.cn
 
@@ -99,6 +99,7 @@ kotae_nuxt/
 │   │   ├── EmptyState.vue        # 空状态占位
 │   │   ├── FetchLoading.vue      # 全局加载指示器
 │   │   ├── ImageLightbox.vue     # 图片灯箱
+│   │   ├── InkTrail.vue          # 光标墨迹（全屏画布彩蛋）
 │   │   ├── LoginDialog.vue       # 登录对话框
 │   │   ├── NoticeList.vue        # 通知列表
 │   │   ├── NoticePanel.vue       # 通知面板
@@ -106,7 +107,7 @@ kotae_nuxt/
 │   │   ├── RegisterDialog.vue    # 注册对话框
 │   │   ├── ResetDialog.vue       # 重置密码对话框
 │   │   ├── SearchDialog.vue      # 搜索对话框
-│   │   ├── SelectionAskBar.vue   # 划词浮条（解释 / 翻译 / 展开）
+│   │   ├── SelectionAskBar.vue   # 划词浮条（解释 / 翻译 / 展开 / 反问我）
 │   │   ├── SpeechInput.vue       # 语音输入（含实时转写浮条）
 │   │   ├── SpeechLiveBar.vue     # 实时转写浮条（Teleport 到 body）
 │   │   └── VToast.vue            # 贴纸风 Toast 外观
@@ -134,6 +135,7 @@ kotae_nuxt/
 │   │   ├── useDebounce.ts        # 防抖
 │   │   ├── useExtractText.ts     # HTML 转纯文本（SSR 安全）
 │   │   ├── useHttp.ts            # HTTP 客户端封装
+│   │   ├── useInkTrail.ts        # 光标墨迹（采样 / 绘制 / 收摊）
 │   │   ├── useReadingTime.ts     # 字数统计与预计阅读时间
 │   │   ├── useRules.ts           # 表单验证规则
 │   │   ├── useShiki.ts           # 代码高亮器单例
@@ -141,7 +143,7 @@ kotae_nuxt/
 │   │   ├── useSpeechRecognition.ts # Web Speech API 语音转文字
 │   │   ├── useSpeechSynthesis.ts # 正文朗读（分段播放 + 当前段高亮）
 │   │   ├── useTextSelection.ts   # 正文划词探测与浮条定位
-│   │   ├── useThemeCycle.ts      # 4 套主题轮换
+│   │   ├── useThemeCycle.ts      # 5 套主题轮换
 │   │   └── useToast.ts           # Toast 通知（集成音效反馈）
 │   ├── layouts/
 │   │   └── default.vue           # 默认布局（左右导航抽屉 + AppBar + 页脚）
@@ -402,12 +404,16 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 
 ### 划词问 AI
 
-在正文里选中任意一段，贴着选区冒出「解释 / 翻译 / 展开」浮条，点开后走 `AiAssistDialog` 流式输出。
+在正文里选中任意一段，贴着选区冒出「解释一下 / 翻译 / 展开讲讲 / 反问我」浮条，点开后走 `AiAssistDialog` 流式输出。
 
 - 只有登录且站点开着 AI 时才出现（`useAiClient().available`）；
 - 选区必须落在正文容器内 —— 在标题或评论区划词不会弹；
 - 回答语言跟随界面语言，翻译的目标语言固定是「另一种」；
 - 结果面板的主按钮是**复制**而不是「应用」：这里没有可以写回的地方。
+
+**反问我**是唯一的两段式动作：模型先把话头递回给你——「你想了解这段的哪一点？」（提示词里明确写了不许问「这段讲了什么」这类复述题），你写下自己的疑问，它再正面解答；如果你的问法里带着理解偏差，会顺手指出来，末尾补一句你还没注意到的关键点。这一屏没有「应用」，因为产出是解答本身。疑问上限 600 字，提问还在流式时不能提交（否则是对着半句话作答），答完可以「重新解答」或「换一个问题」。
+
+浮条宽度按实测值贴着屏幕边缘收，四个动作在 360px 宽的屏上仍是一行；再窄会换行，并收成圆角矩形免得被胶囊圆角切掉。
 
 ### 正文朗读
 
@@ -420,6 +426,18 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 - **按文本节点收集段落**，而不是按标签白名单。代码块、表格单元格、裸 `<div>` 里的文字都会被读到（早期用 `querySelectorAll('p, li, …')` 会整段跳过，有一篇 969 字的文章收集到 0 字）。
 - **长段落按句号切句**再交给引擎，并每 12 秒做一次 pause/resume 保活。整篇或整段一次性丢进去，Chrome 会在长句中途静默停止，后面全不出声。
 
+另外两处是为了「高亮别乱跑」：
+
+- 块级标签里包含 `div` / `section` / `summary` / `figure`。AI 生成和从别处粘进来的内容经常把整段文字直接塞在 `div` 里，`<details><summary>` 的标题也在 `summary` 里；漏掉它们不会丢字，但那一段会兜底到正文根节点 —— 高亮铺满整篇、滚动跳回顶部。
+- 换主题会重算正文 HTML（代码块要换配色），`v-html` 把整棵子树重建，段落里存的元素全部脱离文档 —— 表现是「朗读还在继续，但高亮没了、也不再跟着滚动」。检测到脱离会按序号重新绑定一次。
+
+还有两处是为了「别停在中途」：
+
+- **`cancel()` 和 `speak()` 不能挤在同一轮事件循环里**。被取消的 utterance 的 onend / onerror 是异步回来的，新 utterance 偶尔永远等不到 onend，而 onend 是唯一的推进信号 —— 表现就是「改完倍速，当前这段念完就没声了」。所有「取消后重开口」都改成隔 60ms 再说。
+- **断链看门狗**：每秒检查一次「我们以为在念，但引擎既没在响也没有待播」，是就说明 onend 丢了，从下一句接着念。连续救两次还不行就停下 —— 引擎真坏了的话，继续救只会飞快跳过正文。
+
+已知行为（不是 bug）：音色跟随**界面**语言而不是正文语言，英文界面读中文文章会用英文音色；暂停时点「上一段 / 下一段」会直接开始播放；读完最后一段浮条自动消失，没有单独的「已读完」状态。
+
 ---
 
 ## PWA（可安装 + 离线阅读）
@@ -431,6 +449,22 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 - **中文字体不进预缓存**。`@chinese-fonts/maple-mono-cn` 有 3700 多个 woff2 分片（约 148MB），首次安装拉全套是不可接受的；字体走运行时 CacheFirst，用到哪个存哪个。当前预缓存约 410 项、0 个字体文件。
 - 图标由 `public/favicon.ico` 生成：`pwa-192`、`pwa-512`、`apple-touch-icon`，外加一张红底安全区的 `pwa-maskable-512`（Android 会把图标裁成圆形 / 水滴）。
 - Service Worker 在 `nuxt dev` 下默认不启用，验证请用 `npm run build && node .output/server/index.mjs`。
+
+---
+
+## 光标墨迹（彩蛋）
+
+鼠标划过页面会拖出一串淡墨，停下后约 0.9 秒自行收干消散。纯装饰，不存任何状态。
+
+- **只认鼠标**：`pointermove` 对触摸同样会触发，手指下滑翻页时会在整屏拖出墨迹 —— 那不是彩蛋是事故，所以 `pointerType !== 'mouse'` 直接丢弃。
+- **不做粒子**：只保留最近 48 个采样点（间距 3px），按「年龄」衰减透明度与线宽，衰减用 `(1 - age) ** 1.2` 而非线性，观感是先停留再迅速收干，像墨渗进纸里。
+- **在段的中点下刀、平头相接**：两次 `stroke()` 只要几何上重叠，alpha 就会混合两次（实测 0.5 → 0.75），于是每个采样点都变成一颗更深的圆珠 —— 满屏的「点」就是这么来的。把圆头收到相切又会在接缝处掐出细腰，尾巴串成香肠。唯一两头不占的切法是在段的中点切开：那里两侧方向相同、端面共面，平头贴平头，重叠为 0、缝隙也为 0。`lineCap` 必须保持 `butt`，任何一处改回 `round` 珠子立刻回来。
+- **光晕与主线分两遍画**：光晕宽 2.2 倍、淡到 0.28 倍，垫在主线下面给出湿边。若在同一次循环里逐片画两层，后一片的光晕会盖住前一片的主线，整条尾巴会变成一串「亮头暗尾」的虚线。
+- **笔尖只补朝前的半个圆**：补整颗圆会盖住最后一片的平头端面、再混一次 alpha，最浓的那颗珠子正好落在光标上；半圆与端面只共一条直径，拼起来是个圆角笔尖。
+- **墨干了就停 rAF**：点阵清空后不再申请下一帧，靠下一次 `pointermove` 唤醒。这个效果大部分时间是关着的，常驻 60fps 循环纯烧电。
+- **颜色每帧现取主题主色**，换主题立刻跟上，不需要监听主题变化。
+- **系统开启「减少动态效果」时整个功能让位**（`prefers-reduced-motion`），连监听都不挂。
+- 编辑器路由（`/article/create`、`/article/edit/:id`）自动关闭 —— 那里的鼠标是在选文字、拖代码块。
 
 ---
 
@@ -497,17 +531,37 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 
 ## 主题配置
 
-项目提供 4 套主题，通过 Vuetify 主题系统管理，切换顺序为 light → dark → rainy → glass（`useThemeCycle`）：
+项目提供 3 套主题，通过 Vuetify 主题系统管理，切换顺序为 light → dark → terminal（`useThemeCycle`）：
 
-| 颜色角色 | Light | Dark | Rainy（雨夜闪电） | Glass（玻璃磨砂） |
-|----------|-------|------|-------------------|-------------------|
-| background | #F9FAFB | #121212 | #0B1120 | #EAF0FA |
-| surface | #FFFFFF | #1E1E1E | #141E33 | #FFFFFF |
-| primary | #e41b23 | #349d17 | #F7C948 | #4C6EF5 |
-| secondary | #03DAC6 | #03DAC6 | #5F8BE0 | #22B8CF |
-| error | #B00020 | #B00020 | #FF7070 | #B00020 |
+| 颜色角色 | Light | Dark | Terminal（终端） |
+|----------|-------|------|------------------|
+| background | #F9FAFB | #121212 | #050807 |
+| surface | #FFFFFF | #1E1E1E | #0B1310 |
+| primary | #e41b23 | #349d17 | #2BE86E |
+| secondary | #03DAC6 | #03DAC6 | #FFB000 |
+| error | #B00020 | #B00020 | #FF5A6E |
 
-`main.css` 中的花饰、荧光笔划线、贴纸阴影全部由 `primary` / `secondary` 派生，新增主题无需改样式。
+`main.css` 中的花饰、荧光笔划线、贴纸阴影全部由 `primary` / `secondary` / `--k-ink` 派生，**纯配色**的新主题只改配置即可。terminal 另带装饰层（扫描线、刷新带、方块光标），需要在 `main.css` 里补。
+
+### 终端（terminal）
+
+磷光绿点阵屏：近黑底 + 显像管绿主色 + 琥珀副色，卡片描边与硬阴影直接取磷光绿，整页像一块发光的荧光屏。
+
+- **扫描线是静态的，刷新带只动 `transform`**。全屏 `background-position` 动画很贵——除非「位移本身就是效果」，否则不值得。扫描线强度实测下调过：0.055 在文章页能看出明显横条，0.035 + 25% 占空才不干扰阅读。
+- **`--k-highlight-soft` 单独压暗**。默认值是「主色混白 55%」，在绿主题里划痕和绿标题同色，字母下半截会糊进划痕；改成混近黑绿，亮字才浮得起来。
+- **方块光标是真实元素**（`AppBar.vue` 里的 `.k-caret`），不是 `::after`：标题的 slot 在 `.v-toolbar-title__placeholder` 里，那是块级元素，伪元素会被挤到下一行；而且 `.k-gradient-text` 全站有三处（顶栏、首页大标题、页脚），伪元素会让一屏出现三个闪烁光标。`.k-caret` 只在终端主题下 `display: inline-block`。
+- **「减少动态效果」下光标要单独常亮**。全局降级规则把动画钉在末帧，而闪烁的末帧是 `opacity: 0`，等于把光标擦掉。
+
+### 新增主题要改的不止配置
+
+有四处按主题名分支，漏改不会报错，只会静默用错：
+
+| 位置 | 决定什么 |
+|------|----------|
+| `ArticleForm.vue` | TinyMCE 皮肤（暗色系名单） |
+| `useArticleHtml.ts` 的 `SHIKI_THEMES` | 代码高亮配色；**缺 key 会回退到亮色**，暗色主题会拿到 github-light |
+| `pages/tags/index.vue` | 暗色下标签云的描边色 |
+| `CommandPalette.vue` | 命令面板里「切换主题」的搜索关键词 |
 
 主题名存在 `theme` cookie 里（`app/plugins/theme.ts`），服务端读 cookie 直接渲染对应主题，刷新不会回退到 light、也没有闪白；客户端切换后由 watch 回写 cookie。
 

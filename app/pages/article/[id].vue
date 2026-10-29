@@ -343,12 +343,23 @@
     )
 
     /**
-     * 三个内置动作。
+     * 四个内置动作。
      *
      * 提示词在这里拼而不是在面板里：面板拿到的就是最终要发出去的那段话，
      * 它不需要知道选中了什么、也不需要知道界面语言。
      */
-    const ASK_ACTIONS = [
+    interface AskActionDef {
+        key: string
+        icon: string
+        labelKey: string
+        /** 第一轮提示词（不含原文，原文由 askActions 追加） */
+        rule: () => string
+        /** 只有 socratic 动作需要：第二轮的评价提示词 */
+        kind?: 'socratic'
+        evaluate?: (question: string, answer: string) => string
+    }
+
+    const ASK_ACTIONS: AskActionDef[] = [
         {
             key: 'explain',
             icon: 'mdi-comment-quote-outline',
@@ -369,6 +380,28 @@
             labelKey: 'sel_expand',
             rule: () =>
                 `围绕下面这段文字展开讲讲：补充背景、原因或者一个具体例子，300 字以内。用${answerLang.value}回答。`,
+        },
+        {
+            /**
+             * 反问我：第一轮把话头递回给读者，用户说出疑问后第二轮才解答。
+             *
+             * 不是出考题考用户 —— 是问「你想了解哪一点、有什么疑问」。
+             * 不加「不是考我理解、不要问这段讲了什么」这两句，模型十有八九
+             * 会退回成一道复述题，那就又变回变相的解释了。
+             */
+            key: 'socratic',
+            icon: 'mdi-comment-question-outline',
+            labelKey: 'sel_socratic',
+            kind: 'socratic',
+            rule: () =>
+                `读完下面这段文字，问我对它的哪一点感兴趣、有什么疑问 —— 是邀请我提问，不是考我理解，也不要问「这段讲了什么」。只输出这一句提问，一句话，30 字以内，不要替我回答，也不要解释这段内容。用${answerLang.value}提问。`,
+            /**
+             * 第二轮的提示词在页面里拼：面板不知道原文是哪一段、界面是什么语言。
+             * 把原文、提问、疑问一起塞进去，就不依赖对话历史 —— 重新解答、
+             * 中断重来都不会因为上下文错位而串味。
+             */
+            evaluate: (question: string, answer: string) =>
+                `我在读一段文字时，你问我想了解什么。下面是我说出的疑问。请直接回应它。\n\n【原文】\n${askSource.value}\n\n【你的提问】\n${question}\n\n【我的疑问】\n${answer}\n\n要求：先正面解答我的疑问；如果我的问法里带着理解偏差，顺手指出来；最后补一句这段里我可能还没注意到的关键点。不要复述原文，直接说，300 字以内。用${answerLang.value}回答。`,
         },
     ]
 
@@ -398,6 +431,8 @@
             icon: action.icon,
             format: 'text' as const,
             prompt: `${action.rule()}\n\n${text}`,
+            kind: action.kind,
+            evaluatePrompt: action.evaluate,
         }))
     })
 

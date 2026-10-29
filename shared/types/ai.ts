@@ -66,6 +66,18 @@ export interface AiAssistAction {
      * - `text`：纯文本（标题、评论），默认值
      */
     format?: 'text' | 'html'
+    /**
+     * 交互形态：
+     * - `generate`（默认）：一次问答，出结果就结束
+     * - `socratic`：第一轮把话头递回给用户（问你想了解什么 / 有什么疑问），
+     *   用户说出来之后再发第二轮，针对这个疑问作答
+     *
+     * `socratic` 必须有 `evaluatePrompt`：面板拿不到场景上下文（原文、界面语言），
+     * 第二轮的提示词只能由调用方拼好交进来。
+     */
+    kind?: 'generate' | 'socratic'
+    /** socratic 第二轮：把模型的提问和用户的疑问拼成解答提示词 */
+    evaluatePrompt?: (question: string, answer: string) => string
 }
 
 /**

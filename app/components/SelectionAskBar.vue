@@ -28,8 +28,47 @@
 
     const { name: themeName } = useTheme()
 
-    /** 浮条宽度的一半，用来把浮条夹在视口里 */
-    const BAR_HALF = 172
+    /**
+     * 浮条宽度的一半，用来把浮条夹在视口里。
+     *
+     * 不写死像素：四个动作加引文的实际宽度随语言变（中文 526px、英文更宽），
+     * 估小了贴右边时浮条会探出屏幕，估大了又会被无谓地拉离选区。
+     * 所以在渲染后量一次真实宽度。
+     */
+    const barEl = ref<HTMLElement | null>(null)
+    const barWidth = ref(0)
+    /** 首帧还没量到宽度时的兜底（约等于四个中文动作的宽度） */
+    const FALLBACK_HALF = 238
+
+    const measure = () => {
+        if (barEl.value) barWidth.value = barEl.value.offsetWidth
+    }
+
+    /**
+     * 在 nextTick 里量：此时 DOM 已更新、浏览器还没绘制，
+     * 改 barWidth 触发的重算会赶在同一帧里生效，看不到位置跳动。
+     */
+    watch(
+        () => [props.modelValue, props.text, props.actions.length] as const,
+        async () => {
+            if (!props.modelValue) {
+                barWidth.value = 0
+                return
+            }
+            await nextTick()
+            measure()
+        },
+        { immediate: true }
+    )
+
+    onMounted(() => {
+        // 视口变化会改变引文是否显示（<=560px 时隐藏），宽度跟着变
+        window.addEventListener('resize', measure)
+    })
+
+    onBeforeUnmount(() => {
+        window.removeEventListener('resize', measure)
+    })
 
     const preview = computed(() => {
         const text = props.text.replace(/\s+/g, ' ').trim()
@@ -39,7 +78,9 @@
     const positionStyle = computed(() => {
         if (!import.meta.client) return {}
         const vw = window.innerWidth
-        const half = Math.min(BAR_HALF, vw / 2 - 8)
+        // 半宽优先用实测值；+4 是硬阴影的余量，不然阴影会被屏幕边缘切掉
+        const measured = barWidth.value ? barWidth.value / 2 + 4 : FALLBACK_HALF
+        const half = Math.min(measured, vw / 2 - 8)
         const left = Math.min(Math.max(props.anchor.left, half), vw - half)
         // 上方放得下就贴在选区上面，否则翻到下方
         const top =
@@ -58,6 +99,7 @@
         -->
         <div
             v-if="modelValue && text"
+            ref="barEl"
             class="k-ask-bar"
             :class="`v-theme--${themeName}`"
             :style="positionStyle"
@@ -86,7 +128,16 @@
         z-index: 2400;
         display: flex;
         align-items: center;
+        /* 动作多了之后窄屏可能放不下一行：宁可换行，也别让按钮探出屏幕 */
+        flex-wrap: wrap;
+        justify-content: center;
         gap: 2px;
+        /*
+         * 必须是 max-content。position: fixed 且只给了 left 时，width: auto 会按
+         * 「left 到容器右边缘」的可用空间做 shrink-to-fit —— 而 translateX(-50%)
+         * 不参与这个计算。结果就是选区一旦靠右，浮条会被压窄、四个按钮无谓地换行。
+         */
+        width: max-content;
         max-width: calc(100vw - 16px);
         padding: 5px 8px;
         border-radius: 999px;
@@ -95,6 +146,41 @@
         box-shadow: 3px 3px 0 rgba(var(--v-theme-on-surface), 0.9);
         transform: translateX(-50%);
         animation: k-ask-in 0.16s ease-out;
+    }
+
+    /* 窄屏先牺牲引文预览：按钮才是要点，引文在正文里本来就看得见 */
+    @media (max-width: 560px) {
+        .k-ask-quote,
+        .k-ask-divider {
+            display: none;
+        }
+
+        /* 真放不下时浮条会换行，这时 999px 的胶囊会把第二行按钮切掉，收成圆角矩形 */
+        .k-ask-bar {
+            padding: 5px 6px;
+            border-radius: 16px;
+        }
+
+        /*
+         * 必须带 .k-ask-bar 前缀：基础 .k-ask-btn 规则在文件更后面，
+         * 同权重下媒体查询里的声明会被它盖掉（媒体查询不加权重）。
+         */
+        .k-ask-bar .k-ask-btn {
+            padding: 5px 8px;
+        }
+    }
+
+    /* 小屏手机再压一档，尽量把四个动作维持在一行 */
+    @media (max-width: 400px) {
+        .k-ask-bar .k-ask-btn {
+            gap: 3px;
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+
+        .k-ask-bar .k-ask-btn .mdi {
+            font-size: 14px;
+        }
     }
 
     .k-ask-quote {
