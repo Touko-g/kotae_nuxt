@@ -26,6 +26,8 @@
             @click="navigateTo('/')"
         >
             Kotae
+            <!-- 终端主题的方块光标；其余主题 .k-caret 是 display:none -->
+            <span class="k-caret" aria-hidden="true"></span>
         </v-app-bar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="searchDialog = true">

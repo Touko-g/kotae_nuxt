@@ -31,6 +31,11 @@ export default defineNuxtPlugin({
         const saved = themeCookie.value
         if (saved && (THEME_ORDER as readonly string[]).includes(saved)) {
             themeName.value = saved
+        } else if (saved && import.meta.client) {
+            // 旧版存着已下线的主题名（比如删掉的 rainy / glass）：清掉。
+            // 不清也不会出错 —— 每次都会落回默认值 —— 但留着的话，哪天重新
+            // 上线同名主题就会「诈尸」；清理只在客户端做，避免 SSR 发 Set-Cookie
+            themeCookie.value = null
         }
 
         // 只在客户端回写，避免 SSR 期间产生无意义的 Set-Cookie

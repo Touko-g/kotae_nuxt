@@ -70,8 +70,8 @@
 
     const editorConfig = reactive({
         skin_url: computed(() => {
-            // rainy 属暗色系，glass 属亮色系，统一映射到 TinyMCE 两套皮肤
-            const val = ['dark', 'rainy'].includes(theme.global.name.value)
+            // dark / terminal 属暗色系，light 属亮色系，统一映射到 TinyMCE 两套皮肤
+            const val = ['dark', 'terminal'].includes(theme.global.name.value)
                 ? 'dark'
                 : 'light'
             return `https://chen-1302611521.cos.ap-nanjing.myqcloud.com/tinymce/${val}/skins/ui/${val}`

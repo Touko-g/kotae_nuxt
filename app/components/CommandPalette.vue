@@ -135,7 +135,7 @@
                 id: 'theme',
                 title: t('cmd_toggle_theme'),
                 keywords:
-                    'theme dark light rainy glass 主题 深色 浅色 夜间 雨夜 闪电 玻璃 磨砂',
+                    'theme dark light terminal 主题 深色 浅色 夜间 终端 绿色 点阵',
                 icon: 'mdi-theme-light-dark',
                 group: 'action',
                 run: () => {

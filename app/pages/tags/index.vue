@@ -148,8 +148,7 @@
 
     /* 深色系下贴纸仍为白底深墨，仅借主题强调色描边，无需再覆盖文字色 */
     .v-theme--dark .tag-cloud__item,
-    .v-theme--rainy .tag-cloud__item,
-    .v-theme--glass .tag-cloud__item {
+    .v-theme--terminal .tag-cloud__item {
         border-color: color-mix(in srgb, var(--k-accent-a) 34%, transparent);
         box-shadow: 3px 4px 0
             color-mix(in srgb, var(--k-accent-a) 16%, transparent);

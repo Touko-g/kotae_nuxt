@@ -356,31 +356,19 @@ export default defineNuxtConfig({
                             warning: '#FB8C00',
                         },
                     },
-                    // 雨夜闪电：深藏雨夜空 + 闪电金主色
-                    rainy: {
+                    // 终端：磷光绿点阵屏。底色压到近黑（留一点绿偏，屏幕不发灰），
+                    // 主色是显像管绿、副色取琥珀（老终端的告警色），装饰层见 main.css
+                    terminal: {
                         dark: true,
                         colors: {
-                            background: '#0B1120',
-                            surface: '#141E33',
-                            primary: '#F7C948',
-                            secondary: '#5F8BE0',
-                            error: '#FF7070',
+                            background: '#050807',
+                            surface: '#0B1310',
+                            primary: '#2BE86E',
+                            secondary: '#FFB000',
+                            error: '#FF5A6E',
                             info: '#4DA3FF',
-                            success: '#4CAF50',
-                            warning: '#FB8C00',
-                        },
-                    },
-                    // 玻璃磨砂：浅蓝雾底 + 半透表面（配合 main.css 的 backdrop-blur）
-                    glass: {
-                        colors: {
-                            background: '#EAF0FA',
-                            surface: '#FFFFFF',
-                            primary: '#4C6EF5',
-                            secondary: '#22B8CF',
-                            error: '#B00020',
-                            info: '#2196F3',
-                            success: '#4CAF50',
-                            warning: '#FB8C00',
+                            success: '#38D9A9',
+                            warning: '#FFC53D',
                         },
                     },
                 },

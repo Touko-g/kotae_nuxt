@@ -14,12 +14,11 @@ import type { Highlighter } from 'shiki'
  *    所以 jsdom 不会被打进客户端包。
  */
 
-// 应用主题 → Shiki 主题：light / glass 为亮色系，dark / rainy 为暗色系
+// 应用主题 → Shiki 主题：light 为亮色系，dark / terminal 为暗色系
 const SHIKI_THEMES: Record<string, string> = {
     light: 'github-light',
-    glass: 'github-light',
     dark: 'github-dark',
-    rainy: 'github-dark',
+    terminal: 'github-dark',
 }
 
 // 反转义 HTML 实体，让高亮器拿到真实源码

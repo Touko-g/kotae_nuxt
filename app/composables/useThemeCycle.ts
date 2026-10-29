@@ -1,21 +1,19 @@
 /**
- * 主题轮换：light → dark → rainy（雨夜闪电）→ glass（玻璃磨砂）→ light …
+ * 主题轮换：light → dark → terminal（终端）→ light …
  * AppBar 与 CommandPalette 共用同一套顺序、图标与 i18n 标签
  */
-export const THEME_ORDER = ['light', 'dark', 'rainy', 'glass'] as const
+export const THEME_ORDER = ['light', 'dark', 'terminal'] as const
 
 const THEME_ICONS: Record<string, string> = {
     light: 'mdi-weather-sunny',
     dark: 'mdi-weather-night',
-    rainy: 'mdi-weather-pouring',
-    glass: 'mdi-blur',
+    terminal: 'mdi-console',
 }
 
 const THEME_LABEL_KEYS: Record<string, string> = {
     light: 'theme_light',
     dark: 'theme_dark',
-    rainy: 'theme_rainy',
-    glass: 'theme_glass',
+    terminal: 'theme_terminal',
 }
 
 export function useThemeCycle() {
@@ -25,7 +23,8 @@ export function useThemeCycle() {
         const index = THEME_ORDER.indexOf(
             theme.global.name.value as (typeof THEME_ORDER)[number]
         )
-        // 未知主题名时 indexOf 返回 -1，(-1 + 1) % 4 = 0 → 正好回到第一项
+        // 未知主题名时 indexOf 返回 -1，(-1 + 1) % length = 0 → 正好回到第一项
+        // （比如旧版 cookie 里存着已下线的主题名，这里自然落回 light）
         const next = THEME_ORDER[(index + 1) % THEME_ORDER.length] ?? 'light'
         theme.global.name.value = next
     }

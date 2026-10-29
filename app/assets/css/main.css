@@ -380,7 +380,7 @@ body,
 
 /* ==========================================================================
    Kotae 首页创意抬头（Hero / Featured / Marquee / Rank）
-   统一走主题变量，兼容 light / dark / rainy / glass 四主题；SSR 友好，无随机
+   统一走主题变量，兼容 light / dark / terminal 三主题；SSR 友好，无随机
    约定：需要"提亮/压深"时一律混 --k-surface-c（主题表面色）或 --k-shade，
    不混字面量 #fff / #000 —— 前者随主题明暗自动换方向，后者只保证压深
    ========================================================================== */
@@ -396,11 +396,8 @@ body,
 .v-application.v-theme--dark {
     --k-surface-c: #1e1e1e;
 }
-.v-application.v-theme--rainy {
-    --k-surface-c: #141e33;
-}
-.v-application.v-theme--glass {
-    --k-surface-c: #ffffff;
+.v-application.v-theme--terminal {
+    --k-surface-c: #0b1310;
 }
 
 /* 渐变流动文字（wordmark） */
@@ -627,7 +624,7 @@ body,
 }
 
 /* 热门榜 Top3 徽章：配合主题的递进强调——#1 primary / #2 secondary / #3 墨色，
-   文字用 Vuetify 自动生成的 on-* 与配对 --k-surface-c，四主题下对比度均成立 */
+   文字用 Vuetify 自动生成的 on-* 与配对 --k-surface-c，五主题下对比度均成立 */
 .rank-badge--1 {
     background: rgb(var(--v-theme-primary));
     color: rgb(var(--v-theme-on-primary));
@@ -648,7 +645,7 @@ body,
 /* ==========================================================================
    Kotae 首页活泼插画风（doodle / sticker / highlight / 硬阴影卡）
    撞色可控：花饰/贴纸的亮色一律由 --k-accent-* 从主题 primary / secondary 派生，
-   随四主题换色；榜单前三名同样走主题（primary / secondary / 墨色递进强调）
+   随主题换色；榜单前三名同样走主题（primary / secondary / 墨色递进强调）
    ========================================================================== */
 
 /* 描边墨色：浅色近黑、深色近白，双主题都有粗轮廓感。
@@ -735,7 +732,7 @@ body,
 }
 
 /* 主题派生色：荧光笔划线 + 花饰/贴纸撞色，全部由 primary / secondary 计算，
-   随 light / dark / rainy / glass 自动换色。
+   随 light / dark / terminal 自动换色。
    声明在 .v-application（与主题 token 同级）而非 :root，跟着当前主题类走 */
 .v-application {
     --k-highlight: rgb(var(--v-theme-primary));
@@ -745,7 +742,7 @@ body,
         #fff
     );
     /* 四个可区分且对比安全的点缀色：主色 / 副色 / 调暗(亮)后的主色 / 调暗(亮)后的副色。
-       注：不可直接混 primary + secondary，互补色相（如 rainy 的金+蓝）会灰成脏色；
+       注：不可直接混 primary + secondary，互补色相（如 terminal 的绿+琥珀）会灰成脏色；
        改为往 on-surface 方向调明度，浅底变深、深底变亮，饱和度得以保留 */
     --k-accent-a: rgb(var(--v-theme-primary));
     --k-accent-b: rgb(var(--v-theme-secondary));
@@ -1174,7 +1171,7 @@ body,
 
 /* ==========================================================================
    贴纸风 Toast（vue-sonner）：墨色描边 + 模切白边 + 硬偏移阴影，
-   与全站贴纸层同源；类型色取主题 on-* token（四主题均定义了
+   与全站贴纸层同源；类型色取主题 on-* token（五主题均定义了
    success / info / warning / error），雨夜暗底自动换用提亮变体
    ========================================================================== */
 
@@ -1234,195 +1231,166 @@ body,
 }
 
 /* ==========================================================================
-   新主题专区：雨夜闪电 (rainy) / 玻璃磨砂 (glass)
+   主题专区：终端 (terminal)
    只补主题专属装饰，贴纸层通过 --k-ink 系变量自动适配
    ========================================================================== */
 
-/* 墨色变体：贴纸风要求高对比——描边与硬偏移阴影必须"贴"得出来。
-   rainy 夜底用近乎不透明的亮墨（暗色新粗野主义），glass 亮底用深墨 */
-.v-theme--rainy {
-    --k-ink: rgba(238, 244, 255, 0.98);
-    --k-ink-soft: rgba(226, 232, 240, 0.72);
-    --k-ink-faint: rgba(226, 232, 240, 0.16);
+/* 终端：描边直接用磷光绿，贴纸的粗轮廓与硬偏移阴影在近黑底上就成了发光的荧光边框；
+   正文类文字用偏白的淡绿（纯绿当正文会晃眼，长段落读不住） */
+.v-theme--terminal {
+    --k-ink: rgba(43, 232, 110, 0.86);
+    --k-ink-soft: rgba(196, 255, 219, 0.72);
+    --k-ink-faint: rgba(43, 232, 110, 0.14);
 }
 
-.v-theme--glass {
-    --k-ink: rgba(15, 23, 42, 0.92);
-    --k-ink-soft: rgba(15, 23, 42, 0.62);
-    --k-ink-faint: rgba(15, 23, 42, 0.1);
-}
-
-/* 两主题都需要让主区透出 .v-application 上的背景渐变 */
-.v-theme--rainy .v-main,
-.v-theme--glass .v-main {
+/* 主区透出 .v-application 上的背景渐变 */
+.v-theme--terminal .v-main {
     background-color: transparent !important;
 }
 
-/* ---------- 雨夜闪电：深夜雨空渐变底（主题类在 .v-application 自身，用复合选择器） ---------- */
-.v-application.v-theme--rainy {
+/* ---------- 终端：磷光绿点阵屏 ----------
+   三层叠出「屏幕感」，每层只管一件事：
+   1) .v-application 的底光 —— 顶部一片绿色辉光，模拟显像管荧光晕
+   2) ::before 的扫描线 —— 静态横纹，不参与动画（全屏 background-position 动画在 4K 上很贵，
+      只有必须靠位移成立的动效才值得付这个代价）
+   3) ::after 的刷新带 —— 一条缓慢下扫的亮带，只动 transform，交给合成器
+   两者都 pointer-events:none 且透明度极低，盖在正文上只当纹理，不挡操作 */
+.v-application.v-theme--terminal {
+    background-color: #050807;
     background-image:
-        /* 顶部雷云被闪电映亮的冷蓝 */
         radial-gradient(
-            60% 42% at 50% -8%,
-            rgba(70, 104, 178, 0.34),
-            transparent 72%
+            120% 55% at 50% -12%,
+            rgba(43, 232, 110, 0.16),
+            transparent 68%
         ),
-        /* 地平线冷紫氛围 */
-            radial-gradient(
-                45% 35% at 85% 112%,
-                rgba(70, 48, 120, 0.26),
-                transparent 70%
-            ),
-        /* 整体压暗的深夜渐变：上稍亮、下更黑 */
-            linear-gradient(
-                180deg,
-                rgba(3, 6, 15, 0.5) 0%,
-                rgba(3, 6, 15, 0) 34%,
-                rgba(2, 4, 11, 0.62) 100%
-            );
+        radial-gradient(
+            90% 50% at 50% 112%,
+            rgba(43, 232, 110, 0.06),
+            transparent 70%
+        );
     background-attachment: fixed;
 }
 
-/* 下雨效果：用两张内含大量随机雨丝的 SVG(随机位置/长度/透明度/粗细，斜落已烘焙进图) 平铺，
-   近/远两层不同 tile 尺寸与速度 → 视差；大 tile + 密集随机雨丝使重复阵列不可辨 */
-@keyframes k-rain {
-    to {
-        background-position:
-            0 480px,
-            0 400px;
-    }
-}
-
-.v-application.v-theme--rainy::before {
+/* 扫描线：1px 亮纹 + 3px 暗隙（25% 占空）。强度实测过几档：
+   0.055 时在文章页能看出明显横条，读长文会累；0.035 刚好是「有纹理但不抢注意力」 */
+.v-application.v-theme--terminal::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    opacity: 0.38;
-    background-image: url('/rain-a.svg'), url('/rain-b.svg');
-    background-size:
-        320px 480px,
-        260px 400px;
-    background-repeat: repeat;
-    animation: k-rain 2.6s linear infinite;
+    background-image: repeating-linear-gradient(
+        180deg,
+        rgba(120, 255, 170, 0.035) 0 1px,
+        transparent 1px 4px
+    );
 }
 
-/* 偶发闪电：14s 一轮，尾部两次短促闪烁 */
-@keyframes k-lightning {
+@keyframes k-crt-sweep {
+    0% {
+        transform: translateY(-24vh);
+        opacity: 0;
+    }
+    6% {
+        opacity: 0.5;
+    }
+    55% {
+        opacity: 0.14;
+    }
+    100% {
+        transform: translateY(124vh);
+        opacity: 0;
+    }
+}
+
+.v-application.v-theme--terminal::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18vh;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(120, 255, 170, 0.05) 45%,
+        rgba(190, 255, 214, 0.09) 50%,
+        rgba(120, 255, 170, 0.05) 55%,
+        transparent
+    );
+    animation: k-crt-sweep 9s linear infinite;
+}
+
+/* 点阵屏没有圆角：卡片收成直角，硬偏移阴影再补一圈外发光，像荧光粉在玻璃上晕开 */
+.v-theme--terminal .k-card,
+.v-theme--terminal .k-card--sm {
+    border-radius: 3px !important;
+}
+
+.v-theme--terminal .k-card {
+    box-shadow:
+        6px 6px 0 var(--k-ink),
+        0 0 28px rgba(43, 232, 110, 0.1) !important;
+}
+
+.v-theme--terminal .v-btn,
+.v-theme--terminal .v-chip {
+    border-radius: 3px !important;
+}
+
+/* wordmark：终端里不做渐变流动，改成稳定的磷光绿 */
+.v-theme--terminal .k-gradient-text {
+    background-image: linear-gradient(120deg, #2be86e, #a6ffc6, #2be86e);
+    text-shadow: 0 0 18px rgba(43, 232, 110, 0.45);
+    animation: none;
+}
+
+/* 荧光笔划线：默认取 primary 与「primary 混白 55%」，在终端里两者都是绿，
+   划痕和字几乎同色、下半截糊在一起。这里把划痕压暗，让亮字浮在暗划痕上 */
+.v-application.v-theme--terminal {
+    --k-highlight-soft: color-mix(
+        in srgb,
+        rgb(var(--v-theme-primary)) 58%,
+        #04120a
+    );
+}
+
+/* 方块光标：由 AppBar 里那个 .k-caret 元素承载（不是 ::after —— 标题的
+   .v-toolbar-title__placeholder 是块级元素，伪元素会被挤到下一行）。
+   其余主题不显示，只有终端点亮 */
+.k-caret {
+    display: none;
+}
+
+@keyframes k-caret-blink {
     0%,
-    89.9%,
-    92.2%,
-    94.6%,
+    49.9% {
+        opacity: 1;
+    }
+    50%,
     100% {
         opacity: 0;
     }
-    90.6% {
-        opacity: 0.14;
-    }
-    91.4% {
-        opacity: 0.02;
-    }
-    93.2% {
-        opacity: 0.22;
-    }
-    93.9% {
-        opacity: 0.05;
-    }
-    94.3% {
-        opacity: 0.12;
-    }
 }
 
-.v-application.v-theme--rainy::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(199, 217, 255, 0.9) 0%,
-        rgba(199, 217, 255, 0.25) 35%,
-        transparent 60%
-    );
-    animation: k-lightning 14s ease-out infinite;
-}
-
-/* ---------- 玻璃磨砂：冷色雾斑 + 清晰点阵底 + 半透磨砂表面 ----------
-   玻璃感的关键：背景必须有清晰可辨的细节（点阵）供 backdrop-filter 模糊，
-   否则“模糊平滑渐变 = 还是平滑”，卡片只会看成半透明白板 */
-.v-application.v-theme--glass {
-    background-image:
-        radial-gradient(rgba(76, 110, 245, 0.26) 1.5px, transparent 1.6px),
-        radial-gradient(
-            62% 66% at 16% 8%,
-            rgba(96, 140, 250, 0.72),
-            transparent 72%
-        ),
-        radial-gradient(
-            64% 68% at 88% 94%,
-            rgba(124, 108, 240, 0.62),
-            transparent 72%
-        );
-    background-size:
-        22px 22px,
-        100% 100%,
-        100% 100%;
-    background-attachment: fixed;
-}
-
-.v-theme--glass .v-toolbar,
-.v-theme--glass .v-navigation-drawer,
-.v-theme--glass .v-card,
-.v-theme--glass .v-menu__content,
-.v-theme--glass .v-snackbar__surface,
-.v-theme--glass .k-rail-toolbox {
-    background-color: rgba(255, 255, 255, 0.18) !important;
-    backdrop-filter: blur(26px) saturate(2) brightness(1.06);
-    -webkit-backdrop-filter: blur(26px) saturate(2) brightness(1.06);
-}
-
-/* 玻璃内缘高光：用 outline 画在贴纸墨色描边内侧，
-   不占用 border/box-shadow（两者被贴纸描边与硬阴影占用），outline 跟随 border-radius */
-.v-theme--glass .v-card {
-    outline: 1px solid rgba(255, 255, 255, 0.7);
-    outline-offset: -4.5px;
-}
-
-/* 列表 hover 贴纸底色改为半透磨砂版 */
-.v-theme--glass .k-feed:hover {
-    background-color: color-mix(
-        in srgb,
-        rgb(var(--v-theme-primary)) 10%,
-        rgba(255, 255, 255, 0.5)
-    ) !important;
-}
-
-/* Toast 是瞬时且持续位移的浮层：在其上做 backdrop-filter 会逐帧重采样背景，
-   是玻璃主题卡顿主因。故 toast 去掉 backdrop-filter，改用高不透明磨砂纯色，
-   保留半透亮边环 + 硬阴影维持玻璃贴纸质感，合成成本几乎为零 */
-.v-theme--glass .k-toast .v-alert {
-    background: rgba(255, 255, 255, 0.72) !important;
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.85),
-        0 0 0 4.5px var(--k-ink),
-        8px 8px 0 var(--k-ink) !important;
-}
-
-.v-theme--glass .k-toast .v-alert:hover {
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.85),
-        0 0 0 4.5px var(--k-ink),
-        10px 10px 0 var(--k-ink) !important;
+.v-theme--terminal .k-caret {
+    display: inline-block;
+    width: 0.46em;
+    height: 0.92em;
+    margin-left: 0.14em;
+    vertical-align: -0.08em;
+    background-color: rgb(var(--v-theme-primary));
+    box-shadow: 0 0 12px rgba(43, 232, 110, 0.8);
+    animation: k-caret-blink 1.1s steps(1) infinite;
 }
 
 /* ==========================================================================
    正文朗读：当前正在念的那一段
    朗读时视线是跟着声音走的，所以高亮要够醒目；但不能改字号/内边距 ——
    任何影响排版的样式都会让文字在开始朗读的瞬间跳一下。
-   只用主色的低透明度铺底 + 同色外扩阴影，四套主题都成立。
+   只用主色的低透明度铺底 + 同色外扩阴影，五套主题都成立。
    ========================================================================== */
 .k-tts-active {
     border-radius: 6px;
@@ -1474,15 +1442,16 @@ body,
         transform: none !important;
     }
 
-    /* 雨幕停成静态淡纹，避免持续下落动画 */
-    .v-application.v-theme--rainy::before {
-        animation: none !important;
-        opacity: 0.22 !important;
-    }
-
-    /* 雨夜闪电的雷光闪烁直接移除 */
-    .v-application.v-theme--rainy::after {
+    /* 终端的刷新带停掉（全局规则会把动画直接跳到末帧，本来就是 opacity:0） */
+    .v-application.v-theme--terminal::after {
         animation: none !important;
         opacity: 0 !important;
+    }
+
+    /* 但方块光标不能跟着停 —— 全局规则会让它停在末帧的 opacity:0 上，
+       等于把光标整个擦掉。这里固定为常亮 */
+    .v-theme--terminal .k-caret {
+        animation: none !important;
+        opacity: 1 !important;
     }
 }
