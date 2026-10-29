@@ -217,6 +217,8 @@
             </v-main>
             <AppFooter />
             <Toaster />
+            <!-- 光标墨迹：纯装饰，鼠标划过时拖一串淡墨 -->
+            <InkTrail />
             <!--
                 manifest 链接必须由这个组件渲染：@vite-pwa/nuxt 只把组件注册成全局的，
                 不会自己往 app.head 里塞 <link rel="manifest">，不渲染就没有。
