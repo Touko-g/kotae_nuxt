@@ -13,11 +13,20 @@
     /** 带不带语言前缀都要认：/article/create、/zh/article/edit/12 */
     const EDITOR_ROUTE = /\/article\/(?:create|edit)(?:\/|$)/
 
+    /**
+     * 墨迹总开关，当前是**关**的：先不上线。
+     *
+     * 留成常量而不是直接写 `enabled: () => false`，一是这个开关迟早要再动，
+     * 二是别把下面那条编辑器规则一起删掉 —— 打开时忘了它，编辑区里选文字
+     * 就会拖出一道墨。
+     */
+    const INK_ENABLED = false
+
     useInkTrail(canvasRef, {
         // 用主题主色，三套主题各自成色（浅红 / 草绿 / 终端绿）
         color: () => current.value.colors.primary,
         // 编辑器里关掉：那儿的鼠标是在选文字、拖代码块，再叠一层墨迹纯属添乱
-        enabled: () => !EDITOR_ROUTE.test(route.path),
+        enabled: () => INK_ENABLED && !EDITOR_ROUTE.test(route.path),
     })
 </script>
 
