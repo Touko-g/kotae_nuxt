@@ -737,8 +737,8 @@ body,
 /* 主题派生色：荧光笔划线 + 花饰/贴纸撞色，全部由 primary / secondary 计算，
    随 light / dark / terminal 自动换色。
    声明在 .v-application（与主题 token 同级）而非 :root，跟着当前主题类走。
-   前提：三套主题的主色与副色两两不同（见 nuxt.config.ts）——若两套主题共用同一个
-   secondary，则 --k-accent-b / --k-accent-d 派生的圆环、星芒、贴纸会切了主题也不变色 */
+   已知限制：light 与 dark 共用 secondary (#03DAC6)，故 --k-accent-b / --k-accent-d
+   派生的圆环、星芒、贴纸在明暗切换时同色，只有 terminal 的琥珀不同 */
 .v-application {
     --k-highlight: rgb(var(--v-theme-primary));
     --k-highlight-soft: color-mix(

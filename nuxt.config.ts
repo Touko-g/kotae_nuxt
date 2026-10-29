@@ -332,16 +332,16 @@ export default defineNuxtConfig({
             theme: {
                 defaultTheme: 'light',
                 themes: {
-                    // 三套主题各自一对「主色 + 副色」。副色不能三套共用同一个值：
-                    // 圆环花饰、星芒、贴纸标签、热门榜 #2 徽章、撒花都从 secondary 派生，
-                    // 一旦 light / dark 都取 #03DAC6，这些装饰切主题时颜色一模一样。
+                    // 已知限制：light 与 dark 共用同一个 secondary (#03DAC6)，
+                    // 所以由 secondary 派生的圆环花饰(--k-accent-b)、星芒(--k-accent-d)、
+                    // 贴纸标签、热门榜 #2 徽章、撒花在明暗切换时颜色不变。
+                    // 曾试过拆成 light 靛蓝 / dark 天青，配色观感不佳已回退。
                     light: {
                         colors: {
                             background: '#F9FAFB',
                             surface: '#FFFFFF',
                             primary: '#e41b23',
-                            // 靛蓝：与朱红拉开色相，做纸感贴纸的撞色
-                            secondary: '#1565C0',
+                            secondary: '#03DAC6',
                             error: '#B00020',
                             info: '#2196F3',
                             success: '#4CAF50',
@@ -353,8 +353,7 @@ export default defineNuxtConfig({
                             background: '#121212',
                             surface: '#1E1E1E',
                             primary: '#349d17',
-                            // 天青：夜色里配草绿，比青色更亮更冷
-                            secondary: '#4FC3F7',
+                            secondary: '#03DAC6',
                             error: '#B00020',
                             info: '#2196F3',
                             success: '#4CAF50',

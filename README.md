@@ -538,12 +538,14 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 | background | #F9FAFB | #121212 | #050807 |
 | surface | #FFFFFF | #1E1E1E | #0B1310 |
 | primary | #e41b23 | #349d17 | #2BE86E |
-| secondary | #1565C0 | #4FC3F7 | #FFB000 |
+| secondary | #03DAC6 | #03DAC6 | #FFB000 |
 | error | #B00020 | #B00020 | #FF5A6E |
 
 `main.css` 中的花饰、荧光笔划线、贴纸阴影全部由 `primary` / `secondary` / `--k-ink` 派生，**纯配色**的新主题只改配置即可。terminal 另带装饰层（扫描线、刷新带、方块光标），需要在 `main.css` 里补。
 
-**主色与副色必须两两不同**。圆环花饰（`--k-accent-b`）、星芒（`--k-accent-d`）、贴纸标签、热门榜 #2 徽章、撒花都从 `secondary` 派生；早先 light 与 dark 共用 `#03DAC6`，结果这些装饰切了主题纹丝不动。同理，`.hero-blob--a` 曾写成 `rgb(var(--v-theme-primary) / 0.75)`——`var()` 展开后是 `rgb(228 27 35 / 0.75)`，旧式 `rgb()` 不认斜杠，整条声明被判无效，两团柔和花饰在三套主题下都是 `none`；要透明度请用 `color-mix(in srgb, rgb(var(--v-theme-primary)) 75%, transparent)`。
+**已知限制：light 与 dark 共用 `secondary`。** 圆环花饰（`--k-accent-b`）、星芒（`--k-accent-d`）、贴纸标签、热门榜 #2 徽章、撒花都从 `secondary` 派生，所以这五类装饰在明暗切换时颜色不变（只有 terminal 的琥珀不同）。曾把两套副色拆成 light 靛蓝 `#1565C0` / dark 天青 `#4FC3F7`，观感不佳已回退——要再动请连着截图一起看。
+
+另一个坑值得记着：`.hero-blob--a` 曾写成 `rgb(var(--v-theme-primary) / 0.75)`——`var()` 展开后是 `rgb(228 27 35 / 0.75)`，旧式 `rgb()` 不认斜杠，整条声明被判无效（不报错，只是静默不画），两团柔和花饰在三套主题下都是 `none`。要透明度请用 `color-mix(in srgb, rgb(var(--v-theme-primary)) 75%, transparent)`。
 
 ### 终端（terminal）
 
