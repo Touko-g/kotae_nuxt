@@ -2,7 +2,7 @@
 
 > 记录 · 创作 · 分享，寻找你的答案
 
-Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档与标签云。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 5 套主题。
+Kotae 是一个基于 Nuxt 4 构建的内容分享平台（博客/笔记系统），支持文章发布、评论、点赞、用户管理、通知、相册、心愿单、归档与标签云。项目使用 TypeScript 开发，集成 Vuetify 3 作为 UI 组件库，支持中英双语与 3 套主题。
 
 **线上地址**: https://kotae.cn
 
@@ -143,7 +143,7 @@ kotae_nuxt/
 │   │   ├── useSpeechRecognition.ts # Web Speech API 语音转文字
 │   │   ├── useSpeechSynthesis.ts # 正文朗读（分段播放 + 当前段高亮）
 │   │   ├── useTextSelection.ts   # 正文划词探测与浮条定位
-│   │   ├── useThemeCycle.ts      # 5 套主题轮换
+│   │   ├── useThemeCycle.ts      # 3 套主题轮换
 │   │   └── useToast.ts           # Toast 通知（集成音效反馈）
 │   ├── layouts/
 │   │   └── default.vue           # 默认布局（左右导航抽屉 + AppBar + 页脚）
@@ -538,10 +538,12 @@ const html = normalizeAiHtml(text) // 已净化，可直接 insertContent
 | background | #F9FAFB | #121212 | #050807 |
 | surface | #FFFFFF | #1E1E1E | #0B1310 |
 | primary | #e41b23 | #349d17 | #2BE86E |
-| secondary | #03DAC6 | #03DAC6 | #FFB000 |
+| secondary | #1565C0 | #4FC3F7 | #FFB000 |
 | error | #B00020 | #B00020 | #FF5A6E |
 
 `main.css` 中的花饰、荧光笔划线、贴纸阴影全部由 `primary` / `secondary` / `--k-ink` 派生，**纯配色**的新主题只改配置即可。terminal 另带装饰层（扫描线、刷新带、方块光标），需要在 `main.css` 里补。
+
+**主色与副色必须两两不同**。圆环花饰（`--k-accent-b`）、星芒（`--k-accent-d`）、贴纸标签、热门榜 #2 徽章、撒花都从 `secondary` 派生；早先 light 与 dark 共用 `#03DAC6`，结果这些装饰切了主题纹丝不动。同理，`.hero-blob--a` 曾写成 `rgb(var(--v-theme-primary) / 0.75)`——`var()` 展开后是 `rgb(228 27 35 / 0.75)`，旧式 `rgb()` 不认斜杠，整条声明被判无效，两团柔和花饰在三套主题下都是 `none`；要透明度请用 `color-mix(in srgb, rgb(var(--v-theme-primary)) 75%, transparent)`。
 
 ### 终端（terminal）
 

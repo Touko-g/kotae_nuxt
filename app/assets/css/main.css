@@ -460,9 +460,12 @@ body,
     left: -6%;
     width: 42%;
     padding-bottom: 42%;
+    /* 不能写 rgb(var(--v-theme-primary) / 0.75)：var 展开成 "228 27 35"，
+       旧式 rgb() 不认斜杠语法，整条 background 会被判无效（三主题下都是 none）。
+       用 color-mix 混 transparent 才是合法的"主色 75% 透明度" */
     background: radial-gradient(
         circle at 30% 30%,
-        rgb(var(--v-theme-primary) / 0.75),
+        color-mix(in srgb, rgb(var(--v-theme-primary)) 75%, transparent),
         transparent 70%
     );
 }
@@ -520,7 +523,7 @@ body,
 }
 
 /* 头条 Featured 封面：按 id 取模的同色系深浅渐变（服务端/客户端一致）。
-   亮端混主题表面色（浅底变白、雨夜等深底变暗，保持金/蓝等主题色相不洗白），
+   亮端混主题表面色（浅底变白、深底变暗，保持金/蓝等主题色相不洗白），
    暗端混 --k-shade 保证常驻白字有对比 */
 .featured-cover {
     position: relative;
@@ -624,7 +627,7 @@ body,
 }
 
 /* 热门榜 Top3 徽章：配合主题的递进强调——#1 primary / #2 secondary / #3 墨色，
-   文字用 Vuetify 自动生成的 on-* 与配对 --k-surface-c，五主题下对比度均成立 */
+   文字用 Vuetify 自动生成的 on-* 与配对 --k-surface-c，三主题下对比度均成立 */
 .rank-badge--1 {
     background: rgb(var(--v-theme-primary));
     color: rgb(var(--v-theme-on-primary));
@@ -733,7 +736,9 @@ body,
 
 /* 主题派生色：荧光笔划线 + 花饰/贴纸撞色，全部由 primary / secondary 计算，
    随 light / dark / terminal 自动换色。
-   声明在 .v-application（与主题 token 同级）而非 :root，跟着当前主题类走 */
+   声明在 .v-application（与主题 token 同级）而非 :root，跟着当前主题类走。
+   前提：三套主题的主色与副色两两不同（见 nuxt.config.ts）——若两套主题共用同一个
+   secondary，则 --k-accent-b / --k-accent-d 派生的圆环、星芒、贴纸会切了主题也不变色 */
 .v-application {
     --k-highlight: rgb(var(--v-theme-primary));
     --k-highlight-soft: color-mix(
@@ -1171,8 +1176,8 @@ body,
 
 /* ==========================================================================
    贴纸风 Toast（vue-sonner）：墨色描边 + 模切白边 + 硬偏移阴影，
-   与全站贴纸层同源；类型色取主题 on-* token（五主题均定义了
-   success / info / warning / error），雨夜暗底自动换用提亮变体
+   与全站贴纸层同源；类型色取主题 on-* token（三主题均定义了
+   success / info / warning / error），深色底自动换用提亮变体
    ========================================================================== */
 
 /* 结构性压回：sonner 默认的白色表面 + 柔和阴影 + 圆角让位给 VAlert 贴纸本体，
@@ -1390,7 +1395,7 @@ body,
    正文朗读：当前正在念的那一段
    朗读时视线是跟着声音走的，所以高亮要够醒目；但不能改字号/内边距 ——
    任何影响排版的样式都会让文字在开始朗读的瞬间跳一下。
-   只用主色的低透明度铺底 + 同色外扩阴影，五套主题都成立。
+   只用主色的低透明度铺底 + 同色外扩阴影，三套主题都成立。
    ========================================================================== */
 .k-tts-active {
     border-radius: 6px;
